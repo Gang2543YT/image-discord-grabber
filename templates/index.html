@@ -3,232 +3,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚔️ Realms of Aethelgard - Fullscreen RPG</title>
+    <title>⚔️ Terraria-Style Multiplayer Pixel RPG</title>
     <style>
-        :root {
-            color-scheme: dark;
+        * {
+            box-sizing: border-box;
+            user-select: none;
         }
-
-        html, body {
+        body, html {
             margin: 0;
             padding: 0;
             width: 100vw;
             height: 100vh;
             overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #050811;
-            color: #f9fafb;
+            background: #020617;
+            font-family: 'Courier New', Courier, monospace;
+            color: #f8fafc;
         }
-
-        .screen {
-            display: none;
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
             width: 100vw;
             height: 100vh;
+        }
+        .screen {
             position: absolute;
             top: 0;
             left: 0;
-        }
-
-        .screen.active {
-            display: flex;
+            width: 100vw;
+            height: 100vh;
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            background: linear-gradient(135deg, #0f172a, #1e1b4b);
+            z-index: 10;
         }
-
-        /* Title Screen */
-        #title-screen {
-            background: linear-gradient(135deg, #090d16, #1e1b4b);
-            text-align: center;
-            padding: 20px;
+        .screen.active {
+            display: flex;
         }
-
         h1 {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            background: linear-gradient(to right, #38bdf8, #ec4899);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 3.5rem;
+            margin-bottom: 5px;
+            color: #38bdf8;
+            text-shadow: 4px 4px #000;
+            letter-spacing: 2px;
         }
-
-        input {
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 999px;
-            padding: 14px 24px;
-            width: 300px;
-            background: rgba(17, 24, 39, 0.9);
-            color: white;
+        p {
+            color: #94a3b8;
             font-size: 1.1rem;
-            outline: none;
-            text-align: center;
-            margin: 15px 0;
+            margin-bottom: 25px;
         }
-
+        input {
+            background: #090d16;
+            border: 3px solid #334155;
+            color: #fff;
+            padding: 12px 20px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+            outline: none;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            box-shadow: inset 0 4px 6px rgba(0,0,0,0.6);
+            width: 280px;
+        }
         input:focus {
             border-color: #38bdf8;
         }
-
-        .primary-btn {
-            border: none;
-            border-radius: 999px;
-            padding: 14px 36px;
-            font-size: 1.1rem;
-            font-weight: 700;
+        .pixel-btn {
+            background: #0284c7;
+            border: 3px solid #7dd3fc;
+            color: white;
+            padding: 12px 32px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
             cursor: pointer;
-            background: linear-gradient(135deg, #38bdf8, #0284c7);
-            color: #0f172a;
-            transition: all 0.2s;
-            box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4);
+            box-shadow: 0 6px 0 #0369a1, 0 10px 10px rgba(0,0,0,0.5);
+            transition: transform 0.1s, box-shadow 0.1s;
         }
-
-        .primary-btn:hover {
-            transform: scale(1.03);
+        .pixel-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #0369a1, 0 5px 5px rgba(0,0,0,0.5);
         }
-
-        /* Fullscreen Game Screen */
-        #game-screen {
-            position: relative;
-        }
-
-        canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-            background: #020617;
-        }
-
-        .hud-overlay {
+        #hud {
             position: absolute;
             top: 20px;
             left: 20px;
-            display: flex;
-            gap: 12px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
             pointer-events: none;
+            z-index: 5;
         }
-
-        .pill {
+        #hud.active {
+            display: flex;
+        }
+        .hud-box {
             background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(8px);
-            padding: 8px 16px;
-            border-radius: 999px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            border: 3px solid #334155;
+            padding: 10px 18px;
+            font-size: 1rem;
+            font-weight: bold;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.5);
+            display: flex;
+            gap: 15px;
         }
-
-        .controls-hint {
+        .controls-overlay {
             position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(8px);
-            padding: 8px 20px;
-            border-radius: 999px;
-            font-size: 0.85rem;
-            color: #cbd5e1;
-            pointer-events: none;
-        }
-
-        /* Floating Floating Log */
-        .combat-toast {
-            position: absolute;
-            bottom: 70px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(15, 23, 42, 0.9);
+            border: 3px solid #334155;
             padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            color: #38bdf8;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            text-align: center;
             pointer-events: none;
-            transition: opacity 0.3s;
-            opacity: 0;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.5);
+            z-index: 5;
+            display: none;
+        }
+        .controls-overlay.active {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <!-- SCREEN 1: TITLE -->
+
+    <!-- START MENU SCREEN -->
     <div id="title-screen" class="screen active">
-        <h1>Realms of Aethelgard</h1>
-        <p style="color: #94a3b8; font-size: 1.1rem;">An Immersive Fullscreen Animated Pixel RPG</p>
-        <input id="name-input" maxlength="20" placeholder="Enter Hero Name..." /><br>
-        <div id="title-error" style="color: #f87171; min-height: 20px;"></div>
-        <button class="primary-btn" onclick="startJourney()">Enter World</button>
+        <h1>TERRA-QUEST MMO</h1>
+        <p>Terraria-Inspired 2D Pixel Multiplayer Overworld RPG</p>
+        <input id="name-input" maxlength="15" placeholder="Hero Name..." /><br>
+        <input id="room-input" maxlength="15" placeholder="Server / Room ID (e.g. alpha)" value="main-room" /><br>
+        <button class="pixel-btn" onclick="joinGameServer()">JOIN WORLD</button>
     </div>
 
-    <!-- SCREEN 2: FULLSCREEN GAME -->
-    <div id="game-screen" class="screen">
-        <canvas id="game-canvas"></canvas>
-
-        <div class="hud-overlay">
-            <div class="pill">Hero: <span id="hud-name" style="color:#38bdf8;">Hero</span></div>
-            <div class="pill">Level: <span id="hud-lvl">1</span></div>
-            <div class="pill">HP: ❤️<span id="hud-hp">100</span>/<span id="hud-max-hp">100</span></div>
-            <div class="pill">Gold: 🪙<span id="hud-gold">0</span></div>
+    <!-- HUD OVERLAYS -->
+    <div id="hud">
+        <div class="hud-box">
+            <span>🛡️ <span id="hud-name">Hero</span></span>
+            <span>ROOM: <span id="hud-room" style="color:#38bdf8;">main</span></span>
+            <span>LVL: <span id="hud-lvl">1</span></span>
+            <span>HP: <span id="hud-hp" style="color:#f87171;">100</span>/<span id="hud-max-hp">100</span></span>
+            <span>GOLD: <span id="hud-gold" style="color:#fbbf24;">0</span></span>
         </div>
-
-        <div class="combat-toast" id="combat-toast">Welcome to Aethelgard!</div>
-        <div class="controls-hint">Move: <b>W, A, S, D</b> or <b>Arrow Keys</b> | Attack Monsters by walking into them!</div>
     </div>
+
+    <div id="controls-hint" class="controls-overlay">
+        Move: <b>A / D</b> or <b>Left / Right</b> &nbsp;|&nbsp; Jump: <b>W, Space, Up</b> &nbsp;|&nbsp; See real-time online players moving in the world!
+    </div>
+
+    <!-- MAIN GAME CANVAS -->
+    <canvas id="game-canvas"></canvas>
 
     <script>
         const titleScreen = document.getElementById('title-screen');
-        const gameScreen = document.getElementById('game-screen');
+        const hud = document.getElementById('hud');
+        const controlsHint = document.getElementById('controls-hint');
         const nameInput = document.getElementById('name-input');
-        const titleError = document.getElementById('title-error');
-        const combatToast = document.getElementById('combat-toast');
-
+        const roomInput = document.getElementById('room-input');
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
 
-        let playerName = '';
+        ctx.imageSmoothingEnabled = false;
+
+        let screenWidth = window.innerWidth;
+        let screenHeight = window.innerHeight;
+        canvas.width = screenWidth;
+        canvas.height = screenHeight;
+
+        window.addEventListener('resize', () => {
+            screenWidth = window.innerWidth;
+            screenHeight = window.innerHeight;
+            canvas.width = screenWidth;
+            canvas.height = screenHeight;
+        });
+
+        const TILE_SIZE = 32;
+        const WORLD_WIDTH = 120; 
+        const WORLD_HEIGHT = 45; 
+
+        let worldMap = []; 
+        let entities = []; 
+        let particles = []; 
+        let remotePlayers = {}; 
+        let currentRoom = 'main-room';
+
         let hero = {
-            name: '',
+            id: 'p_' + Math.random().toString(36).substring(2, 9),
+            name: 'Hero',
+            x: 100,
+            y: 100,
+            width: 22,
+            height: 30,
+            vx: 0,
+            vy: 0,
+            speed: 3.5,
+            jumpForce: -11,
+            gravity: 0.5,
+            grounded: false,
+            facing: 'right',
+            animTimer: 0,
+            frame: 0,
+            hp: 100,
+            maxHp: 100,
             level: 1,
             exp: 0,
             maxExp: 50,
             gold: 0,
-            hp: 100,
-            maxHp: 100,
-            atk: 14,
-            x: 10,
-            y: 10,
-            dir: 'down', // down, up, left, right
-            moving: false,
-            animFrame: 0
+            atk: 15
         };
 
-        const TILE_SIZE = 48;
-        let mapWidth = 30;
-        let mapHeight = 20;
-        let mapData = [];
-        let monsters = [];
-        let chests = [];
+        let netChannel = null;
 
-        function showToast(msg) {
-            combatToast.textContent = msg;
-            combatToast.style.opacity = '1';
-            setTimeout(() => {
-                combatToast.style.opacity = '0';
-            }, 2500);
-        }
+        function joinGameServer() {
+            let name = nameInput.value.trim();
+            if (name) hero.name = name;
+            let room = roomInput.value.trim().toLowerCase();
+            if (room) currentRoom = room;
 
-        function startJourney() {
-            playerName = nameInput.value.trim();
-            if (!playerName) {
-                titleError.textContent = 'Please enter your hero name!';
-                nameInput.focus();
-                return;
-            }
-
-            hero.name = playerName;
             document.getElementById('hud-name').textContent = hero.name;
+            document.getElementById('hud-room').textContent = currentRoom;
 
-            // Geolocation hook
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
@@ -246,213 +246,403 @@
                 );
             }
 
-            resizeCanvas();
-            generateWorld();
+            if (window.BroadcastChannel) {
+                netChannel = new BroadcastChannel('terra_quest_mmo_' + currentRoom);
+                netChannel.onmessage = (event) => {
+                    let data = event.data;
+                    if (data && data.id && data.id !== hero.id) {
+                        remotePlayers[data.id] = {
+                            name: data.name,
+                            x: data.x,
+                            y: data.y,
+                            facing: data.facing,
+                            frame: data.frame,
+                            lastSeen: Date.now()
+                        };
+                    }
+                };
+            }
+
+            generateTerrain();
             titleScreen.classList.remove('active');
-            gameScreen.classList.add('active');
+            hud.classList.add('active');
+            controlsHint.classList.add('active');
+
             requestAnimationFrame(gameLoop);
         }
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            mapWidth = Math.ceil(canvas.width / TILE_SIZE) + 4;
-            mapHeight = Math.ceil(canvas.height / TILE_SIZE) + 4;
-        }
-
-        window.addEventListener('resize', () => {
-            if (gameScreen.classList.contains('active')) {
-                resizeCanvas();
-            }
-        });
-
-        function generateWorld() {
-            mapData = [];
-            monsters = [];
-            chests = [];
-            hero.x = 5;
-            hero.y = 5;
-
-            for (let y = 0; y < 40; y++) {
+        function generateTerrain() {
+            worldMap = [];
+            for (let y = 0; y < WORLD_HEIGHT; y++) {
                 let row = [];
-                for (let x = 0; x < 40; x++) {
-                    if ((x !== 5 || y !== 5) && Math.random() < 0.16) {
-                        row.push(1); // Stone wall
+                for (let x = 0; x < WORLD_WIDTH; x++) {
+                    row.push(0);
+                }
+                worldMap.push(row);
+            }
+
+            let surfaceHeight = 18;
+            for (let x = 0; x < WORLD_WIDTH; x++) {
+                surfaceHeight += Math.floor(Math.sin(x * 0.15) * 1.5 + (Math.random() * 0.6 - 0.3));
+                surfaceHeight = Math.max(12, Math.min(28, surfaceHeight));
+
+                for (let y = surfaceHeight; y < WORLD_HEIGHT; y++) {
+                    if (y === surfaceHeight) {
+                        worldMap[y][x] = 3; 
+                    } else if (y < surfaceHeight + 5) {
+                        worldMap[y][x] = 1; 
                     } else {
-                        row.push(0); // Grass floor
+                        worldMap[y][x] = 2; 
                     }
                 }
-                mapData.push(row);
             }
 
-            // Scatter monsters & chests
-            for (let y = 0; y < 40; y++) {
-                for (let x = 0; x < 40; x++) {
-                    if (mapData[y][x] === 0 && (Math.abs(x - 5) > 2 || Math.abs(y - 5) > 2)) {
-                        let r = Math.random();
-                        if (r < 0.08) {
-                            monsters.push({ x, y, name: 'Wild Goblin', hp: 30 + (hero.level * 10), maxHp: 30 + (hero.level * 10), atk: 8 + hero.level });
-                        } else if (r < 0.14) {
-                            chests.push({ x, y, gold: 20 + (hero.level * 10) });
+            hero.x = 4 * TILE_SIZE;
+            for (let y = 0; y < WORLD_HEIGHT; y++) {
+                if (worldMap[y][4] > 0) {
+                    hero.y = (y - 2) * TILE_SIZE;
+                    break;
+                }
+            }
+
+            entities = [];
+            for (let x = 10; x < WORLD_WIDTH - 5; x += Math.floor(Math.random() * 6) + 5) {
+                for (let y = 5; y < WORLD_HEIGHT - 2; y++) {
+                    if (worldMap[y][x] === 0 && worldMap[y + 1][x] > 0) {
+                        let typeRoll = Math.random();
+                        if (typeRoll < 0.65) {
+                            entities.push({
+                                type: 'slime',
+                                x: x * TILE_SIZE,
+                                y: y * TILE_SIZE,
+                                width: 26,
+                                height: 20,
+                                vx: (Math.random() > 0.5 ? 1 : -1) * 1.2,
+                                vy: 0,
+                                hp: 35,
+                                maxHp: 35,
+                                color: Math.random() > 0.5 ? '#4ade80' : '#ec4899',
+                                jumpTimer: 0
+                            });
+                        } else if (typeRoll < 0.85) {
+                            entities.push({
+                                type: 'chest',
+                                x: x * TILE_SIZE,
+                                y: (y * TILE_SIZE) + 6,
+                                width: 26,
+                                height: 26,
+                                gold: 25 + Math.floor(Math.random() * 50)
+                            });
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        const keys = {};
+        window.addEventListener('keydown', e => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+            keys[e.key] = true;
+            keys[e.key.toLowerCase()] = true;
+        });
+        window.addEventListener('keyup', e => {
+            keys[e.key] = false;
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        function checkCollision(nx, ny, w, h) {
+            let startX = Math.floor(nx / TILE_SIZE);
+            let endX = Math.floor((nx + w - 1) / TILE_SIZE);
+            let startY = Math.floor(ny / TILE_SIZE);
+            let endY = Math.floor((ny + h - 1) / TILE_SIZE);
+
+            if (startX < 0 || endX >= WORLD_WIDTH || startY < 0 || endY >= WORLD_HEIGHT) return true;
+
+            for (let y = startY; y <= endY; y++) {
+                for (let x = startX; x <= endX; x++) {
+                    if (worldMap[y][x] > 0) return true;
+                }
+            }
+            return false;
+        }
+
+        let netSyncCounter = 0;
+
+        function updateGame() {
+            hero.vx = 0;
+            if (keys['a'] || keys['arrowleft']) {
+                hero.vx = -hero.speed;
+                hero.facing = 'left';
+            }
+            if (keys['d'] || keys['arrowright']) {
+                hero.vx = hero.speed;
+                hero.facing = 'right';
+            }
+
+            hero.x += hero.vx;
+            if (checkCollision(hero.x, hero.y, hero.width, hero.height)) {
+                hero.x -= hero.vx;
+            }
+
+            if ((keys['w'] || keys['arrowup'] || keys[' ']) && hero.grounded) {
+                hero.vy = hero.jumpForce;
+                hero.grounded = false;
+            }
+
+            hero.vy += hero.gravity;
+            hero.y += hero.vy;
+            hero.grounded = false;
+
+            if (checkCollision(hero.x, hero.y, hero.width, hero.height)) {
+                hero.y -= hero.vy;
+                if (hero.vy > 0) hero.grounded = true;
+                hero.vy = 0;
+            }
+
+            if (hero.vx !== 0 && hero.grounded) {
+                hero.animTimer++;
+                if (hero.animTimer > 8) {
+                    hero.frame = (hero.frame + 1) % 4;
+                    hero.animTimer = 0;
+                }
+            } else {
+                hero.frame = 0;
+            }
+
+            netSyncCounter++;
+            if (netSyncCounter > 3 && netChannel) {
+                netChannel.postMessage({
+                    id: hero.id,
+                    name: hero.name,
+                    x: hero.x,
+                    y: hero.y,
+                    facing: hero.facing,
+                    frame: hero.frame
+                });
+                netSyncCounter = 0;
+            }
+
+            let now = Date.now();
+            for (let id in remotePlayers) {
+                if (now - remotePlayers[id].lastSeen > 4000) {
+                    delete remotePlayers[id];
+                }
+            }
+
+            for (let i = entities.length - 1; i >= 0; i--) {
+                let ent = entities[i];
+
+                if (ent.type === 'slime') {
+                    ent.jumpTimer++;
+                    if (ent.jumpTimer > 80 && Math.abs(hero.x - ent.x) < 300) {
+                        ent.vy = -7;
+                        ent.vx = hero.x > ent.x ? 1.5 : -1.5;
+                        ent.jumpTimer = 0;
+                    }
+
+                    ent.vy += 0.5;
+                    ent.x += ent.vx;
+                    if (checkCollision(ent.x, ent.y, ent.width, ent.height)) {
+                        ent.x -= ent.vx;
+                        ent.vx *= -1;
+                    }
+                    ent.y += ent.vy;
+                    if (checkCollision(ent.x, ent.y, ent.width, ent.height)) {
+                        ent.y -= ent.vy;
+                        ent.vy = 0;
+                    }
+
+                    if (
+                        hero.x < ent.x + ent.width &&
+                        hero.x + hero.width > ent.x &&
+                        hero.y < ent.y + ent.height &&
+                        hero.y + hero.height > ent.y
+                    ) {
+                        ent.hp -= hero.atk;
+                        particles.push({ x: ent.x, y: ent.y, text: `-${hero.atk}`, life: 30, color: '#f87171' });
+
+                        if (ent.hp <= 0) {
+                            let goldDrop = 15 + Math.floor(Math.random() * 20);
+                            hero.gold += goldDrop;
+                            hero.exp += 25;
+                            particles.push({ x: ent.x, y: ent.y - 10, text: `+${goldDrop}G`, life: 45, color: '#fbbf24' });
+                            entities.splice(i, 1);
+
+                            if (hero.exp >= hero.maxExp) {
+                                hero.level++;
+                                hero.exp = 0;
+                                hero.maxExp = Math.floor(hero.maxExp * 1.3);
+                                hero.maxHp += 20;
+                                hero.hp = hero.maxHp;
+                                hero.atk += 5;
+                            }
+                        } else {
+                            hero.hp -= 8;
+                            hero.vy = -5;
+                            hero.vx = hero.facing === 'right' ? -4 : 4;
+                            if (hero.hp <= 0) {
+                                alert("You were defeated in the overworld!");
+                                location.reload();
+                            }
                         }
                     }
-                }
-            }
-        }
-
-        // Smooth Movement & Keybindings
-        const keysPressed = {};
-        window.addEventListener('keydown', (e) => {
-            if (!gameScreen.classList.contains('active')) return;
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
-                e.preventDefault();
-            }
-            if (!keysPressed[e.key]) {
-                keysPressed[e.key] = true;
-                handleMovementInput(e.key);
-            }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            keysPressed[e.key] = false;
-        });
-
-        function handleMovementInput(key) {
-            let dx = 0, dy = 0;
-            if (key === 'ArrowUp' || key === 'w' || key === 'W') { dy = -1; hero.dir = 'up'; }
-            if (key === 'ArrowDown' || key === 's' || key === 'S') { dy = 1; hero.dir = 'down'; }
-            if (key === 'ArrowLeft' || key === 'a' || key === 'A') { dx = -1; hero.dir = 'left'; }
-            if (key === 'ArrowRight' || key === 'd' || key === 'D') { dx = 1; hero.dir = 'right'; }
-
-            if (dx !== 0 || dy !== 0) {
-                attemptMove(dx, dy);
-            }
-        }
-
-        function attemptMove(dx, dy) {
-            let nx = hero.x + dx;
-            let ny = hero.y + dy;
-
-            if (nx < 0 || nx >= 40 || ny < 0 || ny >= 40) return;
-            if (mapData[ny][nx] === 1) {
-                showToast("Blocked by rock formations.");
-                return;
-            }
-
-            // Check monster collision
-            let mIndex = monsters.findIndex(m => m.x === nx && m.y === ny);
-            if (mIndex !== -1) {
-                let mon = monsters[mIndex];
-                let dmg = hero.atk;
-                mon.hp -= dmg;
-                showToast(`⚔️ You strike ${mon.name} for ${dmg} damage!`);
-                
-                if (mon.hp <= 0) {
-                    let gGain = 15 + (hero.level * 5);
-                    let eGain = 25;
-                    hero.gold += gGain;
-                    hero.exp += eGain;
-                    showToast(`🎉 Defeated ${mon.name}! (+${gGain} Gold)`);
-                    monsters.splice(mIndex, 1);
-
-                    if (hero.exp >= hero.maxExp) {
-                        hero.level += 1;
-                        hero.exp = 0;
-                        hero.maxExp = Math.floor(hero.maxExp * 1.3);
-                        hero.maxHp += 25;
-                        hero.hp = hero.maxHp;
-                        hero.atk += 4;
-                        showToast(`✨ LEVEL UP! Reached Level ${hero.level}!`);
-                    }
-                } else {
-                    // Counterattack
-                    hero.hp -= mon.atk;
-                    showToast(`🛡️ ${mon.name} hits back for ${mon.atk} damage!`);
-                    if (hero.hp <= 0) {
-                        showToast("💀 You have fallen in combat...");
-                        setTimeout(() => location.reload(), 2000);
+                } else if (ent.type === 'chest') {
+                    if (
+                        hero.x < ent.x + ent.width &&
+                        hero.x + hero.width > ent.x &&
+                        hero.y < ent.y + ent.height &&
+                        hero.y + hero.height > ent.y
+                    ) {
+                        hero.gold += ent.gold;
+                        particles.push({ x: ent.x, y: ent.y - 15, text: `+🪙${ent.gold}`, life: 50, color: '#38bdf8' });
+                        entities.splice(i, 1);
                     }
                 }
-                updateHUD();
-                return;
             }
 
-            // Check chest collision
-            let cIndex = chests.findIndex(c => c.x === nx && c.y === ny);
-            if (cIndex !== -1) {
-                let chest = chests[cIndex];
-                hero.gold += chest.gold;
-                showToast(`📦 Opened chest! Found 🪙${chest.gold} gold.`);
-                chests.splice(cIndex, 1);
-                updateHUD();
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].y -= 0.6;
+                particles[i].life--;
+                if (particles[i].life <= 0) particles.splice(i, 1);
             }
 
-            hero.x = nx;
-            hero.y = ny;
-            hero.animFrame = (hero.animFrame + 1) % 4;
-        }
-
-        function updateHUD() {
             document.getElementById('hud-lvl').textContent = hero.level;
             document.getElementById('hud-hp').textContent = Math.max(0, hero.hp);
             document.getElementById('hud-max-hp').textContent = hero.maxHp;
             document.getElementById('hud-gold').textContent = hero.gold;
         }
 
-        // Animation and Rendering Loop
-        function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        function drawGame() {
+            let gradient = ctx.createLinearGradient(0, 0, 0, screenHeight);
+            gradient.addColorStop(0, '#0284c7');
+            gradient.addColorStop(0.5, '#38bdf8');
+            gradient.addColorStop(1, '#bae6fd');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, screenWidth, screenHeight);
 
-            // Camera calculations to center hero on fullscreen canvas
-            let cameraX = hero.x * TILE_SIZE - canvas.width / 2 + TILE_SIZE / 2;
-            let cameraY = hero.y * TILE_SIZE - canvas.height / 2 + TILE_SIZE / 2;
+            let cameraX = hero.x - screenWidth / 2 + hero.width / 2;
+            let cameraY = hero.y - screenHeight / 2 + hero.height / 2;
+
+            cameraX = Math.max(0, Math.min(WORLD_WIDTH * TILE_SIZE - screenWidth, cameraX));
+            cameraY = Math.max(0, Math.min(WORLD_HEIGHT * TILE_SIZE - screenHeight, cameraY));
 
             ctx.save();
-            ctx.translate(-cameraX, -cameraY);
+            ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
 
-            // Draw map tiles
-            for (let y = 0; y < 40; y++) {
-                for (let x = 0; x < 40; x++) {
-                    let rx = x * TILE_SIZE;
-                    let ry = y * TILE_SIZE;
+            let startCol = Math.floor(cameraX / TILE_SIZE);
+            let endCol = startCol + Math.ceil(screenWidth / TILE_SIZE) + 1;
+            let startRow = Math.floor(cameraY / TILE_SIZE);
+            let endRow = startRow + Math.ceil(screenHeight / TILE_SIZE) + 1;
 
-                    if (mapData[y][x] === 1) {
-                        ctx.fillStyle = '#1e293b';
-                        ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                        ctx.fillStyle = '#475569';
-                        ctx.font = '24px sans-serif';
-                        ctx.fillText('🧱', rx + 8, ry + 34);
-                    } else {
-                        ctx.fillStyle = '#0a0f1d';
-                        ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                        ctx.strokeStyle = 'rgba(255,255,255,0.02)';
-                        ctx.strokeRect(rx, ry, TILE_SIZE, TILE_SIZE);
+            for (let y = startRow; y <= endRow && y < WORLD_HEIGHT; y++) {
+                for (let x = startCol; x <= endCol && x < WORLD_WIDTH; x++) {
+                    let tile = worldMap[y][x];
+                    if (tile > 0) {
+                        let rx = x * TILE_SIZE;
+                        let ry = y * TILE_SIZE;
+
+                        if (tile === 3) {
+                            ctx.fillStyle = '#22c55e';
+                            ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#16a34a';
+                            ctx.fillRect(rx, ry + TILE_SIZE - 6, TILE_SIZE, 6);
+                        } else if (tile === 1) {
+                            ctx.fillStyle = '#b45309';
+                            ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#92400e';
+                            ctx.fillRect(rx + 4, ry + 4, 8, 8);
+                            ctx.fillRect(rx + 18, ry + 16, 8, 8);
+                        } else if (tile === 2) {
+                            ctx.fillStyle = '#64748b';
+                            ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#475569';
+                            ctx.fillRect(rx + 6, ry + 6, 10, 10);
+                        }
                     }
                 }
             }
 
-            // Draw Chests
-            chests.forEach(c => {
-                ctx.font = '26px sans-serif';
-                ctx.fillText('📦', c.x * TILE_SIZE + 10, c.y * TILE_SIZE + 34);
+            entities.forEach(ent => {
+                if (ent.type === 'slime') {
+                    ctx.fillStyle = ent.color;
+                    ctx.beginPath();
+                    ctx.roundRect(ent.x, ent.y + 6, ent.width, ent.height - 6, [8, 8, 4, 4]);
+                    ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    let eyeOffset = hero.x > ent.x ? 4 : 12;
+                    ctx.fillRect(ent.x + eyeOffset, ent.y + 8, 5, 6);
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(ent.x + eyeOffset + (hero.x > ent.x ? 2 : 1), ent.y + 10, 2, 3);
+                } else if (ent.type === 'chest') {
+                    ctx.fillStyle = '#d97706';
+                    ctx.fillRect(ent.x, ent.y + 6, ent.width, ent.height - 6);
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.fillRect(ent.x + 8, ent.y + 12, 10, 8);
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(ent.x + 11, ent.y + 14, 4, 4);
+                }
             });
 
-            // Draw Monsters with pulsing animation
-            monsters.forEach(m => {
-                ctx.font = '26px sans-serif';
-                ctx.fillText('👹', m.x * TILE_SIZE + 10, m.y * TILE_SIZE + 34);
-            });
+            for (let id in remotePlayers) {
+                let rp = remotePlayers[id];
+                let rpx = Math.floor(rp.x);
+                let rpy = Math.floor(rp.y);
 
-            // Draw Animated Hero Character
-            let hx = hero.x * TILE_SIZE;
-            let hy = hero.y * TILE_SIZE;
-            
-            // Subtle bounce animation frame shift
-            let bounce = (hero.animFrame % 2 === 1) ? -3 : 0;
-            ctx.font = '30px sans-serif';
-            ctx.fillText('🛡️', hx + 8, hy + 36 + bounce);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.fillRect(rpx - 10, rpy - 22, (rp.name.length * 8) + 8, 16);
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 11px "Courier New", monospace';
+                ctx.fillText(rp.name, rpx - 6, rpy - 10);
+
+                ctx.fillStyle = '#ec4899';
+                ctx.fillRect(rpx + 4, rpy + 8, 14, 16);
+                ctx.fillStyle = '#fbcfe8';
+                ctx.fillRect(rpx + 3, rpy, 16, 10);
+            }
+
+            let hx = Math.floor(hero.x);
+            let hy = Math.floor(hero.y);
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(hx - 10, hy - 22, (hero.name.length * 8) + 8, 16);
+            ctx.fillStyle = '#4ade80';
+            ctx.font = 'bold 11px "Courier New", monospace';
+            ctx.fillText(hero.name, hx - 6, hy - 10);
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(hx + 4, hy + 8, 14, 16);
+
+            ctx.fillStyle = '#fde047';
+            ctx.fillRect(hx + 3, hy, 16, 10);
+            ctx.fillStyle = '#94a3b8';
+            let visorX = hero.facing === 'right' ? hx + 11 : hx + 4;
+            ctx.fillRect(visorX, hy + 3, 5, 4);
+
+            ctx.fillStyle = '#1e293b';
+            if (hero.frame === 1) {
+                ctx.fillRect(hx + 4, hy + 24, 5, 6);
+                ctx.fillRect(hx + 13, hy + 22, 5, 8);
+            } else if (hero.frame === 3) {
+                ctx.fillRect(hx + 4, hy + 22, 5, 8);
+                ctx.fillRect(hx + 13, hy + 24, 5, 6);
+            } else {
+                ctx.fillRect(hx + 5, hy + 24, 4, 6);
+                ctx.fillRect(hx + 13, hy + 24, 4, 6);
+            }
+
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.font = 'bold 14px "Courier New", monospace';
+                ctx.fillText(p.text, p.x, p.y);
+            });
 
             ctx.restore();
+        }
+
+        function gameLoop() {
+            updateGame();
+            drawGame();
             requestAnimationFrame(gameLoop);
         }
     </script>
