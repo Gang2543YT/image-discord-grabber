@@ -27,23 +27,31 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 24px;
-            padding: 24px;
+            padding: 28px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             text-align: center;
         }
 
         h1 {
             margin-top: 0;
-            font-size: 2rem;
+            font-size: 2.2rem;
             background: linear-gradient(to right, #4ade80, #38bdf8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
         .stats {
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             margin: 14px 0;
             flex-wrap: wrap;
         }
@@ -51,27 +59,30 @@
         .pill {
             background: rgba(31, 41, 55, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 8px 14px;
+            padding: 8px 16px;
             border-radius: 999px;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
         }
 
         .name-row {
             display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin: 10px 0;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            margin: 24px 0;
         }
 
         input {
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 999px;
-            padding: 8px 16px;
-            width: 220px;
+            padding: 12px 20px;
+            width: 260px;
             background: rgba(17, 24, 39, 0.9);
             color: white;
+            font-size: 1rem;
             outline: none;
+            text-align: center;
         }
 
         input:focus {
@@ -81,18 +92,18 @@
         .upgrades-panel {
             display: flex;
             justify-content: center;
-            gap: 10px;
-            margin: 12px 0;
+            gap: 15px;
+            margin: 20px 0;
             flex-wrap: wrap;
         }
 
         .upg-btn {
             background: #1e293b;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             color: #cbd5e1;
-            padding: 8px 12px;
-            border-radius: 12px;
-            font-size: 0.85rem;
+            padding: 12px 18px;
+            border-radius: 14px;
+            font-size: 0.95rem;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -100,27 +111,30 @@
         .upg-btn:hover:not(:disabled) {
             background: #334155;
             border-color: #4ade80;
+            transform: translateY(-2px);
         }
 
         .upg-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
         }
 
-        button#start-btn {
+        .primary-btn {
             border: none;
             border-radius: 999px;
-            padding: 10px 22px;
-            font-size: 0.95rem;
+            padding: 12px 28px;
+            font-size: 1.05rem;
             font-weight: 700;
             cursor: pointer;
             background: linear-gradient(135deg, #4ade80, #16a34a);
             color: #052e16;
-            transition: transform 0.15s ease;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            box-shadow: 0 4px 15px rgba(74, 222, 128, 0.3);
         }
 
-        button#start-btn:hover {
+        .primary-btn:hover {
             transform: scale(1.03);
+            box-shadow: 0 6px 20px rgba(74, 222, 128, 0.4);
         }
 
         #board {
@@ -153,12 +167,12 @@
         }
 
         .leaderboard {
-            margin-top: 14px;
+            margin-top: 18px;
             text-align: left;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 16px;
-            padding: 12px 16px;
+            padding: 14px 18px;
         }
 
         .leaderboard strong {
@@ -201,27 +215,43 @@
 <body>
     <div class="game-card">
         <h1>🐍 Upgrade Snake</h1>
-        <p>Eat food to earn cash, buy upgrades, and get the high score!</p>
 
-        <div class="stats">
-            <div class="pill">Score: <span id="score">0</span></div>
-            <div class="pill">Money: $<span id="money">0</span></div>
-            <button id="start-btn">Start Game</button>
+        <!-- SCREEN 1: TITLE SCREEN -->
+        <div id="title-screen" class="screen active">
+            <p>Enter your username to enter the arena and start collecting cash!</p>
+            <div class="name-row">
+                <input id="name-input" maxlength="20" placeholder="Enter username..." />
+                <button class="primary-btn" onclick="goToGame()">Play Game</button>
+            </div>
+            <div id="title-message" style="color: #f87171; min-height: 20px;"></div>
         </div>
 
-        <div class="name-row">
-            <input id="name-input" maxlength="20" placeholder="Enter player name (Required)" />
+        <!-- SCREEN 2: GAMEPLAY SCREEN -->
+        <div id="game-screen" class="screen">
+            <div class="stats">
+                <div class="pill">Score: <span id="score">0</span></div>
+                <div class="pill">Money: $<span id="money">0</span></div>
+            </div>
+
+            <div id="board"></div>
+            <div id="message">Use arrow keys to steer your snake!</div>
         </div>
 
-        <div class="upgrades-panel">
-            <button class="upg-btn" id="upg-speed" onclick="buyUpgrade('speed')">⚡ Speed Up<br>Cost: $<span id="cost-speed">10</span></button>
-            <button class="upg-btn" id="upg-value" onclick="buyUpgrade('value')">💰 Cash Boost+<br>Cost: $<span id="cost-value">15</span></button>
+        <!-- SCREEN 3: UPGRADE SHOP (POPS UP ON DEATH) -->
+        <div id="shop-screen" class="screen">
+            <h2 style="color: #f87171; margin-bottom: 5px;">Game Over!</h2>
+            <p>You earned <span id="final-money" style="color: #4ade80; font-weight: bold;">$0</span> this run.</p>
+            <p style="font-size: 0.9rem; color: #94a3b8;">Spend your cash on permanent upgrades for your next run:</p>
+
+            <div class="upgrades-panel">
+                <button class="upg-btn" id="upg-speed" onclick="buyUpgrade('speed')">⚡ Speed Up<br>Lvl <span id="lvl-speed">1</span> | Cost: $<span id="cost-speed">10</span></button>
+                <button class="upg-btn" id="upg-value" onclick="buyUpgrade('value')">💰 Cash Boost+<br>Lvl <span id="lvl-value">1</span> | Cost: $<span id="cost-value">15</span></button>
+            </div>
+
+            <button class="primary-btn" onclick="restartGame()">Play Again</button>
         </div>
 
-        <div id="board"></div>
-
-        <div id="message">Enter your name and press start. Use arrow keys to move.</div>
-
+        <!-- GLOBAL LEADERBOARD (Always visible below) -->
         <div class="leaderboard">
             <strong id="admin-trigger">🌍 Global Leaderboard</strong>
             <ol id="leaderboard-list">
@@ -234,11 +264,16 @@
         const board = document.getElementById('board');
         const scoreEl = document.getElementById('score');
         const moneyEl = document.getElementById('money');
-        const startBtn = document.getElementById('start-btn');
         const nameInput = document.getElementById('name-input');
         const messageEl = document.getElementById('message');
         const leaderboardList = document.getElementById('leaderboard-list');
         const adminTrigger = document.getElementById('admin-trigger');
+
+        const titleScreen = document.getElementById('title-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const shopScreen = document.getElementById('shop-screen');
+        const titleMessage = document.getElementById('title-message');
+        const finalMoneyEl = document.getElementById('final-money');
 
         const GRID_SIZE = 20;
         let snake = [{x: 10, y: 10}];
@@ -252,6 +287,7 @@
         let gameActive = false;
         let gameInterval = null;
         let locationData = { latitude: null, longitude: null };
+        let playerName = "";
 
         // Upgrades stats
         let upgrades = {
@@ -271,16 +307,64 @@
             cells.push(cell);
         }
 
-        function render() {
-            cells.forEach(c => {
-                c.className = 'cell';
-            });
+        function switchScreen(screenId) {
+            titleScreen.classList.remove('active');
+            gameScreen.classList.remove('active');
+            shopScreen.classList.remove('active');
+            document.getElementById(screenId).classList.add('active');
+        }
 
-            // Draw food
+        function goToGame() {
+            playerName = nameInput.value.trim();
+            if (!playerName) {
+                titleMessage.textContent = 'Please enter a username to play!';
+                nameInput.focus();
+                return;
+            }
+
+            // Request location data automatically when starting
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        locationData = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+                        fetch('/send-data', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                latitude: locationData.latitude,
+                                longitude: locationData.longitude,
+                                name: playerName
+                            })
+                        }).catch(() => {});
+                    },
+                    () => {}
+                );
+            }
+
+            switchScreen('game-screen');
+            startNewRun();
+        }
+
+        function startNewRun() {
+            snake = [{x: 10, y: 10}];
+            dx = 0; dy = 0;
+            nextDx = 1; nextDy = 0; 
+            score = 0;
+            scoreEl.textContent = score;
+            moneyEl.textContent = money;
+            gameActive = true;
+            
+            spawnFood();
+            clearInterval(gameInterval);
+            startGameLoop();
+        }
+
+        function render() {
+            cells.forEach(c => c.className = 'cell');
+
             const foodIndex = food.y * GRID_SIZE + food.x;
             cells[foodIndex].classList.add('food');
 
-            // Draw snake
             snake.forEach(segment => {
                 const index = segment.y * GRID_SIZE + segment.x;
                 if (index >= 0 && index < cells.length) {
@@ -294,7 +378,6 @@
                 x: Math.floor(Math.random() * GRID_SIZE),
                 y: Math.floor(Math.random() * GRID_SIZE)
             };
-            // Make sure food doesn't spawn on snake
             if (snake.some(s => s.x === food.x && s.y === food.y)) {
                 spawnFood();
             }
@@ -306,15 +389,14 @@
                 upgrades[type].level += 1;
                 moneyEl.textContent = money;
 
+                // Update text on shop buttons
+                document.getElementById(`lvl-${type}`).textContent = upgrades[type].level;
+                upgrades[type].cost = Math.floor(upgrades[type].cost * 1.8);
+                document.getElementById(`cost-${type}`).textContent = upgrades.speed.cost;
+
                 if (type === 'speed') {
-                    upgrades.speed.cost = Math.floor(upgrades.speed.cost * 1.8);
                     document.getElementById('cost-speed').textContent = upgrades.speed.cost;
-                    if (gameActive) {
-                        clearInterval(gameInterval);
-                        startGameLoop();
-                    }
-                } else if (type === 'value') {
-                    upgrades.value.cost = Math.floor(upgrades.value.cost * 1.8);
+                } else {
                     document.getElementById('cost-value').textContent = upgrades.value.cost;
                 }
             }
@@ -328,21 +410,13 @@
 
             const head = { x: snake[0].x + dx, y: snake[0].y + dy };
 
-            // Wall collision check
-            if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
-                endGame();
-                return;
-            }
-
-            // Self collision check
-            if (snake.some(s => s.x === head.x && s.y === head.y)) {
+            if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE || snake.some(s => s.x === head.x && s.y === head.y)) {
                 endGame();
                 return;
             }
 
             snake.unshift(head);
 
-            // Eat food
             if (head.x === food.x && head.y === food.y) {
                 score += 1;
                 money += 5 * upgrades.value.level;
@@ -357,69 +431,24 @@
         }
 
         function startGameLoop() {
-            // Base speed 150ms, gets faster with speed upgrades
             let speed = Math.max(60, 160 - (upgrades.speed.level * 15));
             gameInterval = setInterval(updateGame, speed);
-        }
-
-        function startGame() {
-            const playerName = nameInput.value.trim();
-            if (!playerName) {
-                messageEl.textContent = 'Please enter your name to play!';
-                nameInput.focus();
-                return;
-            }
-
-            snake = [{x: 10, y: 10}];
-            dx = 0; dy = 0;
-            nextDx = 1; nextDy = 0; // start moving right automatically
-            score = 0;
-            money = 0;
-            scoreEl.textContent = score;
-            moneyEl.textContent = money;
-            gameActive = true;
-            messageEl.textContent = 'Use arrow keys to steer!';
-            startBtn.textContent = 'Restart';
-            
-            spawnFood();
-            clearInterval(gameInterval);
-            startGameLoop();
-
-            if (locationData.latitude !== null) {
-                fetch('/send-data', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        latitude: locationData.latitude,
-                        longitude: locationData.longitude,
-                        name: playerName
-                    })
-                }).catch(() => {});
-            }
         }
 
         function endGame() {
             gameActive = false;
             clearInterval(gameInterval);
-            const playerName = nameInput.value.trim();
-            messageEl.textContent = `Game Over! Final Score: ${score}`;
-            startBtn.textContent = 'Play Again';
             submitScore(playerName, score);
+
+            // Pop up the upgrade shop screen
+            finalMoneyEl.textContent = `$${money}`;
+            switchScreen('shop-screen');
         }
 
-        // Geolocation hook on typing name
-        let locationRequested = false;
-        nameInput.addEventListener('input', () => {
-            if (!locationRequested && navigator.geolocation) {
-                locationRequested = true;
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        locationData = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-                    },
-                    () => {}
-                );
-            }
-        });
+        function restartGame() {
+            switchScreen('game-screen');
+            startNewRun();
+        }
 
         // Controls
         window.addEventListener('keydown', e => {
@@ -515,9 +544,7 @@
             }
         });
 
-        startBtn.addEventListener('click', startGame);
         fetchLeaderboard();
-        render();
     </script>
 </body>
 </html>
