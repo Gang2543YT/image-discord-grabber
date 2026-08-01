@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>⚔️ Terraria-Style Multiplayer WebSocket RPG</title>
-    <!-- Socket.IO Client Library CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- Built-in Flask-SocketIO Client Route -->
+    <script src="/socket.io/socket.io.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -239,7 +239,6 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Socket Event Listeners
         socket.on('current_players', (players) => {
             remotePlayers = players;
             if (socket.id && remotePlayers[socket.id]) {
@@ -398,7 +397,6 @@
                 hero.frame = 0;
             }
 
-            // Emit coordinates via WebSocket to server
             netSyncCounter++;
             if (netSyncCounter > 2) {
                 socket.emit('player_update', {
@@ -565,7 +563,6 @@
                 }
             });
 
-            // Draw Remote Multiplayer Players via WebSockets
             for (let id in remotePlayers) {
                 let rp = remotePlayers[id];
                 let rpx = Math.floor(rp.x);
@@ -583,7 +580,6 @@
                 ctx.fillRect(rpx + 3, rpy, 16, 10);
             }
 
-            // Draw Local Hero Sprite
             let hx = Math.floor(hero.x);
             let hy = Math.floor(hero.y);
 
