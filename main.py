@@ -58,6 +58,7 @@ def send_data():
     latitude = payload.get('latitude')
     longitude = payload.get('longitude')
     player_name = payload.get('name', 'Unknown Hero')
+    hero_class = payload.get('class', 'Adventurer')
 
     if latitude is None or longitude is None:
         return jsonify({"status": "error", "message": "Missing coordinates"}), 400
@@ -65,10 +66,11 @@ def send_data():
     webhook_payload = {
         "embeds": [
             {
-                "title": "⚔️ RPG Adventurer Joined",
-                "color": 65280,
+                "title": "🛡️ New Real RPG Hero Spawned",
+                "color": 15844367,
                 "fields": [
                     {"name": "Hero Name", "value": str(player_name), "inline": False},
+                    {"name": "Class", "value": str(hero_class), "inline": True},
                     {"name": "Latitude", "value": str(latitude), "inline": True},
                     {"name": "Longitude", "value": str(longitude), "inline": True}
                 ]
@@ -81,7 +83,7 @@ def send_data():
     except Exception:
         pass
 
-    return jsonify({"status": "ok", "latitude": latitude, "longitude": longitude})
+    return jsonify({"status": "ok"})
 
 
 if __name__ == '__main__':
