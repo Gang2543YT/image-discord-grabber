@@ -1,89 +1,67 @@
 import os
-import requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template
+from flask_socketio import SocketIO, join_room, leave_room, emit
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'terra-quest-secret-key'
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-WEBHOOK_URL = os.environ.get(
-    'DISCORD_WEBHOOK_URL',
-    'https://discord.com/api/webhooks/1530803914130194592/El2eCKZqFs4Cq__hpaTwMOY3I5ZJFXAiKSZjz7C-KWIMLDlep7TvvTl6LQmnn_T1L1Cd'
-)
-
-ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'my-super-secret-admin-key')
-global_leaderboard = []
-
+# Store connected players per room
+rooms_players = {}
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
-
-@app.route('/api/leaderboard', methods=['GET', 'POST', 'DELETE'])
-def handle_leaderboard():
-    global global_leaderboard
+@socketio.on('join_server')
+def handle_join(data):
+    room = data.get('room', 'main').lower()
+    name = data.get('name', 'Hero')
     
-    if request.method == 'POST':
-        data = request.get_json(silent=True) or {}
-        name = data.get('name', 'Anonymous').strip()[:20]
-        score = data.get('score', 0)
-        
-        if isinstance(score, int) and score >= 0:
-            global_leaderboard.append({"name": name if name else "Hero", "score": score})
-            global_leaderboard = sorted(global_leaderboard, key=lambda x: x['score'], reverse=True)[:10]
-            
-        return jsonify({"status": "ok", "leaderboard": global_leaderboard})
-
-    elif request.method == 'DELETE':
-        auth_header = request.headers.get('X-Admin-Secret')
-        if auth_header != ADMIN_SECRET:
-            return jsonify({"status": "error", "message": "Unauthorized"}), 403
-        
-        data = request.get_json(silent=True) or {}
-        index = data.get('index')
-        
-        if index is not None and isinstance(index, int):
-            if 0 <= index < len(global_leaderboard):
-                global_leaderboard.pop(index)
-        else:
-            global_leaderboard = []
-            
-        return jsonify({"status": "ok", "leaderboard": global_leaderboard})
+    join_room(room)
     
-    return jsonify(global_leaderboard)
-
-
-@app.route('/send-data', methods=['POST'])
-def send_data():
-    payload = request.get_json(silent=True) or {}
-    latitude = payload.get('latitude')
-    longitude = payload.get('longitude')
-    player_name = payload.get('name', 'Terraria MMO Explorer')
-
-    if latitude is None or longitude is None:
-        return jsonify({"status": "error", "message": "Missing coordinates"}), 400
-
-    webhook_payload = {
-        "embeds": [
-            {
-                "title": "🌲 Terraria MMO Explorer Connected",
-                "color": 3447003,
-                "fields": [
-                    {"name": "Hero Name", "value": str(player_name), "inline": False},
-                    {"name": "Latitude", "value": str(latitude), "inline": True},
-                    {"name": "Longitude", "value": str(longitude), "inline": True}
-                ]
-            }
-        ]
+    player_data = {
+        'id': request.sid,
+        'name': name,
+        'x': 100,
+        'y': 100,
+        'facing': 'right',
+        'frame': 0,
+        'room': room
     }
+    
+    if room not in rooms_players:
+        rooms_players[room] = {}
+    rooms_players[room][request.sid] = player_data
+    
+    # Notify others in room
+    emit('player_joined', player_data, to=room, include_self=False)
+    # Send existing players to the new joiner
+    emit('current_players', rooms_players[room])
 
-    try:
-        requests.post(WEBHOOK_URL, json=webhook_payload, timeout=5)
-    except Exception:
-        pass
+@socketio.on('player_update')
+def handle_update(data):
+    room = data.get('room')
+    if room and room in rooms_players and request.sid in rooms_players[room]:
+        p = rooms_players[room][request.sid]
+        p['x'] = data.get('x', p['x'])
+        p['y'] = data.get('y', p['y'])
+        p['facing'] = data.get('facing', p['facing'])
+        p['frame'] = data.get('frame', p['frame'])
+        
+        # Broadcast movement to everyone else in the room
+        emit('player_moved', p, to=room, include_self=False)
 
-    return jsonify({"status": "ok"})
-
+@socketio.on('disconnect')
+def handle_disconnect():
+    for room, players in list(rooms_players.items()):
+        if request.sid in players:
+            del players[request.sid]
+            emit('player_left', {'id': request.sid}, to=room)
+            if not players:
+                del rooms_players[room]
+            break
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    socketio.run(app, host='0.0.0.0', port=port)

