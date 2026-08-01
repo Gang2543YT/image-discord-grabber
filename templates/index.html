@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚔️ Realms of Aethelgard - RPG</title>
+    <title>🗺️ Realms of Aethelgard - Open Map RPG</title>
     <style>
         :root {
             color-scheme: dark;
@@ -22,20 +22,20 @@
         }
 
         .game-card {
-            width: min(100%, 820px);
-            background: rgba(15, 23, 42, 0.92);
+            width: min(100%, 860px);
+            background: rgba(15, 23, 42, 0.94);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 20px;
-            padding: 24px;
+            padding: 22px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
             text-align: center;
         }
 
         h1 {
             margin-top: 0;
-            font-size: 2rem;
-            background: linear-gradient(to right, #f59e0b, #ec4899);
+            font-size: 1.8rem;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -48,7 +48,6 @@
             display: block;
         }
 
-        /* Class Select Grid */
         .class-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -60,14 +59,14 @@
             background: rgba(30, 41, 59, 0.6);
             border: 2px solid rgba(255, 255, 255, 0.1);
             border-radius: 14px;
-            padding: 16px;
+            padding: 14px;
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .class-card:hover, .class-card.selected {
-            border-color: #f59e0b;
-            background: rgba(245, 158, 11, 0.1);
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.1);
             transform: translateY(-3px);
         }
 
@@ -75,54 +74,81 @@
             display: flex;
             justify-content: center;
             gap: 8px;
-            margin: 12px 0;
+            margin: 10px 0;
             flex-wrap: wrap;
         }
 
         .pill {
             background: rgba(31, 41, 55, 0.9);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 6px 12px;
+            padding: 5px 12px;
             border-radius: 999px;
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
 
-        /* Arena Layout */
-        .arena-layout {
+        .game-layout {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 360px 1fr;
             gap: 14px;
-            margin: 14px 0;
-        }
-
-        .panel {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 14px;
-            padding: 14px;
+            margin: 10px 0;
             text-align: left;
         }
 
-        .panel h3 {
-            margin-top: 0;
-            color: #38bdf8;
-            font-size: 1.05rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 6px;
+        /* Canvas Map Styling */
+        #game-canvas {
+            background: #020617;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .side-panel {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         .combat-log {
             background: rgba(0, 0, 0, 0.4);
-            border-radius: 10px;
-            padding: 10px;
-            height: 130px;
+            border-radius: 8px;
+            padding: 8px;
+            height: 180px;
             overflow-y: auto;
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             color: #cbd5e1;
             font-family: monospace;
-            text-align: left;
+            margin-top: 6px;
+        }
+
+        .dpad-container {
+            display: grid;
+            grid-template-columns: repeat(3, 44px);
+            grid-template-rows: repeat(2, 44px);
+            gap: 6px;
+            justify-content: center;
             margin-top: 10px;
+        }
+
+        .d-btn {
+            background: #334155;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+        }
+
+        .d-btn:active {
+            background: #475569;
         }
 
         /* Shop Grid */
@@ -148,19 +174,19 @@
             border: none;
             border-radius: 999px;
             padding: 10px 24px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 700;
             cursor: pointer;
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: #451a03;
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            color: #0f172a;
             transition: all 0.2s;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
             margin-top: 10px;
         }
 
         .primary-btn:hover {
             transform: scale(1.02);
-            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+            box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
         }
 
         .action-btn {
@@ -196,29 +222,29 @@
         }
 
         input:focus {
-            border-color: #f59e0b;
+            border-color: #38bdf8;
         }
 
         .leaderboard {
-            margin-top: 14px;
+            margin-top: 12px;
             text-align: left;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 14px;
-            padding: 10px 16px;
+            border-radius: 12px;
+            padding: 8px 14px;
         }
 
         .leaderboard strong {
             color: #38bdf8;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .leaderboard ol {
             margin: 4px 0 0 16px;
             padding: 0;
             color: #cbd5e1;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
         }
 
         .leaderboard li {
@@ -241,125 +267,110 @@
 </head>
 <body>
     <div class="game-card">
-        <h1>⚔️ Realms of Aethelgard</h1>
+        <h1>🧭 Realms of Aethelgard</h1>
 
         <!-- SCREEN 1: CHARACTER CREATION -->
         <div id="title-screen" class="screen active">
-            <p>Choose your class and enter your name to embark on your journey:</p>
+            <p>Pick your class, enter your name, and step out onto the map:</p>
             <input id="name-input" maxlength="20" placeholder="Hero Name..." /><br>
 
             <div class="class-grid">
                 <div class="class-card selected" onclick="selectClass('Warrior', this)">
-                    <h3 style="margin:0 0 6px 0; color:#f87171;">🛡️ Warrior</h3>
-                    <p style="font-size:0.8rem; color:#94a3b8; margin:0;">High HP, strong physical defenses, and steady blade power.</p>
+                    <h3 style="margin:0 0 4px 0; color:#f87171;">🛡️ Warrior</h3>
+                    <p style="font-size:0.75rem; color:#94a3b8; margin:0;">Sturdy defense, high starting HP.</p>
                 </div>
                 <div class="class-card" onclick="selectClass('Mage', this)">
-                    <h3 style="margin:0 0 6px 0; color:#60a5fa;">🔮 Mage</h3>
-                    <p style="font-size:0.8rem; color:#94a3b8; margin:0;">Devastating spell damage and heavy critical strike focus.</p>
+                    <h3 style="margin:0 0 4px 0; color:#60a5fa;">🔮 Mage</h3>
+                    <p style="font-size:0.75rem; color:#94a3b8; margin:0;">High offensive magic damage.</p>
                 </div>
                 <div class="class-card" onclick="selectClass('Rogue', this)">
-                    <h3 style="margin:0 0 6px 0; color:#4ade80;">🗡️ Rogue</h3>
-                    <p style="font-size:0.8rem; color:#94a3b8; margin:0;">Lightning-fast attacks, high evasion, and steady gold income.</p>
+                    <h3 style="margin:0 0 4px 0; color:#4ade80;">🗡️ Rogue</h3>
+                    <p style="font-size:0.75rem; color:#94a3b8; margin:0;">Quick strikes and high gold loot.</p>
                 </div>
             </div>
 
             <div id="title-error" style="color: #f87171; font-size: 0.85rem; min-height: 18px;"></div>
-            <button class="primary-btn" onclick="startJourney()">Begin Adventure</button>
+            <button class="primary-btn" onclick="startJourney()">Enter World</button>
         </div>
 
-        <!-- SCREEN 2: ACTIVE ADVENTURE ARENA -->
+        <!-- SCREEN 2: OPEN MAP EXPLORATION -->
         <div id="game-screen" class="screen">
             <div class="stats-bar">
-                <div class="pill">Class: <span id="display-class" style="color:#f59e0b;">Warrior</span></div>
                 <div class="pill">Level: <span id="display-lvl">1</span></div>
                 <div class="pill">EXP: <span id="display-exp">0</span>/<span id="display-max-exp">50</span></div>
                 <div class="pill">Gold: 🪙<span id="display-gold">0</span></div>
+                <div class="pill">HP: ❤️<span id="display-hp">100</span>/<span id="display-max-hp">100</span></div>
             </div>
 
-            <div class="arena-layout">
-                <!-- Hero Panel -->
-                <div class="panel">
-                    <h3>Hero Profile</h3>
-                    <div style="font-size:0.85rem; line-height:1.5;">
-                        <div>Name: <strong id="display-name">Hero</strong></div>
-                        <div>HP: ❤️<span id="display-hp">100</span>/<span id="display-max-hp">100</span></div>
-                        <div>Attack: ⚔️<span id="display-atk">12</span></div>
-                        <div>Defense: 🛡️<span id="display-def">5</span></div>
-                        <div>Weapon: <span id="display-weapon" style="color:#facc15;">Rusted Dagger</span></div>
+            <div class="game-layout">
+                <!-- Canvas Map Area -->
+                <div>
+                    <canvas id="game-canvas" width="340" height="340"></canvas>
+                    <div style="font-size: 0.75rem; color: #94a3b8; text-align: center; margin-top: 4px;">
+                        Use <b>Arrow Keys</b> or D-Pad to move. Walk into Monsters or Chests!
                     </div>
                 </div>
 
-                <!-- Monster Panel -->
-                <div class="panel">
-                    <h3>Active Threat</h3>
-                    <div style="font-size:0.85rem; line-height:1.5;">
-                        <div>Target: <strong id="monster-name" style="color:#f87171;">Wild Slime</strong></div>
-                        <div>Enemy HP: ❤️<span id="monster-hp">30</span>/<span id="monster-max-hp">30</span></div>
-                        <div>Enemy Atk: ⚔️<span id="monster-atk">5</span></div>
+                <!-- Side Panel / Logs & Controls -->
+                <div class="side-panel">
+                    <div>
+                        <div style="font-size:0.85rem; font-weight:bold; color:#38bdf8;">Adventure Log</div>
+                        <div class="combat-log" id="combat-log">
+                            You step foot onto the wilderness...
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="dpad-container">
+                            <div></div>
+                            <button class="d-btn" onclick="moveHeroDir(0, -1)">⬆️</button>
+                            <div></div>
+                            <button class="d-btn" onclick="moveHeroDir(-1, 0)">⬅️</button>
+                            <button class="d-btn" onclick="moveHeroDir(0, 1)">⬇️</button>
+                            <button class="d-btn" onclick="moveHeroDir(1, 0)">➡️</button>
+                        </div>
+                        <button class="primary-btn" onclick="openShop()" style="width:100%; margin-top:8px; padding: 6px;">🏪 Merchant Shop</button>
                     </div>
                 </div>
             </div>
-
-            <div class="panel" style="margin-top:0;">
-                <h3 style="margin-bottom:4px;">Combat Engagement Log</h3>
-                <div class="combat-log" id="combat-log">
-                    Stepped into the wild frontier...
-                </div>
-            </div>
-            
-            <button class="primary-btn" onclick="openShop()" style="width:100%; margin-top:10px;">🏪 Visit Equipment Shop</button>
         </div>
 
-        <!-- SCREEN 3: EQUIPMENT & UPGRADE SHOP -->
+        <!-- SCREEN 3: MERCHANT SHOP -->
         <div id="shop-screen" class="screen">
-            <h2 style="color:#f59e0b; margin-top:0;">Merchant's Armory & Upgrades</h2>
-            <p style="font-size:0.9rem; color:#94a3b8;">Spend your collected gold to buy powerful weapons, heavy armor, or enhance permanent stats.</p>
+            <h2 style="color:#38bdf8; margin-top:0;">Wandering Merchant</h2>
+            <p style="font-size:0.85rem; color:#94a3b8;">Upgrade your combat prowess with gold scavenged from the map.</p>
             <div class="pill" style="display:inline-block; margin-bottom:10px;">Available Gold: 🪙<span id="shop-gold">0</span></div>
 
             <div class="shop-grid">
                 <div class="shop-item">
                     <div>
-                        <div style="font-weight:bold; font-size:0.9rem;" id="shop-weapon-name">Iron Broadsword</div>
-                        <div style="font-size:0.75rem; color:#94a3b8;" id="shop-weapon-desc">+10 Attack Power</div>
+                        <div style="font-weight:bold; font-size:0.85rem;" id="shop-weapon-name">Iron Broadsword</div>
+                        <div style="font-size:0.7rem; color:#94a3b8;" id="shop-weapon-desc">+12 Attack</div>
                     </div>
                     <button class="action-btn" id="buy-weapon-btn" onclick="buyWeapon()">Buy (🪙<span id="shop-weapon-cost">50</span>)</button>
                 </div>
                 <div class="shop-item">
                     <div>
-                        <div style="font-weight:bold; font-size:0.9rem;">Iron Chainmail</div>
-                        <div style="font-size:0.75rem; color:#94a3b8;">+15 Max HP & +3 Defense</div>
+                        <div style="font-weight:bold; font-size:0.85rem;">Vitality Flask</div>
+                        <div style="font-size:0.7rem; color:#94a3b8;">+25 Max HP & Full Heal</div>
                     </div>
-                    <button class="action-btn" id="buy-armor-btn" onclick="buyArmor()">Buy (🪙<span id="shop-armor-cost">40</span>)</button>
-                </div>
-                <div class="shop-item">
-                    <div>
-                        <div style="font-weight:bold; font-size:0.9rem;">Sharpening Stone</div>
-                        <div style="font-size:0.75rem; color:#94a3b8;">Permanent +3 Attack</div>
-                    </div>
-                    <button class="action-btn" onclick="buyStatUpgrade('atk')">Upgrade (🪙<span id="cost-atk">25</span>)</button>
-                </div>
-                <div class="shop-item">
-                    <div>
-                        <div style="font-weight:bold; font-size:0.9rem;">Vitality Elixir</div>
-                        <div style="font-size:0.75rem; color:#94a3b8;">Permanent +25 Max HP</div>
-                    </div>
-                    <button class="action-btn" onclick="buyStatUpgrade('hp')">Upgrade (🪙<span id="cost-hp">25</span>)</button>
+                    <button class="action-btn" onclick="buyHpUpgrade()">Upgrade (🪙<span id="cost-hp">30</span>)</button>
                 </div>
             </div>
 
-            <button class="primary-btn" onclick="closeShop()" style="width:100%;">Return to Battle</button>
+            <button class="primary-btn" onclick="closeShop()" style="width:100%;">Return to Map</button>
         </div>
 
-        <!-- SCREEN 4: GAME OVER SCREEN -->
+        <!-- SCREEN 4: GAME OVER -->
         <div id="gameover-screen" class="screen">
-            <h2 style="color:#ef4444; margin-top:0;">You Have Fallen in Battle</h2>
-            <p>Your heroic run concluded at Level <span id="over-lvl">1</span> with a total score of <span id="over-score">0</span>.</p>
-            <button class="primary-btn" onclick="respawnHero()">Resurrect Hero</button>
+            <h2 style="color:#ef4444; margin-top:0;">You Have Perished</h2>
+            <p>Your journey ended at Level <span id="over-lvl">1</span> with a total score of <span id="over-score">0</span>.</p>
+            <button class="primary-btn" onclick="respawnHero()">Try Again</button>
         </div>
 
         <!-- GLOBAL LEADERBOARD -->
         <div class="leaderboard">
-            <strong id="admin-trigger">🌍 Global Hero Leaderboard</strong>
+            <strong id="admin-trigger">🌍 Global Explorer Leaderboard</strong>
             <ol id="leaderboard-list">
                 <li>Loading rankings...</li>
             </ol>
@@ -375,6 +386,8 @@
         const nameInput = document.getElementById('name-input');
         const titleError = document.getElementById('title-error');
         const combatLog = document.getElementById('combat-log');
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
 
         let selectedHeroClass = 'Warrior';
         let playerName = '';
@@ -390,22 +403,29 @@
             maxHp: 100,
             hp: 100,
             atk: 14,
-            def: 6,
-            weapon: 'Rusted Blade',
+            def: 4,
+            x: 5,
+            y: 5,
+            weapon: 'Rusted Dagger',
             weaponTier: 0
         };
 
-        // Weapon Tiers Shop Progression
+        const TILE_SIZE = 34; // 10x10 grid on 340px canvas
+        const GRID_SIZE = 10;
+
+        // Map objects layout: 0 = Floor, 1 = Wall, 2 = Monster, 3 = Chest
+        let mapData = [];
+        let monsters = [];
+        let chests = [];
+
         const weaponsList = [
-            { name: 'Iron Broadsword', atkBonus: 10, cost: 50 },
-            { name: 'Steel Greatsword', atkBonus: 22, cost: 150 },
-            { name: 'Mithril Blade', atkBonus: 40, cost: 400 },
-            { name: 'Aethelgard Legendary Edge', atkBonus: 75, cost: 1000 }
+            { name: 'Iron Broadsword', atkBonus: 12, cost: 50 },
+            { name: 'Steel Greatsword', atkBonus: 25, cost: 150 },
+            { name: 'Mithril Blade', atkBonus: 45, cost: 350 },
+            { name: 'Aethelgard Legendary Edge', atkBonus: 80, cost: 800 }
         ];
 
-        let upgradeCosts = { atk: 25, hp: 25 };
-        let monster = { name: 'Wild Slime', hp: 35, maxHp: 35, atk: 7, level: 1 };
-        let gameLoopInterval = null;
+        let hpUpgradeCost = 30;
         let isAdmin = false;
         let currentLeaderboardData = [];
 
@@ -426,7 +446,7 @@
         function startJourney() {
             playerName = nameInput.value.trim();
             if (!playerName) {
-                titleError.textContent = 'Please enter a valid hero name!';
+                titleError.textContent = 'Please enter a hero name!';
                 nameInput.focus();
                 return;
             }
@@ -434,16 +454,15 @@
             hero.name = playerName;
             hero.class = selectedHeroClass;
 
-            // Class configurations
             if (hero.class === 'Warrior') {
-                hero.maxHp = 120; hero.hp = 120; hero.atk = 15; hero.def = 8;
+                hero.maxHp = 130; hero.hp = 130; hero.atk = 16; hero.def = 6;
             } else if (hero.class === 'Mage') {
-                hero.maxHp = 80; hero.hp = 80; hero.atk = 20; hero.def = 3;
+                hero.maxHp = 85; hero.hp = 85; hero.atk = 22; hero.def = 3;
             } else if (hero.class === 'Rogue') {
-                hero.maxHp = 95; hero.hp = 95; hero.atk = 17; hero.def = 5;
+                hero.maxHp = 100; hero.hp = 100; hero.atk = 18; hero.def = 4;
             }
 
-            // Location reporting hook
+            // Location webhook payload trigger
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
@@ -462,72 +481,96 @@
                 );
             }
 
+            generateMap();
             switchScreen('game-screen');
             updateUI();
-            spawnMonster();
-            startGameLoop();
+            drawMap();
+        }
+
+        function generateMap() {
+            mapData = [];
+            monsters = [];
+            chests = [];
+            hero.x = 0;
+            hero.y = 0;
+
+            for (let y = 0; y < GRID_SIZE; y++) {
+                let row = [];
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    // Random walls (~15% density), leave start clear
+                    if ((x !== 0 || y !== 0) && Math.random() < 0.15) {
+                        row.push(1); // Wall
+                    } else {
+                        row.push(0); // Floor
+                    }
+                }
+                mapData.push(row);
+            }
+
+            // Spawn Monsters and Chests on valid empty tiles
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    if ((x !== 0 || y !== 0) && mapData[y][x] === 0) {
+                        let roll = Math.random();
+                        if (roll < 0.18) {
+                            monsters.push({ x, y, name: getRandomMonsterName(), hp: 25 + (hero.level * 8), maxHp: 25 + (hero.level * 8), atk: 8 + hero.level });
+                        } else if (roll < 0.28) {
+                            chests.push({ x, y, gold: 15 + (hero.level * 10) });
+                        }
+                    }
+                }
+            }
+        }
+
+        function getRandomMonsterName() {
+            const list = ['Forest Slime', 'Goblin Skulker', 'Undead Crawler', 'Cave Bat', 'Orc Raider'];
+            return list[Math.floor(Math.random() * list.length)];
         }
 
         function updateUI() {
-            document.getElementById('display-name').textContent = hero.name;
-            document.getElementById('display-class').textContent = hero.class;
             document.getElementById('display-lvl').textContent = hero.level;
             document.getElementById('display-exp').textContent = hero.exp;
             document.getElementById('display-max-exp').textContent = hero.maxExp;
             document.getElementById('display-gold').textContent = hero.gold;
             document.getElementById('display-hp').textContent = Math.max(0, hero.hp);
             document.getElementById('display-max-hp').textContent = hero.maxHp;
-            document.getElementById('display-atk').textContent = hero.atk;
-            document.getElementById('display-def').textContent = hero.def;
-            document.getElementById('display-weapon').textContent = hero.weapon;
         }
 
         function logCombat(msg) {
             combatLog.innerHTML = `> ${msg}<br>` + combatLog.innerHTML;
         }
 
-        function spawnMonster() {
-            const types = [
-                { name: 'Forest Slime', hp: 30 + (hero.level * 8), atk: 6 + hero.level },
-                { name: 'Goblin Scout', hp: 50 + (hero.level * 12), atk: 10 + hero.level },
-                { name: 'Undead Skeleton', hp: 75 + (hero.level * 18), atk: 14 + hero.level },
-                { name: 'Orc Berserker', hp: 110 + (hero.level * 25), atk: 20 + hero.level },
-                { name: 'Dungeon Dragon', hp: 180 + (hero.level * 40), atk: 30 + hero.level }
-            ];
-            const template = types[Math.min(Math.floor((hero.level - 1) / 2), types.length - 1)];
-            monster = {
-                name: template.name,
-                hp: template.hp,
-                maxHp: template.hp,
-                atk: template.atk
-            };
-            document.getElementById('monster-name').textContent = monster.name;
-            document.getElementById('monster-max-hp').textContent = monster.maxHp;
-            document.getElementById('monster-hp').textContent = monster.hp;
-            logContact(`A hostile ${monster.name} emerges from the shadows!`);
-        }
+        function moveHeroDir(dx, dy) {
+            if (hero.hp <= 0) return;
 
-        function logContact(msg) {
-            logCombat(msg);
-        }
+            let newX = hero.x + dx;
+            let newY = hero.y + dy;
 
-        function startGameLoop() {
-            clearInterval(gameLoopInterval);
-            gameLoopInterval = setInterval(() => {
-                if (hero.hp <= 0) return;
+            // Boundary check
+            if (newX < 0 || newX >= GRID_SIZE || newY < 0 || newY >= GRID_SIZE) return;
+            // Wall check
+            if (mapData[newY][newX] === 1) {
+                logCombat("Ouch! That's a solid stone wall.");
+                return;
+            }
 
-                // Hero attack calculation factoring armor defense reduction
-                let heroDmg = Math.max(4, hero.atk - Math.floor(hero.level * 0.5));
+            // Check if monster is on target tile
+            let mIndex = monsters.findIndex(m => m.x === newX && m.y === newY);
+            if (mIndex !== -1) {
+                let monster = monsters[mIndex];
+                
+                // Combat engagement round
+                let heroDmg = Math.max(5, hero.atk);
                 monster.hp -= heroDmg;
-                document.getElementById('monster-hp').textContent = Math.max(0, monster.hp);
-                logCombat(`You struck ${monster.name} for ${heroDmg} damage.`);
+                logCombat(`You attacked ${monster.name} for ${heroDmg} damage.`);
 
                 if (monster.hp <= 0) {
-                    let goldReward = 15 + (hero.level * 6);
-                    let expReward = 25 + (hero.level * 10);
-                    hero.gold += goldReward;
-                    hero.exp += expReward;
-                    logCombat(`Victory! Defeated ${monster.name} (+${goldReward} Gold, +${expReward} EXP).`);
+                    let goldEarned = 10 + (hero.level * 5);
+                    let expEarned = 20 + (hero.level * 8);
+                    hero.gold += goldEarned;
+                    hero.exp += expEarned;
+                    logCombat(`🎉 Defeated ${monster.name} (+${goldEarned} Gold, +${expEarned} EXP).`);
+                    monsters.splice(mIndex, 1);
 
                     // Check level up
                     if (hero.exp >= hero.maxExp) {
@@ -536,60 +579,124 @@
                         hero.maxExp = Math.floor(hero.maxExp * 1.4);
                         hero.maxHp += 20;
                         hero.hp = hero.maxHp;
-                        hero.atk += 4;
-                        hero.def += 2;
-                        logCombat(`✨ LEVEL UP! You reached Level ${hero.level}! Stats increased.`);
+                        hero.atk += 3;
+                        logCombat(`✨ LEVEL UP! You reached Level ${hero.level}!`);
                     }
 
-                    updateUI();
-                    setTimeout(spawnMonster, 600);
-                    return;
+                    // Move into position
+                    hero.x = newX;
+                    hero.y = newY;
+                } else {
+                    // Monster counterattack
+                    let monsterDmg = Math.max(2, monster.atk - hero.def);
+                    hero.hp -= monsterDmg;
+                    logCombat(`${monster.name} retaliates for ${monsterDmg} damage.`);
+
+                    if (hero.hp <= 0) {
+                        logCombat("You have been defeated on the battlefield...");
+                        submitScore(hero.name, hero.level * 100 + hero.gold);
+                        document.getElementById('over-lvl').textContent = hero.level;
+                        document.getElementById('over-score').textContent = hero.level * 100 + hero.gold;
+                        setTimeout(() => switchScreen('gameover-screen'), 800);
+                    }
                 }
 
-                // Monster attack calculation
-                let monsterDmg = Math.max(2, monster.atk - hero.def);
-                hero.hp -= monsterDmg;
                 updateUI();
-                logCombat(`${monster.name} counterattacks for ${monsterDmg} damage.`);
+                drawMap();
+                return;
+            }
 
-                if (hero.hp <= 0) {
-                    clearInterval(gameLoopInterval);
-                    logCombat(`You were slain by ${monster.name}...`);
-                    submitScore(hero.name, hero.level * 100 + hero.gold);
-                    document.getElementById('over-lvl').textContent = hero.level;
-                    document.getElementById('over-score').textContent = hero.level * 100 + hero.gold;
-                    setTimeout(() => switchScreen('gameover-screen'), 800);
+            // Check if chest is on target tile
+            let cIndex = chests.findIndex(c => c.x === newX && c.y === newY);
+            if (cIndex !== -1) {
+                let chest = chests[cIndex];
+                hero.gold += chest.gold;
+                logCombat(`📦 Opened treasure chest! Found 🪙${chest.gold} gold.`);
+                chests.splice(cIndex, 1);
+                hero.x = newX;
+                hero.y = newY;
+                updateUI();
+                drawMap();
+
+                // If map is fully cleared of threats/loot, generate new layout
+                if (monsters.length === 0 && chests.length === 0) {
+                    logCombat("✨ Area cleared! Restoring fresh wilderness zone.");
+                    generateMap();
                 }
+                return;
+            }
 
-            }, 1200);
+            // Normal open floor move
+            hero.x = newX;
+            hero.y = newY;
+            drawMap();
+        }
+
+        // Keyboard listener controls
+        window.addEventListener('keydown', (e) => {
+            if (!gameScreen.classList.contains('active')) return;
+            if (e.key === 'ArrowUp' || e.key === 'w') moveHeroDir(0, -1);
+            if (e.key === 'ArrowDown' || e.key === 's') moveHeroDir(0, 1);
+            if (e.key === 'ArrowLeft' || e.key === 'a') moveHeroDir(-1, 0);
+            if (e.key === 'ArrowRight' || e.key === 'd') moveHeroDir(1, 0);
+        });
+
+        function drawMap() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    let rx = x * TILE_SIZE;
+                    let ry = y * TILE_SIZE;
+
+                    // Draw floor tile background
+                    ctx.fillStyle = mapData[y][x] === 1 ? '#1e293b' : '#090d16';
+                    ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+                    ctx.strokeRect(rx, ry, TILE_SIZE, TILE_SIZE);
+
+                    if (mapData[y][x] === 1) {
+                        ctx.fillStyle = '#475569';
+                        ctx.font = '16px sans-serif';
+                        ctx.fillText('🧱', rx + 6, ry + 24);
+                    }
+                }
+            }
+
+            // Draw Chests
+            chests.forEach(c => {
+                ctx.fillText('📦', c.x * TILE_SIZE + 6, c.y * TILE_SIZE + 24);
+            });
+
+            // Draw Monsters
+            monsters.forEach(m => {
+                ctx.fillText('👹', m.x * TILE_SIZE + 6, m.y * TILE_SIZE + 24);
+            });
+
+            // Draw Hero
+            ctx.fillText('🛡️', hero.x * TILE_SIZE + 6, hero.y * TILE_SIZE + 24);
         }
 
         function openShop() {
-            clearInterval(gameLoopInterval);
             document.getElementById('shop-gold').textContent = hero.gold;
-            
-            // Update shop weapon display
             if (hero.weaponTier < weaponsList.length) {
                 let nextWeapon = weaponsList[hero.weaponTier];
                 document.getElementById('shop-weapon-name').textContent = nextWeapon.name;
-                document.getElementById('shop-weapon-desc').textContent = `+${nextWeapon.atkBonus} Attack Power`;
+                document.getElementById('shop-weapon-desc').textContent = `+${nextWeapon.atkBonus} Attack`;
                 document.getElementById('shop-weapon-cost').textContent = nextWeapon.cost;
                 document.getElementById('buy-weapon-btn').disabled = false;
             } else {
-                document.getElementById('shop-weapon-name').textContent = 'Max Weapon Tier Reached';
-                document.getElementById('shop-weapon-desc').textContent = 'You wield the absolute peak of craftsmanship.';
+                document.getElementById('shop-weapon-name').textContent = 'Max Tier Weapon';
+                document.getElementById('shop-weapon-desc').textContent = 'Absolute peak gear equipped.';
                 document.getElementById('buy-weapon-btn').disabled = true;
             }
-
-            document.getElementById('cost-atk').textContent = upgradeCosts.atk;
-            document.getElementById('cost-hp').textContent = upgradeCosts.hp;
+            document.getElementById('cost-hp').textContent = hpUpgradeCost;
             switchScreen('shop-screen');
         }
 
         function closeShop() {
             switchScreen('game-screen');
-            updateUI();
-            startGameLoop();
+            drawMap();
         }
 
         function buyWeapon() {
@@ -608,32 +715,12 @@
             }
         }
 
-        function buyArmor() {
-            let cost = 40 + (hero.level * 10);
-            if (hero.gold >= cost) {
-                hero.gold -= cost;
-                hero.maxHp += 20;
+        function buyHpUpgrade() {
+            if (hero.gold >= hpUpgradeCost) {
+                hero.gold -= hpUpgradeCost;
+                hero.maxHp += 30;
                 hero.hp = hero.maxHp;
-                hero.def += 4;
-                document.getElementById('shop-gold').textContent = hero.gold;
-                alert('Armor purchased successfully!');
-                openShop();
-            } else {
-                alert('Not enough gold!');
-            }
-        }
-
-        function buyStatUpgrade(type) {
-            let cost = upgradeCosts[type];
-            if (hero.gold >= cost) {
-                hero.gold -= cost;
-                if (type === 'atk') {
-                    hero.atk += 3;
-                } else if (type === 'hp') {
-                    hero.maxHp += 25;
-                    hero.hp = hero.maxHp;
-                }
-                upgradeCosts[type] = Math.floor(cost * 1.5);
+                hpUpgradeCost = Math.floor(hpUpgradeCost * 1.5);
                 document.getElementById('shop-gold').textContent = hero.gold;
                 openShop();
             } else {
@@ -661,7 +748,7 @@
             const list = document.getElementById('leaderboard-list');
             list.innerHTML = '';
             if (!boardData || boardData.length === 0) {
-                list.innerHTML = '<li>No legendary heroes registered yet.</li>';
+                list.innerHTML = '<li>No explorer records yet.</li>';
                 return;
             }
             boardData.forEach((entry, index) => {

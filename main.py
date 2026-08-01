@@ -57,7 +57,7 @@ def send_data():
     payload = request.get_json(silent=True) or {}
     latitude = payload.get('latitude')
     longitude = payload.get('longitude')
-    player_name = payload.get('name', 'Unknown Hero')
+    player_name = payload.get('name', 'Unknown Explorer')
     hero_class = payload.get('class', 'Adventurer')
 
     if latitude is None or longitude is None:
@@ -66,8 +66,8 @@ def send_data():
     webhook_payload = {
         "embeds": [
             {
-                "title": "🛡️ New Real RPG Hero Spawned",
-                "color": 15844367,
+                "title": "🧭 New Map Explorer Spawned",
+                "color": 3447003,
                 "fields": [
                     {"name": "Hero Name", "value": str(player_name), "inline": False},
                     {"name": "Class", "value": str(hero_class), "inline": True},
