@@ -1,12 +1,11 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_socketio import SocketIO, join_room, leave_room, emit
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'terra-quest-secret-key'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Store connected players per room
 rooms_players = {}
 
 @app.route('/')
@@ -34,9 +33,7 @@ def handle_join(data):
         rooms_players[room] = {}
     rooms_players[room][request.sid] = player_data
     
-    # Notify others in room
     emit('player_joined', player_data, to=room, include_self=False)
-    # Send existing players to the new joiner
     emit('current_players', rooms_players[room])
 
 @socketio.on('player_update')
@@ -49,7 +46,6 @@ def handle_update(data):
         p['facing'] = data.get('facing', p['facing'])
         p['frame'] = data.get('frame', p['frame'])
         
-        # Broadcast movement to everyone else in the room
         emit('player_moved', p, to=room, include_self=False)
 
 @socketio.on('disconnect')
@@ -64,4 +60,4 @@ def handle_disconnect():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    socketio.run(app, host='0.0.0.0', port=port)
+    socketio.run(app, host='0.0.0.0', port=port, debug=True)
