@@ -1,10 +1,13 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, join_room, leave_room, emit
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'terra-quest-secret-key'
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 rooms_players = {}
 
