@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>⚔️ Terraria-Style Multiplayer WebSocket RPG</title>
-    <!-- Official Socket.IO Client CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * {
@@ -27,6 +26,7 @@
             image-rendering: crisp-edges;
             width: 100vw;
             height: 100vh;
+            cursor: crosshair;
         }
         .screen {
             position: absolute;
@@ -112,15 +112,59 @@
             display: flex;
             gap: 15px;
         }
-        .controls-overlay {
+        /* HOTBAR / INVENTORY UI */
+        #hotbar {
             position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
+            display: none;
+            gap: 8px;
+            z-index: 5;
+            pointer-events: auto;
+        }
+        #hotbar.active {
+            display: flex;
+        }
+        .slot {
+            width: 50px;
+            height: 50px;
             background: rgba(15, 23, 42, 0.9);
             border: 3px solid #334155;
-            padding: 10px 20px;
-            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            position: relative;
+            box-shadow: 3px 3px 0px rgba(0,0,0,0.5);
+            cursor: pointer;
+        }
+        .slot.selected {
+            border-color: #38bdf8;
+            background: rgba(30, 41, 59, 0.95);
+        }
+        .slot .icon {
+            font-size: 1.2rem;
+        }
+        .slot .count {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 0.7rem;
+            color: #f8fafc;
+            font-weight: bold;
+        }
+        .controls-overlay {
+            position: absolute;
+            bottom: 85px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.9);
+            border: 3px solid #334155;
+            padding: 8px 16px;
+            font-size: 0.85rem;
             color: #cbd5e1;
             text-align: center;
             pointer-events: none;
@@ -135,16 +179,16 @@
 </head>
 <body>
 
-    <!-- START MENU SCREEN -->
+    <!-- START MENU -->
     <div id="title-screen" class="screen active">
         <h1>TERRA-QUEST MMO</h1>
-        <p>Live WebSocket Multiplayer Terraria Overworld RPG</p>
+        <p>Mine blocks, collect materials, build, and explore with friends!</p>
         <input id="name-input" maxlength="15" placeholder="Hero Name..." /><br>
         <input id="room-input" maxlength="15" placeholder="Server Room (e.g. alpha)" value="main" /><br>
         <button class="pixel-btn" onclick="connectToServer()">JOIN WORLD</button>
     </div>
 
-    <!-- HUD OVERLAYS -->
+    <!-- HUD -->
     <div id="hud">
         <div class="hud-box">
             <span>🛡️ <span id="hud-name">Hero</span></span>
@@ -156,16 +200,33 @@
     </div>
 
     <div id="controls-hint" class="controls-overlay">
-        Move: <b>A / D</b> or <b>Left / Right</b> &nbsp;|&nbsp; Jump: <b>W, Space, Up</b> &nbsp;|&nbsp; See connected online players live!
+        Move: <b>A/D</b> | Jump: <b>W/Space</b> | <b>Left-Click</b>: Mine Block | <b>Right-Click</b>: Place Block | Select: <b>1, 2, 3</b>
     </div>
 
-    <!-- MAIN GAME CANVAS -->
+    <!-- HOTBAR INVENTORY -->
+    <div id="hotbar">
+        <div class="slot selected" id="slot-0" onclick="selectSlot(0)">
+            <span class="icon">🟫</span>
+            <span class="count" id="count-1">0</span>
+        </div>
+        <div class="slot" id="slot-1" onclick="selectSlot(1)">
+            <span class="icon">⬜</span>
+            <span class="count" id="count-2">0</span>
+        </div>
+        <div class="slot" id="slot-2" onclick="selectSlot(2)">
+            <span class="icon">🟩</span>
+            <span class="count" id="count-3">0</span>
+        </div>
+    </div>
+
+    <!-- CANVAS -->
     <canvas id="game-canvas"></canvas>
 
     <script>
         const socket = io();
         const titleScreen = document.getElementById('title-screen');
         const hud = document.getElementById('hud');
+        const hotbar = document.getElementById('hotbar');
         const controlsHint = document.getElementById('controls-hint');
         const nameInput = document.getElementById('name-input');
         const roomInput = document.getElementById('room-input');
@@ -196,6 +257,15 @@
         let remotePlayers = {}; 
         let currentRoom = 'main';
 
+        // Inventory System
+        let inventory = {
+            1: 0, // Dirt
+            2: 0, // Stone
+            3: 0  // Grass
+        };
+        let selectedSlotIndex = 0;
+        const hotbarMapping = [1, 2, 3]; // Maps slot index to tile ID
+
         let hero = {
             name: 'Hero',
             x: 100,
@@ -220,6 +290,14 @@
             atk: 15
         };
 
+        function selectSlot(index) {
+            selectedSlotIndex = index;
+            document.querySelectorAll('.slot').forEach((s, i) => {
+                if (i === index) s.classList.add('selected');
+                else s.classList.remove('selected');
+            });
+        }
+
         function connectToServer() {
             let name = nameInput.value.trim();
             if (name) hero.name = name;
@@ -234,6 +312,7 @@
             generateTerrain();
             titleScreen.classList.remove('active');
             hud.classList.add('active');
+            hotbar.classList.add('active');
             controlsHint.classList.add('active');
 
             requestAnimationFrame(gameLoop);
@@ -256,6 +335,12 @@
 
         socket.on('player_left', (data) => {
             delete remotePlayers[data.id];
+        });
+
+        socket.on('tile_updated', (data) => {
+            if (data.room === currentRoom) {
+                worldMap[data.y][data.x] = data.tile;
+            }
         });
 
         function generateTerrain() {
@@ -296,31 +381,19 @@
             for (let x = 10; x < WORLD_WIDTH - 5; x += Math.floor(Math.random() * 6) + 5) {
                 for (let y = 5; y < WORLD_HEIGHT - 2; y++) {
                     if (worldMap[y][x] === 0 && worldMap[y + 1][x] > 0) {
-                        let typeRoll = Math.random();
-                        if (typeRoll < 0.65) {
-                            entities.push({
-                                type: 'slime',
-                                x: x * TILE_SIZE,
-                                y: y * TILE_SIZE,
-                                width: 26,
-                                height: 20,
-                                vx: (Math.random() > 0.5 ? 1 : -1) * 1.2,
-                                vy: 0,
-                                hp: 35,
-                                maxHp: 35,
-                                color: Math.random() > 0.5 ? '#4ade80' : '#ec4899',
-                                jumpTimer: 0
-                            });
-                        } else if (typeRoll < 0.85) {
-                            entities.push({
-                                type: 'chest',
-                                x: x * TILE_SIZE,
-                                y: (y * TILE_SIZE) + 6,
-                                width: 26,
-                                height: 26,
-                                gold: 25 + Math.floor(Math.random() * 50)
-                            });
-                        }
+                        entities.push({
+                            type: 'slime',
+                            x: x * TILE_SIZE,
+                            y: y * TILE_SIZE,
+                            width: 26,
+                            height: 20,
+                            vx: (Math.random() > 0.5 ? 1 : -1) * 1.2,
+                            vy: 0,
+                            hp: 35,
+                            maxHp: 35,
+                            color: Math.random() > 0.5 ? '#4ade80' : '#ec4899',
+                            jumpTimer: 0
+                        });
                         break;
                     }
                 }
@@ -332,11 +405,67 @@
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
             keys[e.key] = true;
             keys[e.key.toLowerCase()] = true;
+
+            if (e.key === '1') selectSlot(0);
+            if (e.key === '2') selectSlot(1);
+            if (e.key === '3') selectSlot(2);
         });
+
         window.addEventListener('keyup', e => {
             keys[e.key] = false;
             keys[e.key.toLowerCase()] = false;
         });
+
+        // Mouse Mining and Placement Interactions
+        window.addEventListener('mousedown', e => {
+            if (titleScreen.classList.contains('active')) return;
+
+            let cameraX = hero.x - screenWidth / 2 + hero.width / 2;
+            let cameraY = hero.y - screenHeight / 2 + hero.height / 2;
+            cameraX = Math.max(0, Math.min(WORLD_WIDTH * TILE_SIZE - screenWidth, cameraX));
+            cameraY = Math.max(0, Math.min(WORLD_HEIGHT * TILE_SIZE - screenHeight, cameraY));
+
+            let worldMouseX = e.clientX + cameraX;
+            let worldMouseY = e.clientY + cameraY;
+
+            let tileX = Math.floor(worldMouseX / TILE_SIZE);
+            let tileY = Math.floor(worldMouseY / TILE_SIZE);
+
+            if (tileX < 0 || tileX >= WORLD_WIDTH || tileY < 0 || tileY >= WORLD_HEIGHT) return;
+
+            // Check distance from player (reach limit)
+            let dist = Math.hypot((hero.x + hero.width/2) - worldMouseX, (hero.y + hero.height/2) - worldMouseY);
+            if (dist > 140) return; // Out of reach
+
+            if (e.button === 0) {
+                // Left Click: Mine Block
+                let currentTile = worldMap[tileY][tileX];
+                if (currentTile > 0) {
+                    inventory[currentTile] = (inventory[currentTile] || 0) + 1;
+                    worldMap[tileY][tileX] = 0;
+                    socket.emit('update_tile', { room: currentRoom, x: tileX, y: tileY, tile: 0 });
+                    particles.push({ x: tileX * TILE_SIZE, y: tileY * TILE_SIZE, text: '+1', life: 30, color: '#38bdf8' });
+                }
+            } else if (e.button === 2) {
+                // Right Click: Place Block
+                let activeTileType = hotbarMapping[selectedSlotIndex];
+                if (worldMap[tileY][tileX] === 0 && inventory[activeTileType] > 0) {
+                    // Make sure player isn't standing directly inside the placed tile
+                    let pBox = { x: hero.x, y: hero.y, w: hero.width, h: hero.height };
+                    let tBox = { x: tileX * TILE_SIZE, y: tileY * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
+                    
+                    let overlapping = !(pBox.x + pBox.w < tBox.x || pBox.x > tBox.x + tBox.w || pBox.y + pBox.h < tBox.y || pBox.y > tBox.y + tBox.h);
+                    
+                    if (!overlapping) {
+                        inventory[activeTileType]--;
+                        worldMap[tileY][tileX] = activeTileType;
+                        socket.emit('update_tile', { room: currentRoom, x: tileX, y: tileY, tile: activeTileType });
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('contextmenu', e => e.preventDefault()); // Prevent context menu on right click
 
         function checkCollision(nx, ny, w, h) {
             let startX = Math.floor(nx / TILE_SIZE);
@@ -411,7 +540,6 @@
 
             for (let i = entities.length - 1; i >= 0; i--) {
                 let ent = entities[i];
-
                 if (ent.type === 'slime') {
                     ent.jumpTimer++;
                     if (ent.jumpTimer > 80 && Math.abs(hero.x - ent.x) < 300) {
@@ -444,38 +572,17 @@
                         if (ent.hp <= 0) {
                             let goldDrop = 15 + Math.floor(Math.random() * 20);
                             hero.gold += goldDrop;
-                            hero.exp += 25;
                             particles.push({ x: ent.x, y: ent.y - 10, text: `+${goldDrop}G`, life: 45, color: '#fbbf24' });
                             entities.splice(i, 1);
-
-                            if (hero.exp >= hero.maxExp) {
-                                hero.level++;
-                                hero.exp = 0;
-                                hero.maxExp = Math.floor(hero.maxExp * 1.3);
-                                hero.maxHp += 20;
-                                hero.hp = hero.maxHp;
-                                hero.atk += 5;
-                            }
                         } else {
                             hero.hp -= 8;
                             hero.vy = -5;
                             hero.vx = hero.facing === 'right' ? -4 : 4;
                             if (hero.hp <= 0) {
-                                alert("You were defeated in the overworld!");
+                                alert("You were defeated!");
                                 location.reload();
                             }
                         }
-                    }
-                } else if (ent.type === 'chest') {
-                    if (
-                        hero.x < ent.x + ent.width &&
-                        hero.x + hero.width > ent.x &&
-                        hero.y < ent.y + ent.height &&
-                        hero.y + hero.height > ent.y
-                    ) {
-                        hero.gold += ent.gold;
-                        particles.push({ x: ent.x, y: ent.y - 15, text: `+🪙${ent.gold}`, life: 50, color: '#38bdf8' });
-                        entities.splice(i, 1);
                     }
                 }
             }
@@ -486,10 +593,14 @@
                 if (particles[i].life <= 0) particles.splice(i, 1);
             }
 
+            // Update UI elements
             document.getElementById('hud-lvl').textContent = hero.level;
             document.getElementById('hud-hp').textContent = Math.max(0, hero.hp);
             document.getElementById('hud-max-hp').textContent = hero.maxHp;
             document.getElementById('hud-gold').textContent = hero.gold;
+            document.getElementById('count-1').textContent = inventory[1];
+            document.getElementById('count-2').textContent = inventory[2];
+            document.getElementById('count-3').textContent = inventory[3];
         }
 
         function drawGame() {
@@ -553,13 +664,6 @@
                     ctx.fillRect(ent.x + eyeOffset, ent.y + 8, 5, 6);
                     ctx.fillStyle = '#000';
                     ctx.fillRect(ent.x + eyeOffset + (hero.x > ent.x ? 2 : 1), ent.y + 10, 2, 3);
-                } else if (ent.type === 'chest') {
-                    ctx.fillStyle = '#d97706';
-                    ctx.fillRect(ent.x, ent.y + 6, ent.width, ent.height - 6);
-                    ctx.fillStyle = '#fbbf24';
-                    ctx.fillRect(ent.x + 8, ent.y + 12, 10, 8);
-                    ctx.fillStyle = '#000';
-                    ctx.fillRect(ent.x + 11, ent.y + 14, 4, 4);
                 }
             });
 

@@ -51,6 +51,13 @@ def handle_update(data):
         
         emit('player_moved', p, to=room, include_self=False)
 
+@socketio.on('update_tile')
+def handle_tile_update(data):
+    room = data.get('room')
+    if room:
+        # Broadcast block break/placement changes to everyone else in the room
+        emit('tile_updated', data, to=room, include_self=False)
+
 @socketio.on('disconnect')
 def handle_disconnect():
     for room, players in list(rooms_players.items()):
