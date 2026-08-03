@@ -3,69 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Minecraft-Style Game</title>
+    <title>2D Terraria-Style Sandbox RPG</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #87ceeb;
-            font-family: monospace;
+            background-color: #1a1a24;
+            font-family: 'Courier New', Courier, monospace;
             user-select: none;
         }
         canvas {
             display: block;
         }
-        #ui {
+        #ui-overlay {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 15px;
+            left: 15px;
             color: white;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px;
-            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 12px;
+            border-radius: 6px;
+            border: 2px solid #444;
             pointer-events: none;
-            font-size: 14px;
+            font-size: 13px;
         }
-        #inventory {
+        #hotbar {
             position: absolute;
-            bottom: 10px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 5px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 5px;
-            border-radius: 5px;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 8px;
+            border-radius: 8px;
+            border: 2px solid #555;
         }
         .slot {
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid #555;
+            width: 45px;
+            height: 45px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #666;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: bold;
+            font-size: 11px;
+            position: relative;
         }
         .slot.active {
-            border-color: yellow;
+            border-color: #f39c12;
+            background: rgba(243, 156, 18, 0.2);
+        }
+        .slot span {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 10px;
+            color: #f1c40f;
         }
     </style>
 </head>
 <body>
-    <div id="ui">
-        Controls: A/D to Move, Space to Jump<br>
-        Left Click: Mine Block (Stone/Ores require Wooden Pickaxe)<br>
-        Right Click: Place Block<br>
-        1-5: Select Hotbar Slot
+    <div id="ui-overlay">
+        <strong>Controls:</strong> A/D to Move | Space to Jump | W/S or Mouse to Aim<br>
+        <strong>Left Click:</strong> Swing Sword / Mine Blocks<br>
+        <strong>Hotbar:</strong> 1-5 to select items
     </div>
-    <div id="inventory">
-        <div class="slot active" id="slot-0">Pick</div>
-        <div class="slot" id="slot-1">Wood</div>
-        <div class="slot" id="slot-2">Stone</div>
-        <div class="slot" id="slot-3">Dirt</div>
-        <div class="slot" id="slot-4">Plank</div>
+
+    <div id="hotbar">
+        <div class="slot active" id="slot-0">Sword<span>1</span></div>
+        <div class="slot" id="slot-1">Pick<span>2</span></div>
+        <div class="slot" id="slot-2">Wood<span>0</span></div>
+        <div class="slot" id="slot-3">Stone<span>0</span></div>
+        <div class="slot" id="slot-4">Ore<span>0</span></div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -82,94 +95,108 @@
         resize();
 
         // --- GAME CONFIG & CONSTANTS ---
-        const TILE_SIZE = 32;
-        const CHUNK_SIZE = 32; // Width in blocks per chunk
-        const WORLD_HEIGHT = 64; // Height in blocks
+        const TILE_SIZE = 24;
+        const CHUNK_WIDTH = 32;
+        const WORLD_HEIGHT = 80;
         const loadedChunks = new Map();
 
-        // Colors (Minecraft-inspired palette)
         const COLORS = {
-            sky: '#87ceeb',
-            grass: '#559933',
-            dirt: '#866043',
-            stone: '#7f7f7f',
-            iron_ore: '#9e9e9e',
-            oak_planks: '#a67c52',
-            darkness: '#050510'
+            skyTop: '#151d28',
+            skyBottom: '#4a90e2',
+            surface: '#43a047',
+            grass: '#558b2f',
+            dirt: '#795548',
+            stone: '#616161',
+            copper_ore: '#d84315',
+            iron_ore: '#b0bec5',
+            wood: '#8d6e63'
         };
 
-        // Player State
+        // --- PLAYER & ENTITIES ---
         const player = {
             x: 0,
             y: 45 * TILE_SIZE,
-            width: 22,
-            height: 48,
+            width: 20,
+            height: 38,
             vx: 0,
             vy: 0,
-            speed: 4,
-            jumpForce: -10,
-            gravity: 0.5,
+            speed: 4.5,
+            jumpForce: -10.5,
+            gravity: 0.45,
             grounded: false,
+            health: 100,
+            maxHealth: 100,
+            selectedSlot: 0,
+            facing: 1, // 1 for right, -1 for left
+            swingTimer: 0,
             inventory: {
-                wooden_pickaxe: 1,
-                oak_planks: 10,
-                stone: 5,
-                dirt: 10
-            },
-            selectedSlot: 0
+                copper_broadsword: 1,
+                copper_pickaxe: 1,
+                wood: 15,
+                stone: 0,
+                copper_ore: 0
+            }
         };
 
-        const hotbarItems = ['wooden_pickaxe', 'oak_planks', 'stone', 'dirt', 'oak_planks'];
+        const hotbarKeys = ['copper_broadsword', 'copper_pickaxe', 'wood', 'stone', 'copper_ore'];
 
-        // Input handling
+        // Input Management
         const keys = {};
-        window.addEventListener('keydown', (e) => {
+        const mouse = { x: 0, y: 0, down: false };
+
+        window.addEventListener('keydown', e => {
             keys[e.code] = true;
             if (e.code >= 'Digit1' && e.code <= 'Digit5') {
                 player.selectedSlot = parseInt(e.code) - 1;
-                updateInventoryUI();
+                updateHotbarUI();
             }
         });
-        window.addEventListener('keyup', (e) => {
-            keys[e.code] = false;
+        window.addEventListener('keyup', e => { keys[e.code] = false; });
+        window.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
         });
+        window.addEventListener('mousedown', () => { mouse.down = true; });
+        window.addEventListener('mouseup', () => { mouse.down = false; });
+        window.addEventListener('contextmenu', e => e.preventDefault());
 
-        function updateInventoryUI() {
+        function updateHotbarUI() {
             for (let i = 0; i < 5; i++) {
-                const slotEl = document.getElementById(`slot-${i}`);
+                const slot = document.getElementById(`slot-${i}`);
+                const itemName = hotbarKeys[i];
+                const count = player.inventory[itemName] || 0;
+                slot.querySelector('span').innerText = count;
                 if (i === player.selectedSlot) {
-                    slotEl.classList.add('active');
+                    slot.classList.add('active');
                 } else {
-                    slotEl.classList.remove('active');
+                    slot.classList.remove('active');
                 }
             }
         }
 
-        // --- PROCEDURAL INFINITE WORLD GENERATION ---
-        function getChunkX(worldX) {
-            return Math.floor(worldX / (CHUNK_SIZE * TILE_SIZE));
-        }
-
+        // --- PROCEDURAL WORLD GENERATION ---
         function generateChunk(cx) {
             const chunkData = [];
-            for (let x = 0; x < CHUNK_SIZE; x++) {
-                const worldX = cx * CHUNK_SIZE + x;
-                // Surface height map using sine waves
-                const surfaceHeight = Math.floor(35 + Math.sin(worldX * 0.05) * 6 + Math.cos(worldX * 0.02) * 10);
+            for (let x = 0; x < CHUNK_WIDTH; x++) {
+                const worldX = cx * CHUNK_WIDTH + x;
+                const surfaceHeight = Math.floor(40 + Math.sin(worldX * 0.04) * 8 + Math.cos(worldX * 0.015) * 15);
                 
                 const column = {};
                 for (let y = 0; y < WORLD_HEIGHT; y++) {
-                    let blockType = null;
+                    let type = null;
                     if (y === surfaceHeight) {
-                        blockType = 'grass';
-                    } else if (y < surfaceHeight && y > surfaceHeight - 4) {
-                        blockType = 'dirt';
-                    } else if (y < surfaceHeight - 3) {
-                        blockType = (y < 15 && Math.random() < 0.08) ? 'iron_ore' : 'stone';
+                        type = 'grass';
+                    } else if (y > surfaceHeight && y < surfaceHeight + 5) {
+                        type = 'dirt';
+                    } else if (y >= surfaceHeight + 5) {
+                        if (y > surfaceHeight + 15 && Math.random() < 0.06) {
+                            type = Math.random() < 0.5 ? 'copper_ore' : 'iron_ore';
+                        } else {
+                            type = 'stone';
+                        }
                     }
-                    if (blockType) {
-                        column[y] = blockType;
-                    }
+                    if (type) column[y] = type;
                 }
                 chunkData[x] = { surfaceHeight, blocks: column };
             }
@@ -177,92 +204,25 @@
             return chunkData;
         }
 
-        function getBlock(worldBlockX, worldBlockY) {
-            const cx = Math.floor(worldBlockX / CHUNK_SIZE);
-            const localX = ((worldBlockX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-            
+        function getBlock(bx, by) {
+            const cx = Math.floor(bx / CHUNK_WIDTH);
+            const lx = ((bx % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
             let chunk = loadedChunks.get(cx);
-            if (!chunk) {
-                chunk = generateChunk(cx);
-            }
-            return chunk[localX]?.blocks[worldBlockY] || null;
+            if (!chunk) chunk = generateChunk(cx);
+            return chunk[lx]?.blocks[by] || null;
         }
 
-        function setBlock(worldBlockX, worldBlockY, type) {
-            const cx = Math.floor(worldBlockX / CHUNK_SIZE);
-            const localX = ((worldBlockX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-            
+        function setBlock(bx, by, type) {
+            const cx = Math.floor(bx / CHUNK_WIDTH);
+            const lx = ((bx % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
             let chunk = loadedChunks.get(cx);
-            if (!chunk) {
-                chunk = generateChunk(cx);
-            }
+            if (!chunk) chunk = generateChunk(cx);
             if (type === null) {
-                delete chunk[localX].blocks[worldBlockY];
+                delete chunk[lx].blocks[by];
             } else {
-                chunk[localX].blocks[worldBlockY] = type;
+                chunk[lx].blocks[by] = type;
             }
         }
-
-        function getSurfaceHeightAt(worldBlockX) {
-            const cx = Math.floor(worldBlockX / CHUNK_SIZE);
-            const localX = ((worldBlockX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-            let chunk = loadedChunks.get(cx);
-            if (!chunk) {
-                chunk = generateChunk(cx);
-            }
-            return chunk[localX].surfaceHeight;
-        }
-
-        // --- MOUSE INTERACTIONS (MINE & PLACE) ---
-        window.addEventListener('mousedown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            // Convert screen coordinates to world block coordinates
-            const worldX = mouseX + camera.x;
-            const worldY = mouseY + camera.y;
-            const blockX = Math.floor(worldX / TILE_SIZE);
-            const blockY = Math.floor(worldY / TILE_SIZE);
-
-            // Check distance from player
-            const playerBlockX = Math.floor((player.x + player.width/2) / TILE_SIZE);
-            const playerBlockY = Math.floor((player.y + player.height/2) / TILE_SIZE);
-            const dist = Math.hypot(blockX - playerBlockX, blockY - playerBlockY);
-
-            if (dist > 6) return; // Too far away
-
-            const currentBlock = getBlock(blockX, blockY);
-
-            if (e.button === 0) { // Left click: Mine
-                if (!currentBlock) return;
-
-                // Tool-gated check for stone and ores
-                if (currentBlock === 'stone' || currentBlock.includes('_ore')) {
-                    if (!player.inventory.wooden_pickaxe) {
-                        console.warn("You need a pickaxe to mine stone/ores!");
-                        return;
-                    }
-                }
-
-                // Break block and add to inventory
-                setBlock(blockX, blockY, null);
-                player.inventory[currentBlock] = (player.inventory[currentBlock] || 0) + 1;
-
-            } else if (e.button === 2) { // Right click: Place
-                if (currentBlock !== null) return; // Space occupied
-
-                const selectedItemName = hotbarItems[player.selectedSlot];
-                if (selectedItemName === 'wooden_pickaxe') return; // Cannot place tools
-
-                if ((player.inventory[selectedItemName] || 0) > 0) {
-                    setBlock(blockX, blockY, selectedItemName);
-                    player.inventory[selectedItemName]--;
-                }
-            }
-        });
-
-        window.addEventListener('contextmenu', e => e.preventDefault());
 
         // --- PHYSICS & COLLISION ---
         function checkCollision(nx, ny) {
@@ -273,43 +233,72 @@
 
             for (let bx = left; bx <= right; bx++) {
                 for (let by = top; by <= bottom; by++) {
-                    if (getBlock(bx, by) !== null) {
-                        return true;
-                    }
+                    if (getBlock(bx, by) !== null) return true;
                 }
             }
             return false;
         }
 
         function updatePlayer() {
-            // Horizontal movement
             player.vx = 0;
-            if (keys['KeyA'] || keys['ArrowLeft']) player.vx = -player.speed;
-            if (keys['KeyD'] || keys['ArrowRight']) player.vx = player.speed;
+            if (keys['KeyA'] || keys['ArrowLeft']) { player.vx = -player.speed; player.facing = -1; }
+            if (keys['KeyD'] || keys['ArrowRight']) { player.vx = player.speed; player.facing = 1; }
 
-            // Apply horizontal motion & collision
             player.x += player.vx;
-            if (checkCollision(player.x, player.y)) {
-                player.x -= player.vx;
-            }
+            if (checkCollision(player.x, player.y)) player.x -= player.vx;
 
-            // Gravity & Vertical motion
             player.vy += player.gravity;
             player.y += player.vy;
             player.grounded = false;
 
             if (checkCollision(player.x, player.y)) {
                 player.y -= player.vy;
-                if (player.vy > 0) {
-                    player.grounded = true;
-                }
+                if (player.vy > 0) player.grounded = true;
                 player.vy = 0;
             }
 
-            // Jump
             if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && player.grounded) {
                 player.vy = player.jumpForce;
                 player.grounded = false;
+            }
+
+            if (player.swingTimer > 0) player.swingTimer--;
+
+            // Handle Item / Tool Action (Mining / Swinging)
+            if (mouse.down && player.swingTimer === 0) {
+                const cameraX = player.x - canvas.width / 2;
+                const cameraY = player.y - canvas.height / 2;
+                const worldMouseX = mouse.x + cameraX;
+                const worldMouseY = mouse.y + cameraY;
+
+                const targetBx = Math.floor(worldMouseX / TILE_SIZE);
+                const targetBy = Math.floor(worldMouseY / TILE_SIZE);
+
+                const playerBx = Math.floor((player.x + player.width / 2) / TILE_SIZE);
+                const playerBy = Math.floor((player.y + player.height / 2) / TILE_SIZE);
+
+                // Reach check (Terraria-style distance limit ~5 tiles)
+                if (Math.hypot(targetBx - playerBx, targetBy - playerBy) < 6) {
+                    const block = getBlock(targetBx, targetBy);
+                    const selectedItem = hotbarKeys[player.selectedSlot];
+
+                    if (selectedItem.includes('pickaxe') || selectedItem.includes('broadsword')) {
+                        player.swingTimer = 12; // Cooldown frames
+                        if (block) {
+                            setBlock(targetBx, targetBy, null);
+                            const dropName = block.includes('ore') ? block : (block === 'stone' ? 'stone' : 'wood');
+                            player.inventory[dropName] = (player.inventory[dropName] || 0) + 1;
+                            updateHotbarUI();
+                        }
+                    } else if (selectedItem === 'wood' || selectedItem === 'stone') {
+                        if (!block && player.inventory[selectedItem] > 0) {
+                            setBlock(targetBx, targetBy, selectedItem);
+                            player.inventory[selectedItem]--;
+                            updateHotbarUI();
+                            player.swingTimer = 10;
+                        }
+                    }
+                }
             }
         }
 
@@ -317,78 +306,73 @@
         const camera = { x: 0, y: 0 };
 
         function draw() {
-            // Camera follow player smoothly
             camera.x = player.x - canvas.width / 2 + player.width / 2;
             camera.y = player.y - canvas.height / 2 + player.height / 2;
 
-            // Background Sky
-            ctx.fillStyle = COLORS.sky;
+            // Gradient Sky Background
+            const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            grad.addColorStop(0, COLORS.skyTop);
+            grad.addColorStop(1, COLORS.skyBottom);
+            ctx.fillStyle = grad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Render visible chunks & blocks
-            const startChunkX = Math.floor(camera.x / (CHUNK_SIZE * TILE_SIZE)) - 1;
-            const endChunkX = startChunkX + Math.ceil(canvas.width / (CHUNK_SIZE * TILE_SIZE)) + 2;
+            // Render Chunks & Blocks
+            const startChunk = Math.floor(camera.x / (CHUNK_WIDTH * TILE_SIZE)) - 1;
+            const endChunk = startChunk + Math.ceil(canvas.width / (CHUNK_WIDTH * TILE_SIZE)) + 2;
 
-            for (let cx = startChunkX; cx <= endChunkX; cx++) {
-                let chunk = loadedChunks.get(cx);
-                if (!chunk) chunk = generateChunk(cx);
+            for (let cx = startChunk; cx <= endChunk; cx++) {
+                let chunk = loadedChunks.get(cx) || generateChunk(cx);
+                for (let lx = 0; lx < CHUNK_WIDTH; lx++) {
+                    const bx = cx * CHUNK_WIDTH + lx;
+                    const col = chunk[lx];
+                    for (const [strY, type] of Object.entries(col.blocks)) {
+                        const by = parseInt(strY);
+                        const screenX = bx * TILE_SIZE - camera.x;
+                        const screenY = by * TILE_SIZE - camera.y;
 
-                for (let localX = 0; localX < CHUNK_SIZE; localX++) {
-                    const worldBlockX = cx * CHUNK_SIZE + localX;
-                    const blockCol = chunk[localX];
-                    const surfaceHeight = blockCol.surfaceHeight;
-
-                    for (const [strY, type] of Object.entries(blockCol.blocks)) {
-                        const worldBlockY = parseInt(strY);
-                        const screenX = worldBlockX * TILE_SIZE - camera.x;
-                        const screenY = worldBlockY * TILE_SIZE - camera.y;
-
-                        // Cull offscreen blocks
                         if (screenX < -TILE_SIZE || screenX > canvas.width + TILE_SIZE ||
-                            screenY < -TILE_SIZE || screenY > canvas.height + TILE_SIZE) {
-                            continue;
-                        }
+                            screenY < -TILE_SIZE || screenY > canvas.height + TILE_SIZE) continue;
 
-                        // Base Block Color
                         ctx.fillStyle = COLORS[type] || '#fff';
                         ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
 
-                        // --- DARKNESS & SMOOTH TRANSITION SYSTEM ---
-                        // Darkness starts strictly below the grass layer with a smooth gradient transition
-                        if (worldBlockY < surfaceHeight) {
-                            const depth = surfaceHeight - worldBlockY;
-                            // Smooth gradient factor calculating darkness alpha overlay
-                            let darknessAlpha = Math.min(0.88, depth * 0.07);
-                            if (depth === 1) darknessAlpha = 0.15; // Soft transition right under grass
-
-                            ctx.fillStyle = `rgba(5, 5, 16, ${darknessAlpha})`;
+                        // Underground Darkness Gradient Overlay
+                        if (by > col.surfaceHeight) {
+                            const depth = by - col.surfaceHeight;
+                            const alpha = Math.min(0.85, depth * 0.045);
+                            ctx.fillStyle = `rgba(10, 10, 18, ${alpha})`;
                             ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
                         }
                     }
                 }
             }
 
-            // Draw Player (Classic 2D Minecraft style placeholder character)
-            const playerScreenX = player.x - camera.x;
-            const playerScreenY = player.y - camera.y;
-            
-            // Body / Outfit
-            ctx.fillStyle = '#cc3333';
-            ctx.fillRect(playerScreenX + 3, playerScreenY + 16, player.width - 6, 22);
-            // Head
-            ctx.fillStyle = '#d4a373';
-            ctx.fillRect(playerScreenX + 4, playerScreenY, 14, 16);
-            // Legs
-            ctx.fillStyle = '#3333cc';
-            ctx.fillRect(playerScreenX + 4, playerScreenY + 38, 6, 10);
-            ctx.fillRect(playerScreenX + 12, playerScreenY + 38, 6, 10);
+            // Draw Player Character (Terraria-style sprite placeholder)
+            const px = player.x - camera.x;
+            const py = player.y - camera.y;
 
-            // Render Inventory / Item Counts on screen UI
-            ctx.fillStyle = 'white';
-            ctx.font = '14px monospace';
-            ctx.fillText(`Wood: ${player.inventory.oak_planks || 0}`, 20, 60);
-            ctx.fillText(`Stone: ${player.inventory.stone || 0}`, 20, 80);
-            ctx.fillText(`Pickaxe: ${player.inventory.wooden_pickaxe ? 'Yes' : 'No'}`, 20, 100);
+            // Legs
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(px + 3, py + 26, 5, 12);
+            ctx.fillRect(px + 12, py + 26, 5, 12);
+            // Torso / Shirt
+            ctx.fillStyle = '#2980b9';
+            ctx.fillRect(px + 2, py + 12, 16, 16);
+            // Head & Hair
+            ctx.fillStyle = '#f1c40f';
+            ctx.fillRect(px + 3, py + 2, 14, 12);
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(px + 3, py, 14, 4);
+
+            // Draw Weapon Swing Arc if swinging
+            if (player.swingTimer > 0) {
+                ctx.save();
+                ctx.translate(px + player.width / 2, py + player.height / 2);
+                ctx.rotate(player.facing * (1 - player.swingTimer / 12) * Math.PI * 1.2);
+                ctx.fillStyle = '#bdc3c7';
+                ctx.fillRect(10, -4, 20, 6); // Sword blade
+                ctx.restore();
+            }
         }
 
         function loop() {
@@ -397,10 +381,11 @@
             requestAnimationFrame(loop);
         }
 
-        // Initialize world around spawn point and start
+        // Initialize surrounding chunks and start
         generateChunk(0);
         generateChunk(1);
         generateChunk(-1);
+        updateHotbarUI();
         loop();
     </script>
 </body>
