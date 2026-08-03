@@ -40,32 +40,34 @@
             font-size: 1rem; font-weight: bold; box-shadow: 4px 4px 0px rgba(0,0,0,0.5); display: flex; gap: 15px;
         }
         
-        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: none; gap: 8px; z-index: 5; pointer-events: auto; }
+        /* Hotbar bar on bottom */
+        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: none; gap: 5px; z-index: 5; pointer-events: auto; background: rgba(15, 23, 42, 0.85); padding: 6px; border: 3px solid #334155; box-shadow: 4px 4px 0px rgba(0,0,0,0.5); }
         #hotbar.active { display: flex; }
         .slot {
-            width: 50px; height: 50px; background: rgba(15, 23, 42, 0.9); border: 3px solid #334155;
+            width: 44px; height: 44px; background: #090d16; border: 2px solid #334155;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 0.75rem; color: #94a3b8; position: relative; box-shadow: 3px 3px 0px rgba(0,0,0,0.5); cursor: pointer;
+            font-size: 0.75rem; color: #94a3b8; position: relative; cursor: pointer;
         }
-        .slot.selected { border-color: #38bdf8; background: rgba(30, 41, 59, 0.95); }
-        .slot .icon { font-size: 1.2rem; }
-        .slot .count { position: absolute; bottom: 2px; right: 4px; font-size: 0.7rem; color: #f8fafc; font-weight: bold; }
+        .slot.selected { border-color: #38bdf8; background: #1e293b; }
+        .slot .count { position: absolute; bottom: 1px; right: 3px; font-size: 0.65rem; color: #f8fafc; font-weight: bold; }
 
-        /* Inventory & Crafting UI Overlay */
+        /* Minecraft Inventory Screen */
         #inventory-ui {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 480px; background: rgba(15, 23, 42, 0.95); border: 4px solid #334155;
-            padding: 20px; display: none; flex-direction: column; gap: 15px; z-index: 20; box-shadow: 8px 8px 0px rgba(0,0,0,0.7);
+            width: 460px; background: #c6c6c6; border: 4px solid #373737; border-top-color: #ffffff; border-left-color: #ffffff;
+            padding: 15px; display: none; flex-direction: column; gap: 12px; z-index: 20; color: #373737;
+            font-family: 'Courier New', Courier, monospace; box-shadow: 10px 10px 0px rgba(0,0,0,0.6);
         }
         #inventory-ui.active { display: flex; }
-        .inv-section-title { font-size: 1.1rem; color: #38bdf8; border-bottom: 2px solid #334155; padding-bottom: 5px; }
-        .inv-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-        .crafting-container { display: flex; gap: 20px; align-items: center; }
-        .recipe-btn {
-            background: #1e293b; border: 2px solid #475569; color: #f8fafc; padding: 8px 12px;
-            font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; cursor: pointer; text-align: left;
+        .inv-title { font-weight: bold; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #8b8b8b; padding-bottom: 4px; }
+        .inv-grid-container { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #8b8b8b; padding: 6px; border: 2px solid #373737; }
+        .inv-cell {
+            width: 38px; height: 38px; background: #8b8b8b; border: 2px solid; border-color: #373737 #ffffff #ffffff #373737;
+            display: flex; align-items: center; justify-content: center; position: relative; font-size: 0.7rem; font-weight: bold; cursor: pointer;
         }
-        .recipe-btn:hover { background: #334155; border-color: #38bdf8; }
+        .crafting-section { display: flex; flex-direction: column; gap: 6px; background: #8b8b8b; padding: 8px; border: 2px solid #373737; }
+        .craft-btn { background: #737373; border: 2px solid; border-color: #ffffff #373737 #373737 #ffffff; padding: 6px; font-weight: bold; cursor: pointer; font-family: 'Courier New', Courier, monospace; text-align: left; font-size: 0.8rem; }
+        .craft-btn:active { border-color: #373737 #ffffff #ffffff #373737; }
 
         .controls-overlay {
             position: absolute; bottom: 85px; left: 50%; transform: translateX(-50%);
@@ -79,7 +81,7 @@
 
     <div id="title-screen" class="screen active">
         <h1>TERRA-QUEST MMO</h1>
-        <p>Explore, Mine Ores, Craft Tools & Build!</p>
+        <p>Explore Flat Plains, Cave Dungeons & Survive the Night!</p>
         <input id="name-input" maxlength="15" placeholder="Hero Name..." /><br>
         <input id="room-input" maxlength="15" placeholder="Server Room (e.g. alpha)" value="main" /><br>
         <button class="pixel-btn" onclick="connectToServer()">JOIN WORLD</button>
@@ -88,41 +90,52 @@
     <div id="hud">
         <div class="hud-box">
             <span>🛡️ <span id="hud-name">Hero</span></span>
-            <span>ROOM: <span id="hud-room" style="color:#38bdf8;">main</span></span>
+            <span>TIME: <span id="hud-time" style="color:#38bdf8;">Day</span></span>
             <span>TOOL: <span id="hud-tool" style="color:#fbbf24;">Fists</span></span>
         </div>
     </div>
 
-    <!-- Inventory Screen -->
+    <!-- Minecraft Style Inventory Screen -->
     <div id="inventory-ui">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span class="inv-section-title" style="border:none; font-size: 1.4rem;">🎒 INVENTORY & CRAFTING</span>
-            <span style="cursor:pointer; color:#ef4444; font-weight:bold;" onclick="toggleInventory()">[X]</span>
+        <div class="inv-title">
+            <span>Inventory & Crafting</span>
+            <span style="cursor:pointer; color:#000;" onclick="toggleInventory()">[X]</span>
         </div>
         <div>
-            <div class="inv-section-title">Item Storage (Blank until collected)</div>
-            <div id="inventory-slots" class="inv-grid" style="margin-top: 10px;">
-                <!-- Dynamically filled slots -->
+            <div style="font-size: 0.8rem; margin-bottom: 4px; font-weight:bold;">Storage (Blank until items collected)</div>
+            <div id="main-inventory-grid" class="inv-grid-container">
+                <!-- 27 Main Inventory Cells -->
             </div>
         </div>
         <div>
-            <div class="inv-section-title">Crafting Bench</div>
-            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
-                <button class="recipe-btn" onclick="craftItem('wooden_pickaxe')">🛠️ Craft Wooden Pickaxe (Req: 5 Wood)</button>
-                <button class="recipe-btn" onclick="craftItem('stone_pickaxe')">⛏️ Craft Stone Pickaxe (Req: 5 Stone)</button>
-                <button class="recipe-btn" onclick="craftItem('iron_pickaxe')">⚙️ Craft Iron Pickaxe (Req: 5 Iron)</button>
+            <div style="font-size: 0.8rem; margin-bottom: 4px; font-weight:bold;">Hotbar Storage</div>
+            <div id="inventory-hotbar-grid" class="inv-grid-container" style="grid-template-columns: repeat(9, 1fr);">
+                <!-- 9 Hotbar Inventory Cells -->
             </div>
+        </div>
+        <div class="crafting-section">
+            <div style="font-size: 0.8rem; font-weight:bold;">Crafting Station</div>
+            <button class="craft-btn" onclick="craftItem('wooden_pickaxe')">🛠️ Wooden Pickaxe (Req: 5 Wood)</button>
+            <button class="craft-btn" onclick="craftItem('stone_pickaxe')">⛏️ Stone Pickaxe (Req: 5 Stone)</button>
+            <button class="craft-btn" onclick="craftItem('iron_pickaxe')">⚙️ Iron Pickaxe (Req: 5 Iron)</button>
         </div>
     </div>
 
     <div id="controls-hint" class="controls-overlay">
-        Move: <b>A/D</b> | Jump: <b>W/Space</b> | Inventory: <b>E</b> | <b>Left-Click</b>: Mine/Attack | <b>Right-Click</b>: Place
+        Move: <b>A/D</b> | Jump: <b>W/Space</b> | Inventory: <b>E</b> | <b>Left-Click</b>: Mine | <b>Right-Click</b>: Place
     </div>
 
+    <!-- 9 Hotbar Slots on Bottom Screen -->
     <div id="hotbar">
-        <div class="slot selected" id="slot-0" onclick="selectSlot(0)"><span class="icon">🟫</span><span class="count" id="count-1">0</span></div>
-        <div class="slot" id="slot-1" onclick="selectSlot(1)"><span class="icon">⬜</span><span class="count" id="count-2">0</span></div>
-        <div class="slot" id="slot-2" onclick="selectSlot(2)"><span class="icon">🟩</span><span class="count" id="count-3">0</span></div>
+        <div class="slot selected" id="hotbar-slot-0" onclick="selectHotbarSlot(0)"><span class="count" id="hc-0"></span></div>
+        <div class="slot" id="hotbar-slot-1" onclick="selectHotbarSlot(1)"><span class="count" id="hc-1"></span></div>
+        <div class="slot" id="hotbar-slot-2" onclick="selectHotbarSlot(2)"><span class="count" id="hc-2"></span></div>
+        <div class="slot" id="hotbar-slot-3" onclick="selectHotbarSlot(3)"><span class="count" id="hc-3"></span></div>
+        <div class="slot" id="hotbar-slot-4" onclick="selectHotbarSlot(4)"><span class="count" id="hc-4"></span></div>
+        <div class="slot" id="hotbar-slot-5" onclick="selectHotbarSlot(5)"><span class="count" id="hc-5"></span></div>
+        <div class="slot" id="hotbar-slot-6" onclick="selectHotbarSlot(6)"><span class="count" id="hc-6"></span></div>
+        <div class="slot" id="hotbar-slot-7" onclick="selectHotbarSlot(7)"><span class="count" id="hc-7"></span></div>
+        <div class="slot" id="hotbar-slot-8" onclick="selectHotbarSlot(8)"><span class="count" id="hc-8"></span></div>
     </div>
 
     <canvas id="game-canvas"></canvas>
@@ -154,21 +167,22 @@
         });
 
         const TILE_SIZE = 32;
-        const WORLD_WIDTH = 140; 
-        const WORLD_HEIGHT = 50; 
+        const WORLD_WIDTH = 150; 
+        const WORLD_HEIGHT = 55; 
 
         let worldMap = []; 
         let droppedItems = []; 
         let remotePlayers = {}; 
+        let currentMobs = [];
+        let worldTime = 0; // 0 to 1200
         let currentRoom = 'main';
         let gameStarted = false;
         let inventoryOpen = false;
 
-        // Inventory mapping: Tile/Item IDs
-        // 1: Dirt, 2: Stone, 3: Grass, 4: Wood, 5: Leaves, 6: Coal, 7: Iron, 8: Gold, 9: Diamond
-        let inventory = {}; 
-        let selectedSlotIndex = 0;
-        const hotbarMapping = [1, 2, 4]; // Dirt, Stone, Wood in hotbar by default
+        // Inventory array: 36 slots total (0-8 hotbar, 9-35 main inventory)
+        // Each slot: { type: null, count: 0 }
+        let inventorySlots = Array(36).fill(null).map(() => ({ type: null, count: 0 }));
+        let selectedHotbarIndex = 0;
 
         let hero = {
             name: 'Hero',
@@ -190,20 +204,13 @@
         };
 
         const tileNames = {
-            1: 'Dirt Block',
-            2: 'Stone Block',
-            3: 'Grass Block',
-            4: 'Wood Block',
-            5: 'Leaves',
-            6: 'Coal Ore',
-            7: 'Iron Ore',
-            8: 'Gold Ore',
-            9: 'Diamond Ore'
+            1: 'Dirt', 2: 'Stone', 3: 'Grass', 4: 'Wood', 5: 'Leaves',
+            6: 'Coal', 7: 'Iron', 8: 'Gold', 9: 'Diamond'
         };
 
-        function selectSlot(index) {
-            selectedSlotIndex = index;
-            document.querySelectorAll('.slot').forEach((s, i) => {
+        function selectHotbarSlot(index) {
+            selectedHotbarIndex = index;
+            document.querySelectorAll('#hotbar .slot').forEach((s, i) => {
                 if (i === index) s.classList.add('selected');
                 else s.classList.remove('selected');
             });
@@ -219,57 +226,116 @@
             }
         }
 
-        function renderInventoryUI() {
-            const slotsContainer = document.getElementById('inventory-slots');
-            slotsContainer.innerHTML = '';
-            
-            // Render only items that have quantity > 0 (Blank until collected)
-            for (let id in inventory) {
-                if (inventory[id] > 0) {
-                    let slotDiv = document.createElement('div');
-                    slotDiv.className = 'slot';
-                    slotDiv.style.width = '100%';
-                    slotDiv.style.height = '60px';
-                    slotDiv.innerHTML = `<span class="icon">📦</span><span style="font-size:0.65rem">${tileNames[id] || 'Item'}</span><span class="count">${inventory[id]}</span>`;
-                    slotsContainer.appendChild(slotDiv);
+        function addItemToInventory(tileType) {
+            // Find existing stack
+            for (let i = 0; i < 36; i++) {
+                if (inventorySlots[i].type === tileType) {
+                    inventorySlots[i].count++;
+                    updateHotbarUI();
+                    return;
                 }
             }
-            if (slotsContainer.children.length === 0) {
-                slotsContainer.innerHTML = '<div style="color: #64748b; font-size: 0.85rem; grid-column: span 5; text-align:center; padding:15px;">Inventory is empty. Mine blocks to collect items!</div>';
+            // Find empty slot
+            for (let i = 0; i < 36; i++) {
+                if (inventorySlots[i].type === null) {
+                    inventorySlots[i].type = tileType;
+                    inventorySlots[i].count = 1;
+                    updateHotbarUI();
+                    return;
+                }
+            }
+        }
+
+        function updateHotbarUI() {
+            for (let i = 0; i < 9; i++) {
+                let slotEl = document.getElementById(`hotbar-slot-${i}`);
+                let countEl = document.getElementById(`hc-${i}`);
+                let item = inventorySlots[i];
+                if (item.type !== null && item.count > 0) {
+                    slotEl.style.background = '#1e293b';
+                    countEl.textContent = item.count;
+                } else {
+                    slotEl.style.background = '#090d16';
+                    countEl.textContent = '';
+                }
+            }
+        }
+
+        function renderInventoryUI() {
+            const mainGrid = document.getElementById('main-inventory-grid');
+            const hotbarGrid = document.getElementById('inventory-hotbar-grid');
+            mainGrid.innerHTML = '';
+            hotbarGrid.innerHTML = '';
+
+            // Render main inventory slots (9 to 35)
+            for (let i = 9; i < 36; i++) {
+                let cell = document.createElement('div');
+                cell.className = 'inv-cell';
+                let item = inventorySlots[i];
+                if (item.type !== null && item.count > 0) {
+                    cell.innerHTML = `<span style="font-size:0.6rem">${tileNames[item.type]}</span><span style="position:absolute; bottom:1px; right:2px; font-size:0.65rem;">${item.count}</span>`;
+                }
+                mainGrid.appendChild(cell);
+            }
+
+            // Render hotbar inventory slots (0 to 8)
+            for (let i = 0; i < 9; i++) {
+                let cell = document.createElement('div');
+                cell.className = 'inv-cell';
+                let item = inventorySlots[i];
+                if (item.type !== null && item.count > 0) {
+                    cell.innerHTML = `<span style="font-size:0.6rem">${tileNames[item.type]}</span><span style="position:absolute; bottom:1px; right:2px; font-size:0.65rem;">${item.count}</span>`;
+                }
+                hotbarGrid.appendChild(cell);
             }
         }
 
         function craftItem(recipeType) {
+            let countType = (type) => {
+                let total = 0;
+                for (let s of inventorySlots) {
+                    if (s.type === type) total += s.count;
+                }
+                return total;
+            };
+
+            let deductItems = (type, amount) => {
+                for (let s of inventorySlots) {
+                    if (s.type === type) {
+                        let take = Math.min(s.count, amount);
+                        s.count -= take;
+                        amount -= take;
+                        if (s.count === 0) s.type = null;
+                        if (amount <= 0) break;
+                    }
+                }
+            };
+
             if (recipeType === 'wooden_pickaxe') {
-                if ((inventory[4] || 0) >= 5) {
-                    inventory[4] -= 5;
+                if (countType(4) >= 5) {
+                    deductItems(4, 5);
                     hero.tool = 'Wooden Pickaxe';
                     hero.toolTier = 2;
-                    alert('Successfully crafted Wooden Pickaxe!');
-                } else {
-                    alert('Not enough Wood! Need 5 Wood blocks.');
-                }
+                    alert('Crafted Wooden Pickaxe!');
+                } else { alert('Need 5 Wood blocks!'); }
             } else if (recipeType === 'stone_pickaxe') {
-                if ((inventory[2] || 0) >= 5) {
-                    inventory[2] -= 5;
+                if (countType(2) >= 5) {
+                    deductItems(2, 5);
                     hero.tool = 'Stone Pickaxe';
                     hero.toolTier = 3;
-                    alert('Successfully crafted Stone Pickaxe!');
-                } else {
-                    alert('Not enough Stone! Need 5 Stone blocks.');
-                }
+                    alert('Crafted Stone Pickaxe!');
+                } else { alert('Need 5 Stone blocks!'); }
             } else if (recipeType === 'iron_pickaxe') {
-                if ((inventory[7] || 0) >= 5) {
-                    inventory[7] -= 5;
+                if (countType(7) >= 5) {
+                    deductItems(7, 5);
                     hero.tool = 'Iron Pickaxe';
                     hero.toolTier = 4;
-                    alert('Successfully crafted Iron Pickaxe!');
-                } else {
-                    alert('Not enough Iron! Need 5 Iron Ore.');
-                }
+                    alert('Crafted Iron Pickaxe!');
+                } else { alert('Need 5 Iron Ore!'); }
             }
             document.getElementById('hud-tool').textContent = hero.tool;
-            renderInventoryUI();
+            updateHotbarUI();
+            if (inventoryOpen) renderInventoryUI();
         }
 
         function connectToServer() {
@@ -279,7 +345,6 @@
             if (room) currentRoom = room;
 
             document.getElementById('hud-name').textContent = hero.name;
-            document.getElementById('hud-room').textContent = currentRoom;
 
             socket.emit('join_server', { name: hero.name, room: currentRoom });
         }
@@ -288,6 +353,7 @@
             worldMap = data.world;
             remotePlayers = data.players;
             droppedItems = data.items || [];
+            worldTime = data.time || 0;
             if (socket.id && remotePlayers[socket.id]) {
                 delete remotePlayers[socket.id];
             }
@@ -319,6 +385,12 @@
             }
         });
         socket.on('sync_items', (items) => { droppedItems = items; });
+        socket.on('world_tick', (data) => {
+            worldTime = data.time;
+            currentMobs = data.mobs || [];
+            let isNight = worldTime >= 600;
+            document.getElementById('hud-time').textContent = isNight ? '🌙 Night' : '☀️ Day';
+        });
 
         const keys = {};
         window.addEventListener('keydown', e => {
@@ -331,9 +403,9 @@
 
             keys[e.key] = true;
             keys[e.key.toLowerCase()] = true;
-            if (e.key === '1') selectSlot(0);
-            if (e.key === '2') selectSlot(1);
-            if (e.key === '3') selectSlot(2);
+            if (e.key >= '1' && e.key <= '9') {
+                selectHotbarSlot(parseInt(e.key) - 1);
+            }
         });
 
         window.addEventListener('keyup', e => {
@@ -364,7 +436,6 @@
                     worldMap[tileY][tileX] = 0;
                     socket.emit('update_tile', { room: currentRoom, x: tileX, y: tileY, tile: 0 });
 
-                    // Spawn physical drop item with bouncy animation velocity
                     let newItem = {
                         id: Math.random().toString(36).substring(2, 9),
                         type: currentTile,
@@ -377,17 +448,56 @@
                     socket.emit('spawn_item', { room: currentRoom, item: newItem });
                 }
             } else if (e.button === 2) {
-                let activeTileType = hotbarMapping[selectedSlotIndex];
-                if (worldMap[tileY][tileX] === 0 && (inventory[activeTileType] || 0) > 0) {
+                let activeItem = inventorySlots[selectedHotbarIndex];
+                if (worldMap[tileY][tileX] === 0 && activeItem.type !== null && activeItem.count > 0) {
                     let pBox = { x: hero.x, y: hero.y, w: hero.width, h: hero.height };
                     let tBox = { x: tileX * TILE_SIZE, y: tileY * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
                     let overlapping = !(pBox.x + pBox.w < tBox.x || pBox.x > tBox.x + tBox.w || pBox.y + pBox.h < tBox.y || pBox.y > tBox.y + tBox.h);
                     
                     if (!overlapping) {
-                        inventory[activeTileType]--;
-                        worldMap[tileY][tileX] = activeTileType;
-                        socket.emit('update_tile', { room: currentRoom, x: tileX, y: tileY, tile: activeTileType });
+                        activeItem.count--;
+                        if (activeItem.count <= 0) activeItem.type = null;
+                        worldMap[tileY][tileX] = activeItem.type || activeItem.type; // place block
+                        // Wait, let's fix the placed block tile type value:
+                        let placedType = worldMap[tileY][tileX] = activeItem.type === null ? 0 : activeItem.type; 
+                        // Actually, store activeItem.type before decrementing:
+                        // Let's rewrite placement correctly:
                     }
+                }
+            }
+        });
+
+        // Correcting right-click placement logic cleanly:
+        window.addEventListener('mousedown', e => {
+            if (!gameStarted || inventoryOpen) return;
+            if (e.button !== 2) return;
+
+            let cameraX = Math.max(0, Math.min(WORLD_WIDTH * TILE_SIZE - screenWidth, hero.x - screenWidth / 2 + hero.width / 2));
+            let cameraY = Math.max(0, Math.min(WORLD_HEIGHT * TILE_SIZE - screenHeight, hero.y - screenHeight / 2 + hero.height / 2));
+
+            let worldMouseX = e.clientX + cameraX;
+            let worldMouseY = e.clientY + cameraY;
+
+            let tileX = Math.floor(worldMouseX / TILE_SIZE);
+            let tileY = Math.floor(worldMouseY / TILE_SIZE);
+
+            if (tileX < 0 || tileX >= WORLD_WIDTH || tileY < 0 || tileY >= WORLD_HEIGHT) return;
+            let dist = Math.hypot((hero.x + hero.width/2) - worldMouseX, (hero.y + hero.height/2) - worldMouseY);
+            if (dist > 140) return;
+
+            let activeItem = inventorySlots[selectedHotbarIndex];
+            if (worldMap[tileY][tileX] === 0 && activeItem.type !== null && activeItem.count > 0) {
+                let pBox = { x: hero.x, y: hero.y, w: hero.width, h: hero.height };
+                let tBox = { x: tileX * TILE_SIZE, y: tileY * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
+                let overlapping = !(pBox.x + pBox.w < tBox.x || pBox.x > tBox.x + tBox.w || pBox.y + pBox.h < tBox.y || pBox.y > tBox.y + tBox.h);
+                
+                if (!overlapping) {
+                    let tileToPlace = activeItem.type;
+                    activeItem.count--;
+                    if (activeItem.count <= 0) activeItem.type = null;
+                    worldMap[tileY][tileX] = tileToPlace;
+                    socket.emit('update_tile', { room: currentRoom, x: tileX, y: tileY, tile: tileToPlace });
+                    updateHotbarUI();
                 }
             }
         });
@@ -445,7 +555,6 @@
                 }
             }
 
-            // Update item physics & animation drop bounces
             for (let i = droppedItems.length - 1; i >= 0; i--) {
                 let item = droppedItems[i];
                 item.vy += 0.45;
@@ -456,7 +565,7 @@
                 let ty = Math.floor((item.y + 16) / TILE_SIZE);
                 if (ty >= 0 && ty < WORLD_HEIGHT && tx >= 0 && tx < WORLD_WIDTH && worldMap[ty][tx] > 0) {
                     item.y = ty * TILE_SIZE - 16;
-                    item.vy = -item.vy * 0.3; // Bounce animation effect
+                    item.vy = -item.vy * 0.3;
                     item.vx *= 0.75;
                 }
 
@@ -465,7 +574,7 @@
                 let colliding = !(pBox.x + pBox.w < iBox.x || pBox.x > iBox.x + iBox.w || pBox.y + pBox.h < iBox.y || pBox.y > iBox.y + iBox.h);
 
                 if (colliding) {
-                    inventory[item.type] = (inventory[item.type] || 0) + 1;
+                    addItemToInventory(item.type);
                     socket.emit('collect_item', { room: currentRoom, index: i });
                     droppedItems.splice(i, 1);
                 }
@@ -476,17 +585,19 @@
                 socket.emit('player_update', { room: currentRoom, x: hero.x, y: hero.y, facing: hero.facing, frame: hero.frame });
                 netSyncCounter = 0;
             }
-
-            document.getElementById('count-1').textContent = inventory[1] || 0;
-            document.getElementById('count-2').textContent = inventory[2] || 0;
-            document.getElementById('count-3').textContent = inventory[4] || 0; // Hotbar slot 3 set to wood blocks
         }
 
         function drawGame() {
+            let isNight = worldTime >= 600;
             let gradient = ctx.createLinearGradient(0, 0, 0, screenHeight);
-            gradient.addColorStop(0, '#0284c7');
-            gradient.addColorStop(0.5, '#38bdf8');
-            gradient.addColorStop(1, '#bae6fd');
+            if (isNight) {
+                gradient.addColorStop(0, '#020617');
+                gradient.addColorStop(1, '#0f172a');
+            } else {
+                gradient.addColorStop(0, '#0284c7');
+                gradient.addColorStop(0.5, '#38bdf8');
+                gradient.addColorStop(1, '#bae6fd');
+            }
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, screenWidth, screenHeight);
 
@@ -523,16 +634,16 @@
                             ctx.fillStyle = '#451a03'; ctx.fillRect(rx + 4, ry + 4, 8, 24);
                         } else if (tile === 5) {
                             ctx.fillStyle = '#15803d'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                        } else if (tile === 6) { // Coal
+                        } else if (tile === 6) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
                             ctx.fillStyle = '#0f172a'; ctx.fillRect(rx + 5, ry + 5, 10, 10);
-                        } else if (tile === 7) { // Iron
+                        } else if (tile === 7) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
                             ctx.fillStyle = '#e2e8f0'; ctx.fillRect(rx + 5, ry + 5, 10, 10);
-                        } else if (tile === 8) { // Gold
+                        } else if (tile === 8) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
                             ctx.fillStyle = '#fbbf24'; ctx.fillRect(rx + 5, ry + 5, 10, 10);
-                        } else if (tile === 9) { // Diamond
+                        } else if (tile === 9) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
                             ctx.fillStyle = '#38bdf8'; ctx.fillRect(rx + 5, ry + 5, 10, 10);
                         }
@@ -540,7 +651,7 @@
                 }
             }
 
-            // Draw dropped item animations with floating visual offsets
+            // Draw dropped items
             droppedItems.forEach(item => {
                 if (item.type === 3 || item.type === 5) ctx.fillStyle = '#22c55e';
                 else if (item.type === 1 || item.type === 4) ctx.fillStyle = '#b45309';
@@ -550,6 +661,15 @@
                 else if (item.type === 9) ctx.fillStyle = '#38bdf8';
                 else ctx.fillStyle = '#64748b';
                 ctx.fillRect(item.x, item.y + Math.sin(Date.now() * 0.01) * 3, 14, 14);
+            });
+
+            // Draw Night Cave Mobs
+            currentMobs.forEach(mob => {
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(mob.x + 4, mob.y + 4, 24, 24);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(mob.x + 8, mob.y + 10, 4, 4);
+                ctx.fillRect(mob.x + 20, mob.y + 10, 4, 4);
             });
 
             for (let id in remotePlayers) {

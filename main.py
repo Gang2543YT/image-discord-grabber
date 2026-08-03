@@ -11,21 +11,23 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'terra-quest-secret-key'
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
-WORLD_WIDTH = 140
-WORLD_HEIGHT = 50
+WORLD_WIDTH = 150
+WORLD_HEIGHT = 55
 
 rooms_players = {}
 rooms_worlds = {}
 rooms_items = {}
+rooms_mobs = {}
+rooms_time = {}  # Tracks day/night time ticks (0 to 1200 seconds for 20 min cycle)
 
 def generate_server_world():
     world = [[0 for _ in range(WORLD_WIDTH)] for _ in range(WORLD_HEIGHT)]
-    surface_height = 18
+    surface_height = 20
     
-    # Generate terrain profile
+    # Generate flatter terrain profile
     for x in range(WORLD_WIDTH):
-        surface_height += math.floor(math.sin(x * 0.12) * 1.5 + (random.random() * 0.6 - 0.3))
-        surface_height = max(12, min(30, surface_height))
+        surface_height += math.floor(math.sin(x * 0.08) * 0.8 + (random.random() * 0.4 - 0.2))
+        surface_height = max(15, min(25, surface_height))
 
         for y in range(surface_height, WORLD_HEIGHT):
             if y == surface_height:
@@ -33,36 +35,46 @@ def generate_server_world():
             elif y < surface_height + 5:
                 world[y][x] = 1  # Dirt
             else:
-                # Ore distribution based on depth
                 rand = random.random()
-                if y > 38 and rand < 0.025:
+                if y > 42 and rand < 0.025:
                     world[y][x] = 9  # Diamond Ore
-                elif y > 30 and rand < 0.04:
+                elif y > 35 and rand < 0.04:
                     world[y][x] = 8  # Gold Ore
-                elif y > 24 and rand < 0.06:
+                elif y > 28 and rand < 0.06:
                     world[y][x] = 7  # Iron Ore
-                elif y > 20 and rand < 0.08:
+                elif y > 22 and rand < 0.08:
                     world[y][x] = 6  # Coal Ore
                 else:
                     world[y][x] = 2  # Stone
 
+    # Carve Caves underground
+    for _ in range(12):
+        cx = random.randint(10, WORLD_WIDTH - 10)
+        cy = random.randint(28, WORLD_HEIGHT - 8)
+        carve_radius = random.randint(4, 8)
+        for _ in range(40):
+            cx += random.randint(-2, 2)
+            cy += random.randint(-2, 2)
+            for ky in range(cy - carve_radius, cy + carve_radius):
+                for kx in range(cx - carve_radius, cx + carve_radius):
+                    if 0 < kx < WORLD_WIDTH - 1 and 22 < ky < WORLD_HEIGHT - 1:
+                        if math.hypot(kx - cx, ky - cy) < carve_radius:
+                            world[ky][kx] = 0  # Air / Cave
+
     # Spawn trees on the surface
-    for x in range(5, WORLD_WIDTH - 5, 7):
-        if random.random() < 0.7:
-            # Find surface y
+    for x in range(6, WORLD_WIDTH - 6, 9):
+        if random.random() < 0.8:
             sy = 0
             for y in range(WORLD_HEIGHT):
                 if world[y][x] == 3:
                     sy = y
                     break
             if sy > 0:
-                # Trunk (3 blocks high)
-                for ty in range(1, 4):
+                for ty in range(1, 5):
                     if sy - ty >= 0:
                         world[sy - ty][x] = 4  # Wood
-                # Leaves canopy
                 for lx in range(x - 2, x + 3):
-                    for ly in range(sy - 6, sy - 3):
+                    for ly in range(sy - 7, sy - 4):
                         if 0 <= lx < WORLD_WIDTH and 0 <= ly < WORLD_HEIGHT and world[ly][lx] == 0:
                             world[ly][lx] = 5  # Leaves
 
@@ -82,6 +94,8 @@ def handle_join(data):
     if room not in rooms_worlds:
         rooms_worlds[room] = generate_server_world()
         rooms_items[room] = []
+        rooms_mobs[room] = []
+        rooms_time[room] = 0  # 0 to 1200 seconds (600s day, 600s night)
     
     player_data = {
         'id': request.sid,
@@ -90,7 +104,8 @@ def handle_join(data):
         'y': 100,
         'facing': 'right',
         'frame': 0,
-        'room': room
+        'room': room,
+        'hp': 100
     }
     
     if room not in rooms_players:
@@ -100,7 +115,8 @@ def handle_join(data):
     emit('init_world', {
         'world': rooms_worlds[room], 
         'players': rooms_players[room], 
-        'items': rooms_items[room]
+        'items': rooms_items[room],
+        'time': rooms_time[room]
     })
     emit('player_joined', player_data, to=room, include_self=False)
 
@@ -158,7 +174,38 @@ def handle_disconnect():
                     del rooms_worlds[room]
                 if room in rooms_items:
                     del rooms_items[room]
+                if room in rooms_mobs:
+                    del rooms_mobs[room]
+                if room in rooms_time:
+                    del rooms_time[room]
             break
+
+# Background task to manage time cycle (10 min day, 10 min night) and monster spawns in caves at night
+def background_world_ticker():
+    while True:
+        eventlet.sleep(1)
+        for room in list(rooms_worlds.keys()):
+            if room in rooms_time:
+                rooms_time[room] = (rooms_time[room] + 1) % 1200  # 20 min total cycle
+                is_night = rooms_time[room] >= 600
+                
+                # Manage night cave monsters
+                mobs = rooms_mobs.get(room, [])
+                if is_night:
+                    if len(mobs) < 8 and random.random() < 0.3:
+                        # Spawn monster in cave/underground
+                        mx = random.randint(10, WORLD_WIDTH - 10)
+                        my = random.randint(28, WORLD_HEIGHT - 5)
+                        if rooms_worlds[room][my][mx] == 0:  # air block
+                            mobs.append({'id': random.randint(1000, 9999), 'x': mx * 32, 'y': my * 32, 'hp': 40})
+                else:
+                    # Despawn mobs during day
+                    mobs = []
+                rooms_mobs[room] = mobs
+                
+                socketio.emit('world_tick', {'time': rooms_time[room], 'mobs': mobs}, to=room)
+
+eventlet.spawn(background_world_ticker)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
