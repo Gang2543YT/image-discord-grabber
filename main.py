@@ -18,52 +18,55 @@ rooms_players = {}
 rooms_worlds = {}
 rooms_items = {}
 rooms_mobs = {}
-rooms_time = {}  # Tracks day/night time ticks (0 to 1200 seconds for 20 min cycle)
+rooms_time = {}
 
 def generate_server_world():
     world = [[0 for _ in range(WORLD_WIDTH)] for _ in range(WORLD_HEIGHT)]
     surface_height = 20
     
-    # Generate flatter terrain profile
+    # Flatter, smoother terrain profile
     for x in range(WORLD_WIDTH):
-        surface_height += math.floor(math.sin(x * 0.08) * 0.8 + (random.random() * 0.4 - 0.2))
-        surface_height = max(15, min(25, surface_height))
+        surface_height += math.floor(math.sin(x * 0.06) * 0.5 + (random.random() * 0.2 - 0.1))
+        surface_height = max(16, min(24, surface_height))
 
         for y in range(surface_height, WORLD_HEIGHT):
             if y == surface_height:
                 world[y][x] = 3  # Grass
-            elif y < surface_height + 5:
+            elif y < surface_height + 4:
                 world[y][x] = 1  # Dirt
             else:
-                rand = random.random()
-                if y > 42 and rand < 0.025:
-                    world[y][x] = 9  # Diamond Ore
-                elif y > 35 and rand < 0.04:
-                    world[y][x] = 8  # Gold Ore
-                elif y > 28 and rand < 0.06:
-                    world[y][x] = 7  # Iron Ore
-                elif y > 22 and rand < 0.08:
-                    world[y][x] = 6  # Coal Ore
-                else:
-                    world[y][x] = 2  # Stone
+                world[y][x] = 2  # Stone
 
-    # Carve Caves underground
-    for _ in range(12):
+    # Clumped Ore Veins generation
+    for _ in range(25):
+        ore_type = random.choices([6, 7, 8, 9], weights=[50, 30, 15, 5])[0]
+        ox = random.randint(5, WORLD_WIDTH - 5)
+        oy = random.randint(26, WORLD_HEIGHT - 6)
+        for _ in range(5):
+            ox += random.randint(-1, 1)
+            oy += random.randint(-1, 1)
+            if 0 < ox < WORLD_WIDTH - 1 and 24 < oy < WORLD_HEIGHT - 1:
+                if world[oy][ox] == 2:
+                    world[oy][ox] = ore_type
+
+    # Smaller, tighter cave carvers underground
+    for _ in range(16):
         cx = random.randint(10, WORLD_WIDTH - 10)
-        cy = random.randint(28, WORLD_HEIGHT - 8)
-        carve_radius = random.randint(4, 8)
-        for _ in range(40):
+        cy = random.randint(26, WORLD_HEIGHT - 6)
+        carve_radius = random.randint(2, 4)  # Smaller cave size
+        for _ in range(25):
             cx += random.randint(-2, 2)
-            cy += random.randint(-2, 2)
-            for ky in range(cy - carve_radius, cy + carve_radius):
-                for kx in range(cx - carve_radius, cx + carve_radius):
-                    if 0 < kx < WORLD_WIDTH - 1 and 22 < ky < WORLD_HEIGHT - 1:
-                        if math.hypot(kx - cx, ky - cy) < carve_radius:
-                            world[ky][kx] = 0  # Air / Cave
+            cy += random.randint(-1, 1)
+            for ky in range(cy - carve_radius, cy + carve_radius + 1):
+                for kx in range(cx - carve_radius, cx + carve_radius + 1):
+                    if 0 < kx < WORLD_WIDTH - 1 and 23 < ky < WORLD_HEIGHT - 1:
+                        if math.hypot(kx - cx, ky - cy) <= carve_radius:
+                            if world[ky][kx] != 3:  # Keep surface grass intact
+                                world[ky][kx] = 0  # Cave Air
 
-    # Spawn trees on the surface
-    for x in range(6, WORLD_WIDTH - 6, 9):
-        if random.random() < 0.8:
+    # Trees on surface
+    for x in range(6, WORLD_WIDTH - 6, 8):
+        if random.random() < 0.75:
             sy = 0
             for y in range(WORLD_HEIGHT):
                 if world[y][x] == 3:
@@ -88,14 +91,13 @@ def home():
 def handle_join(data):
     room = data.get('room', 'main').lower()
     name = data.get('name', 'Hero')
-    
     join_room(room)
     
     if room not in rooms_worlds:
         rooms_worlds[room] = generate_server_world()
         rooms_items[room] = []
         rooms_mobs[room] = []
-        rooms_time[room] = 0  # 0 to 1200 seconds (600s day, 600s night)
+        rooms_time[room] = 0
     
     player_data = {
         'id': request.sid,
@@ -129,7 +131,6 @@ def handle_update(data):
         p['y'] = data.get('y', p['y'])
         p['facing'] = data.get('facing', p['facing'])
         p['frame'] = data.get('frame', p['frame'])
-        
         emit('player_moved', p, to=room, include_self=False)
 
 @socketio.on('update_tile')
@@ -138,7 +139,6 @@ def handle_tile_update(data):
     x = data.get('x')
     y = data.get('y')
     tile = data.get('tile')
-    
     if room and room in rooms_worlds:
         if 0 <= x < WORLD_WIDTH and 0 <= y < WORLD_HEIGHT:
             rooms_worlds[room][y][x] = tile
@@ -168,41 +168,31 @@ def handle_disconnect():
             del players[request.sid]
             emit('player_left', {'id': request.sid}, to=room)
             if not players:
-                if room in rooms_players:
-                    del rooms_players[room]
-                if room in rooms_worlds:
-                    del rooms_worlds[room]
-                if room in rooms_items:
-                    del rooms_items[room]
-                if room in rooms_mobs:
-                    del rooms_mobs[room]
-                if room in rooms_time:
-                    del rooms_time[room]
+                rooms_players.pop(room, None)
+                rooms_worlds.pop(room, None)
+                rooms_items.pop(room, None)
+                rooms_mobs.pop(room, None)
+                rooms_time.pop(room, None)
             break
 
-# Background task to manage time cycle (10 min day, 10 min night) and monster spawns in caves at night
 def background_world_ticker():
     while True:
         eventlet.sleep(1)
         for room in list(rooms_worlds.keys()):
             if room in rooms_time:
-                rooms_time[room] = (rooms_time[room] + 1) % 1200  # 20 min total cycle
+                rooms_time[room] = (rooms_time[room] + 1) % 1200
                 is_night = rooms_time[room] >= 600
                 
-                # Manage night cave monsters
                 mobs = rooms_mobs.get(room, [])
                 if is_night:
-                    if len(mobs) < 8 and random.random() < 0.3:
-                        # Spawn monster in cave/underground
+                    if len(mobs) < 6 and random.random() < 0.25:
                         mx = random.randint(10, WORLD_WIDTH - 10)
-                        my = random.randint(28, WORLD_HEIGHT - 5)
-                        if rooms_worlds[room][my][mx] == 0:  # air block
+                        my = random.randint(26, WORLD_HEIGHT - 5)
+                        if rooms_worlds[room][my][mx] == 0:  # Cave air spawn
                             mobs.append({'id': random.randint(1000, 9999), 'x': mx * 32, 'y': my * 32, 'hp': 40})
                 else:
-                    # Despawn mobs during day
                     mobs = []
                 rooms_mobs[room] = mobs
-                
                 socketio.emit('world_tick', {'time': rooms_time[room], 'mobs': mobs}, to=room)
 
 eventlet.spawn(background_world_ticker)

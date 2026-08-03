@@ -3,76 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚔️ Terraria-Style Multiplayer WebSocket RPG</title>
+    <title>⚔️ PixelCraft Professional MMO</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * { box-sizing: border-box; user-select: none; }
         body, html {
             margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden;
-            background: #020617; font-family: 'Courier New', Courier, monospace; color: #f8fafc;
+            background: #020617; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #f8fafc;
         }
         canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; width: 100vw; height: 100vh; cursor: crosshair; }
+        
         .screen {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             display: none; flex-direction: column; justify-content: center; align-items: center;
-            background: linear-gradient(135deg, #0f172a, #1e1b4b); z-index: 10;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); z-index: 10;
         }
         .screen.active { display: flex; }
-        h1 { font-size: 3.5rem; margin-bottom: 5px; color: #38bdf8; text-shadow: 4px 4px #000; letter-spacing: 2px; }
+        h1 { font-size: 3.2rem; margin-bottom: 5px; color: #38bdf8; text-shadow: 3px 3px #020617; letter-spacing: 2px; font-weight: 800; }
         p { color: #94a3b8; font-size: 1.1rem; margin-bottom: 25px; }
         input {
-            background: #090d16; border: 3px solid #334155; color: #fff; padding: 12px 20px;
-            font-size: 1.2rem; font-family: 'Courier New', Courier, monospace; text-align: center;
-            outline: none; border-radius: 4px; margin-bottom: 15px; box-shadow: inset 0 4px 6px rgba(0,0,0,0.6); width: 280px;
+            background: #090d16; border: 2px solid #334155; color: #fff; padding: 12px 20px;
+            font-size: 1.1rem; text-align: center; outline: none; border-radius: 6px; margin-bottom: 15px; width: 280px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.6); transition: border-color 0.2s;
         }
         input:focus { border-color: #38bdf8; }
         .pixel-btn {
-            background: #0284c7; border: 3px solid #7dd3fc; color: white; padding: 12px 32px;
-            font-size: 1.2rem; font-family: 'Courier New', Courier, monospace; font-weight: bold; cursor: pointer;
-            box-shadow: 0 6px 0 #0369a1, 0 10px 10px rgba(0,0,0,0.5); transition: transform 0.1s, box-shadow 0.1s;
+            background: linear-gradient(to bottom, #0ea5e9, #0284c7); border: 2px solid #38bdf8; color: white; padding: 12px 32px;
+            font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4); transition: transform 0.1s, filter 0.1s;
         }
-        .pixel-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #0369a1, 0 5px 5px rgba(0,0,0,0.5); }
+        .pixel-btn:hover { filter: brightness(1.1); }
+        .pixel-btn:active { transform: translateY(2px); }
         
         #hud { position: absolute; top: 20px; left: 20px; display: none; flex-direction: column; gap: 10px; pointer-events: none; z-index: 5; }
         #hud.active { display: flex; }
         .hud-box {
-            background: rgba(15, 23, 42, 0.85); border: 3px solid #334155; padding: 10px 18px;
-            font-size: 1rem; font-weight: bold; box-shadow: 4px 4px 0px rgba(0,0,0,0.5); display: flex; gap: 15px;
+            background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px);
+            padding: 10px 16px; font-size: 0.95rem; font-weight: 600; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; gap: 15px;
         }
         
+        /* Mini Map container */
+        #minimap-container {
+            position: absolute; top: 20px; right: 20px; width: 180px; height: 110px;
+            background: rgba(15, 23, 42, 0.85); border: 2px solid #334155; border-radius: 6px;
+            overflow: hidden; z-index: 5; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        #minimap-container.active { display: block; }
+        #minimap-canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+
         /* Hotbar bar on bottom */
-        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: none; gap: 5px; z-index: 5; pointer-events: auto; background: rgba(15, 23, 42, 0.85); padding: 6px; border: 3px solid #334155; box-shadow: 4px 4px 0px rgba(0,0,0,0.5); }
+        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: none; gap: 6px; z-index: 5; pointer-events: auto; background: rgba(15, 23, 42, 0.85); padding: 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
         #hotbar.active { display: flex; }
         .slot {
-            width: 44px; height: 44px; background: #090d16; border: 2px solid #334155;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 0.75rem; color: #94a3b8; position: relative; cursor: pointer;
+            width: 46px; height: 46px; background: rgba(9, 13, 22, 0.7); border: 2px solid #334155; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: border-color 0.1s;
         }
-        .slot.selected { border-color: #38bdf8; background: #1e293b; }
-        .slot .count { position: absolute; bottom: 1px; right: 3px; font-size: 0.65rem; color: #f8fafc; font-weight: bold; }
+        .slot.selected { border-color: #38bdf8; background: rgba(30, 41, 59, 0.9); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+        .slot canvas { width: 28px; height: 28px; }
+        .slot .count { position: absolute; bottom: 2px; right: 4px; font-size: 0.7rem; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
 
-        /* Minecraft Inventory Screen */
+        /* Minecraft Professional Inventory Screen */
         #inventory-ui {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 460px; background: #c6c6c6; border: 4px solid #373737; border-top-color: #ffffff; border-left-color: #ffffff;
-            padding: 15px; display: none; flex-direction: column; gap: 12px; z-index: 20; color: #373737;
-            font-family: 'Courier New', Courier, monospace; box-shadow: 10px 10px 0px rgba(0,0,0,0.6);
+            width: 480px; background: #1e293b; border: 2px solid #475569; border-radius: 10px;
+            padding: 20px; display: none; flex-direction: column; gap: 15px; z-index: 20; color: #f8fafc;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.7);
         }
         #inventory-ui.active { display: flex; }
-        .inv-title { font-weight: bold; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #8b8b8b; padding-bottom: 4px; }
-        .inv-grid-container { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #8b8b8b; padding: 6px; border: 2px solid #373737; }
+        .inv-title { font-weight: bold; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+        .inv-grid-container { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155; }
         .inv-cell {
-            width: 38px; height: 38px; background: #8b8b8b; border: 2px solid; border-color: #373737 #ffffff #ffffff #373737;
-            display: flex; align-items: center; justify-content: center; position: relative; font-size: 0.7rem; font-weight: bold; cursor: pointer;
+            width: 40px; height: 40px; background: #1e293b; border: 2px solid #334155; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: background 0.1s;
         }
-        .crafting-section { display: flex; flex-direction: column; gap: 6px; background: #8b8b8b; padding: 8px; border: 2px solid #373737; }
-        .craft-btn { background: #737373; border: 2px solid; border-color: #ffffff #373737 #373737 #ffffff; padding: 6px; font-weight: bold; cursor: pointer; font-family: 'Courier New', Courier, monospace; text-align: left; font-size: 0.8rem; }
-        .craft-btn:active { border-color: #373737 #ffffff #ffffff #373737; }
+        .inv-cell:hover { background: #334155; }
+        .inv-cell canvas { width: 26px; height: 26px; }
+        .inv-cell .count { position: absolute; bottom: 1px; right: 3px; font-size: 0.65rem; font-weight: bold; color: #fff; text-shadow: 1px 1px #000; }
+
+        /* Tooltip hover container */
+        #tooltip {
+            position: absolute; background: rgba(15, 23, 42, 0.95); border: 1px solid #38bdf8; padding: 4px 8px;
+            font-size: 0.75rem; border-radius: 4px; pointer-events: none; z-index: 30; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+        }
+
+        .crafting-section { display: flex; flex-direction: column; gap: 8px; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155; }
+        .craft-btn { background: #334155; border: 1px solid #475569; color: #fff; padding: 8px; font-weight: 600; cursor: pointer; border-radius: 4px; text-align: left; font-size: 0.85rem; transition: background 0.1s; }
+        .craft-btn:hover { background: #475569; }
 
         .controls-overlay {
-            position: absolute; bottom: 85px; left: 50%; transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.9); border: 3px solid #334155; padding: 8px 16px;
-            font-size: 0.85rem; color: #cbd5e1; text-align: center; pointer-events: none; box-shadow: 4px 4px 0px rgba(0,0,0,0.5); z-index: 5; display: none;
+            position: absolute; bottom: 95px; left: 50%; transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px;
+            font-size: 0.85rem; color: #cbd5e1; text-align: center; pointer-events: none; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 5; display: none;
         }
         .controls-overlay.active { display: block; }
     </style>
@@ -80,11 +101,11 @@
 <body>
 
     <div id="title-screen" class="screen active">
-        <h1>TERRA-QUEST MMO</h1>
-        <p>Explore Flat Plains, Cave Dungeons & Survive the Night!</p>
+        <h1>PIXELCRAFT MMO</h1>
+        <p>Explore Flat Plains, Deep Dark Caves & Survive the Night!</p>
         <input id="name-input" maxlength="15" placeholder="Hero Name..." /><br>
         <input id="room-input" maxlength="15" placeholder="Server Room (e.g. alpha)" value="main" /><br>
-        <button class="pixel-btn" onclick="connectToServer()">JOIN WORLD</button>
+        <button class="pixel-btn" onclick="connectToServer()">ENTER WORLD</button>
     </div>
 
     <div id="hud">
@@ -95,37 +116,41 @@
         </div>
     </div>
 
-    <!-- Minecraft Style Inventory Screen -->
+    <!-- Mini Map Container -->
+    <div id="minimap-container">
+        <canvas id="minimap-canvas" width="180" height="110"></canvas>
+    </div>
+
+    <!-- Inventory Screen -->
     <div id="inventory-ui">
         <div class="inv-title">
             <span>Inventory & Crafting</span>
-            <span style="cursor:pointer; color:#000;" onclick="toggleInventory()">[X]</span>
+            <span style="cursor:pointer; color:#94a3b8;" onclick="toggleInventory()">✕</span>
         </div>
         <div>
-            <div style="font-size: 0.8rem; margin-bottom: 4px; font-weight:bold;">Storage (Blank until items collected)</div>
-            <div id="main-inventory-grid" class="inv-grid-container">
-                <!-- 27 Main Inventory Cells -->
-            </div>
+            <div style="font-size: 0.8rem; margin-bottom: 4px; font-weight:600; color:#94a3b8;">Main Inventory Storage</div>
+            <div id="main-inventory-grid" class="inv-grid-container"></div>
         </div>
         <div>
-            <div style="font-size: 0.8rem; margin-bottom: 4px; font-weight:bold;">Hotbar Storage</div>
-            <div id="inventory-hotbar-grid" class="inv-grid-container" style="grid-template-columns: repeat(9, 1fr);">
-                <!-- 9 Hotbar Inventory Cells -->
-            </div>
+            <div style="font-size: 0.8rem; margin-bottom: 4px; font-weight:600; color:#94a3b8;">Hotbar</div>
+            <div id="inventory-hotbar-grid" class="inv-grid-container" style="grid-template-columns: repeat(9, 1fr);"></div>
         </div>
         <div class="crafting-section">
-            <div style="font-size: 0.8rem; font-weight:bold;">Crafting Station</div>
+            <div style="font-size: 0.8rem; font-weight:600; color:#94a3b8;">Crafting Station</div>
             <button class="craft-btn" onclick="craftItem('wooden_pickaxe')">🛠️ Wooden Pickaxe (Req: 5 Wood)</button>
             <button class="craft-btn" onclick="craftItem('stone_pickaxe')">⛏️ Stone Pickaxe (Req: 5 Stone)</button>
-            <button class="craft-btn" onclick="craftItem('iron_pickaxe')">⚙️ Iron Pickaxe (Req: 5 Iron)</button>
+            <button class="craft-btn" onclick="craftItem('crafting_table_block')">📦 Crafting Table Block (Req: 4 Wood)</button>
         </div>
     </div>
+
+    <!-- Floating Tooltip Container -->
+    <div id="tooltip"></div>
 
     <div id="controls-hint" class="controls-overlay">
         Move: <b>A/D</b> | Jump: <b>W/Space</b> | Inventory: <b>E</b> | <b>Left-Click</b>: Mine | <b>Right-Click</b>: Place
     </div>
 
-    <!-- 9 Hotbar Slots on Bottom Screen -->
+    <!-- Hotbar Slots on Bottom Screen -->
     <div id="hotbar">
         <div class="slot selected" id="hotbar-slot-0" onclick="selectHotbarSlot(0)"><span class="count" id="hc-0"></span></div>
         <div class="slot" id="hotbar-slot-1" onclick="selectHotbarSlot(1)"><span class="count" id="hc-1"></span></div>
@@ -147,12 +172,17 @@
         const hotbar = document.getElementById('hotbar');
         const controlsHint = document.getElementById('controls-hint');
         const inventoryUi = document.getElementById('inventory-ui');
+        const minimapContainer = document.getElementById('minimap-container');
+        const tooltip = document.getElementById('tooltip');
         const nameInput = document.getElementById('name-input');
         const roomInput = document.getElementById('room-input');
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
+        const minimapCanvas = document.getElementById('minimap-canvas');
+        const minimapCtx = minimapCanvas.getContext('2d');
 
         ctx.imageSmoothingEnabled = false;
+        minimapCtx.imageSmoothingEnabled = false;
 
         let screenWidth = window.innerWidth;
         let screenHeight = window.innerHeight;
@@ -174,13 +204,12 @@
         let droppedItems = []; 
         let remotePlayers = {}; 
         let currentMobs = [];
-        let worldTime = 0; // 0 to 1200
+        let worldTime = 0;
         let currentRoom = 'main';
         let gameStarted = false;
         let inventoryOpen = false;
 
-        // Inventory array: 36 slots total (0-8 hotbar, 9-35 main inventory)
-        // Each slot: { type: null, count: 0 }
+        // 36 inventory slots (0-8 hotbar, 9-35 main inventory)
         let inventorySlots = Array(36).fill(null).map(() => ({ type: null, count: 0 }));
         let selectedHotbarIndex = 0;
 
@@ -197,7 +226,6 @@
             gravity: 0.5,
             grounded: false,
             facing: 'right',
-            animTimer: 0,
             frame: 0,
             tool: 'Fists',
             toolTier: 1
@@ -205,8 +233,51 @@
 
         const tileNames = {
             1: 'Dirt', 2: 'Stone', 3: 'Grass', 4: 'Wood', 5: 'Leaves',
-            6: 'Coal', 7: 'Iron', 8: 'Gold', 9: 'Diamond'
+            6: 'Coal Ore', 7: 'Iron Ore', 8: 'Gold Ore', 9: 'Diamond Ore', 10: 'Crafting Table'
         };
+
+        // Draw individual mini icon graphic onto a small canvas context
+        function drawBlockIcon(targetCtx, tileType, size) {
+            targetCtx.clearRect(0, 0, size, size);
+            if (!tileType) return;
+            
+            targetCtx.save();
+            targetCtx.scale(size / 32, size / 32);
+
+            if (tileType === 3) {
+                targetCtx.fillStyle = '#22c55e'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#16a34a'; targetCtx.fillRect(0, 26, 32, 6);
+            } else if (tileType === 1) {
+                targetCtx.fillStyle = '#b45309'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#92400e'; targetCtx.fillRect(4, 4, 8, 8); targetCtx.fillRect(18, 18, 8, 8);
+            } else if (tileType === 2) {
+                targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#475569'; targetCtx.fillRect(6, 6, 10, 10);
+            } else if (tileType === 4) {
+                targetCtx.fillStyle = '#78350f'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#451a03'; targetCtx.fillRect(4, 4, 8, 24);
+            } else if (tileType === 5) {
+                targetCtx.fillStyle = '#15803d'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#166534'; targetCtx.fillRect(6, 6, 8, 8); targetCtx.fillRect(18, 16, 8, 8);
+            } else if (tileType === 6) {
+                targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#0f172a'; targetCtx.fillRect(6, 6, 10, 10);
+            } else if (tileType === 7) {
+                targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#e2e8f0'; targetCtx.fillRect(6, 6, 10, 10);
+            } else if (tileType === 8) {
+                targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#fbbf24'; targetCtx.fillRect(6, 6, 10, 10);
+            } else if (tileType === 9) {
+                targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#38bdf8'; targetCtx.fillRect(6, 6, 10, 10);
+            } else if (tileType === 10) {
+                targetCtx.fillStyle = '#b45309'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#78350f'; targetCtx.fillRect(2, 2, 28, 6);
+                targetCtx.fillStyle = '#451a03'; targetCtx.fillRect(6, 8, 4, 24); targetCtx.fillRect(22, 8, 4, 24);
+            }
+            targetCtx.restore();
+        }
 
         function selectHotbarSlot(index) {
             selectedHotbarIndex = index;
@@ -223,11 +294,11 @@
                 renderInventoryUI();
             } else {
                 inventoryUi.classList.remove('active');
+                tooltip.style.display = 'none';
             }
         }
 
         function addItemToInventory(tileType) {
-            // Find existing stack
             for (let i = 0; i < 36; i++) {
                 if (inventorySlots[i].type === tileType) {
                     inventorySlots[i].count++;
@@ -235,7 +306,6 @@
                     return;
                 }
             }
-            // Find empty slot
             for (let i = 0; i < 36; i++) {
                 if (inventorySlots[i].type === null) {
                     inventorySlots[i].type = tileType;
@@ -251,11 +321,19 @@
                 let slotEl = document.getElementById(`hotbar-slot-${i}`);
                 let countEl = document.getElementById(`hc-${i}`);
                 let item = inventorySlots[i];
+                
+                let iconCanvas = slotEl.querySelector('canvas');
+                if (!iconCanvas) {
+                    iconCanvas = document.createElement('canvas');
+                    iconCanvas.width = 28; iconCanvas.height = 28;
+                    slotEl.insertBefore(iconCanvas, countEl);
+                }
+                
                 if (item.type !== null && item.count > 0) {
-                    slotEl.style.background = '#1e293b';
+                    drawBlockIcon(iconCanvas.getContext('2d'), item.type, 28);
                     countEl.textContent = item.count;
                 } else {
-                    slotEl.style.background = '#090d16';
+                    iconCanvas.getContext('2d').clearRect(0, 0, 28, 28);
                     countEl.textContent = '';
                 }
             }
@@ -267,26 +345,39 @@
             mainGrid.innerHTML = '';
             hotbarGrid.innerHTML = '';
 
-            // Render main inventory slots (9 to 35)
-            for (let i = 9; i < 36; i++) {
+            let createCellHTML = (item) => {
                 let cell = document.createElement('div');
                 cell.className = 'inv-cell';
-                let item = inventorySlots[i];
                 if (item.type !== null && item.count > 0) {
-                    cell.innerHTML = `<span style="font-size:0.6rem">${tileNames[item.type]}</span><span style="position:absolute; bottom:1px; right:2px; font-size:0.65rem;">${item.count}</span>`;
-                }
-                mainGrid.appendChild(cell);
-            }
+                    let c = document.createElement('canvas');
+                    c.width = 26; c.height = 26;
+                    drawBlockIcon(c.getContext('2d'), item.type, 26);
+                    cell.appendChild(c);
+                    
+                    let cnt = document.createElement('span');
+                    cnt.className = 'count';
+                    cnt.textContent = item.count;
+                    cell.appendChild(cnt);
 
-            // Render hotbar inventory slots (0 to 8)
-            for (let i = 0; i < 9; i++) {
-                let cell = document.createElement('div');
-                cell.className = 'inv-cell';
-                let item = inventorySlots[i];
-                if (item.type !== null && item.count > 0) {
-                    cell.innerHTML = `<span style="font-size:0.6rem">${tileNames[item.type]}</span><span style="position:absolute; bottom:1px; right:2px; font-size:0.65rem;">${item.count}</span>`;
+                    // Hover event listeners for block name tooltip
+                    cell.addEventListener('mousemove', (e) => {
+                        tooltip.textContent = tileNames[item.type] || 'Block';
+                        tooltip.style.left = (e.pageX + 12) + 'px';
+                        tooltip.style.top = (e.pageY + 12) + 'px';
+                        tooltip.style.display = 'block';
+                    });
+                    cell.addEventListener('mouseleave', () => {
+                        tooltip.style.display = 'none';
+                    });
                 }
-                hotbarGrid.appendChild(cell);
+                return cell;
+            };
+
+            for (let i = 9; i < 36; i++) {
+                mainGrid.appendChild(createCellHTML(inventorySlots[i]));
+            }
+            for (let i = 0; i < 9; i++) {
+                hotbarGrid.appendChild(createCellHTML(inventorySlots[i]));
             }
         }
 
@@ -325,13 +416,12 @@
                     hero.toolTier = 3;
                     alert('Crafted Stone Pickaxe!');
                 } else { alert('Need 5 Stone blocks!'); }
-            } else if (recipeType === 'iron_pickaxe') {
-                if (countType(7) >= 5) {
-                    deductItems(7, 5);
-                    hero.tool = 'Iron Pickaxe';
-                    hero.toolTier = 4;
-                    alert('Crafted Iron Pickaxe!');
-                } else { alert('Need 5 Iron Ore!'); }
+            } else if (recipeType === 'crafting_table_block') {
+                if (countType(4) >= 4) {
+                    deductItems(4, 4);
+                    addItemToInventory(10);
+                    alert('Crafted Crafting Table Block!');
+                } else { alert('Need 4 Wood blocks!'); }
             }
             document.getElementById('hud-tool').textContent = hero.tool;
             updateHotbarUI();
@@ -345,7 +435,6 @@
             if (room) currentRoom = room;
 
             document.getElementById('hud-name').textContent = hero.name;
-
             socket.emit('join_server', { name: hero.name, room: currentRoom });
         }
 
@@ -354,9 +443,7 @@
             remotePlayers = data.players;
             droppedItems = data.items || [];
             worldTime = data.time || 0;
-            if (socket.id && remotePlayers[socket.id]) {
-                delete remotePlayers[socket.id];
-            }
+            if (socket.id && remotePlayers[socket.id]) delete remotePlayers[socket.id];
 
             hero.x = 4 * TILE_SIZE;
             for (let y = 0; y < WORLD_HEIGHT; y++) {
@@ -371,6 +458,7 @@
                 titleScreen.classList.remove('active');
                 hud.classList.add('active');
                 hotbar.classList.add('active');
+                minimapContainer.classList.add('active');
                 controlsHint.classList.add('active');
                 requestAnimationFrame(gameLoop);
             }
@@ -403,9 +491,7 @@
 
             keys[e.key] = true;
             keys[e.key.toLowerCase()] = true;
-            if (e.key >= '1' && e.key <= '9') {
-                selectHotbarSlot(parseInt(e.key) - 1);
-            }
+            if (e.key >= '1' && e.key <= '9') selectHotbarSlot(parseInt(e.key) - 1);
         });
 
         window.addEventListener('keyup', e => {
@@ -415,6 +501,7 @@
 
         window.addEventListener('mousedown', e => {
             if (!gameStarted || inventoryOpen) return;
+            if (e.button !== 0 && e.button !== 2) return;
 
             let cameraX = Math.max(0, Math.min(WORLD_WIDTH * TILE_SIZE - screenWidth, hero.x - screenWidth / 2 + hero.width / 2));
             let cameraY = Math.max(0, Math.min(WORLD_HEIGHT * TILE_SIZE - screenHeight, hero.y - screenHeight / 2 + hero.height / 2));
@@ -426,7 +513,6 @@
             let tileY = Math.floor(worldMouseY / TILE_SIZE);
 
             if (tileX < 0 || tileX >= WORLD_WIDTH || tileY < 0 || tileY >= WORLD_HEIGHT) return;
-
             let dist = Math.hypot((hero.x + hero.width/2) - worldMouseX, (hero.y + hero.height/2) - worldMouseY);
             if (dist > 140) return;
 
@@ -455,49 +541,13 @@
                     let overlapping = !(pBox.x + pBox.w < tBox.x || pBox.x > tBox.x + tBox.w || pBox.y + pBox.h < tBox.y || pBox.y > tBox.y + tBox.h);
                     
                     if (!overlapping) {
+                        let tileToPlace = activeItem.type;
                         activeItem.count--;
                         if (activeItem.count <= 0) activeItem.type = null;
-                        worldMap[tileY][tileX] = activeItem.type || activeItem.type; // place block
-                        // Wait, let's fix the placed block tile type value:
-                        let placedType = worldMap[tileY][tileX] = activeItem.type === null ? 0 : activeItem.type; 
-                        // Actually, store activeItem.type before decrementing:
-                        // Let's rewrite placement correctly:
+                        worldMap[tileY][tileX] = tileToPlace;
+                        socket.emit('update_tile', { room: currentRoom, x: tileX, y: tileY, tile: tileToPlace });
+                        updateHotbarUI();
                     }
-                }
-            }
-        });
-
-        // Correcting right-click placement logic cleanly:
-        window.addEventListener('mousedown', e => {
-            if (!gameStarted || inventoryOpen) return;
-            if (e.button !== 2) return;
-
-            let cameraX = Math.max(0, Math.min(WORLD_WIDTH * TILE_SIZE - screenWidth, hero.x - screenWidth / 2 + hero.width / 2));
-            let cameraY = Math.max(0, Math.min(WORLD_HEIGHT * TILE_SIZE - screenHeight, hero.y - screenHeight / 2 + hero.height / 2));
-
-            let worldMouseX = e.clientX + cameraX;
-            let worldMouseY = e.clientY + cameraY;
-
-            let tileX = Math.floor(worldMouseX / TILE_SIZE);
-            let tileY = Math.floor(worldMouseY / TILE_SIZE);
-
-            if (tileX < 0 || tileX >= WORLD_WIDTH || tileY < 0 || tileY >= WORLD_HEIGHT) return;
-            let dist = Math.hypot((hero.x + hero.width/2) - worldMouseX, (hero.y + hero.height/2) - worldMouseY);
-            if (dist > 140) return;
-
-            let activeItem = inventorySlots[selectedHotbarIndex];
-            if (worldMap[tileY][tileX] === 0 && activeItem.type !== null && activeItem.count > 0) {
-                let pBox = { x: hero.x, y: hero.y, w: hero.width, h: hero.height };
-                let tBox = { x: tileX * TILE_SIZE, y: tileY * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
-                let overlapping = !(pBox.x + pBox.w < tBox.x || pBox.x > tBox.x + tBox.w || pBox.y + pBox.h < tBox.y || pBox.y > tBox.y + tBox.h);
-                
-                if (!overlapping) {
-                    let tileToPlace = activeItem.type;
-                    activeItem.count--;
-                    if (activeItem.count <= 0) activeItem.type = null;
-                    worldMap[tileY][tileX] = tileToPlace;
-                    socket.emit('update_tile', { room: currentRoom, x: tileX, y: tileY, tile: tileToPlace });
-                    updateHotbarUI();
                 }
             }
         });
@@ -636,16 +686,40 @@
                             ctx.fillStyle = '#15803d'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
                         } else if (tile === 6) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#0f172a'; ctx.fillRect(rx + 5, ry + 5, 10, 10);
+                            ctx.fillStyle = '#0f172a'; ctx.fillRect(rx + 6, ry + 6, 10, 10);
                         } else if (tile === 7) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#e2e8f0'; ctx.fillRect(rx + 5, ry + 5, 10, 10);
+                            ctx.fillStyle = '#e2e8f0'; ctx.fillRect(rx + 6, ry + 6, 10, 10);
                         } else if (tile === 8) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#fbbf24'; ctx.fillRect(rx + 5, ry + 5, 10, 10);
+                            ctx.fillStyle = '#fbbf24'; ctx.fillRect(rx + 6, ry + 6, 10, 10);
                         } else if (tile === 9) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#38bdf8'; ctx.fillRect(rx + 5, ry + 5, 10, 10);
+                            ctx.fillStyle = '#38bdf8'; ctx.fillRect(rx + 6, ry + 6, 10, 10);
+                        } else if (tile === 10) {
+                            ctx.fillStyle = '#b45309'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#78350f'; ctx.fillRect(rx, ry, TILE_SIZE, 6);
+                        }
+                    }
+                }
+            }
+
+            // Underground Darkness / Lighting effect for caves & underground terrain
+            for (let y = startRow; y <= endRow && y < WORLD_HEIGHT; y++) {
+                for (let x = startCol; x <= endCol && x < WORLD_WIDTH; x++) {
+                    let rx = x * TILE_SIZE;
+                    let ry = y * TILE_SIZE;
+                    if (y >= 26) {
+                        let distToHero = Math.hypot((hero.x + 11) - (rx + 16), (hero.y + 15) - (ry + 16));
+                        let maxRadius = 160; // torch/sight light radius underground
+                        if (distToHero > maxRadius) {
+                            let alpha = Math.min(0.92, (distToHero - maxRadius) / 120 + 0.3);
+                            ctx.fillStyle = `rgba(2, 6, 23, ${alpha})`;
+                            ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                        } else {
+                            let alpha = Math.max(0, (distToHero / maxRadius) * 0.6);
+                            ctx.fillStyle = `rgba(2, 6, 23, ${alpha})`;
+                            ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
                         }
                     }
                 }
@@ -653,17 +727,11 @@
 
             // Draw dropped items
             droppedItems.forEach(item => {
-                if (item.type === 3 || item.type === 5) ctx.fillStyle = '#22c55e';
-                else if (item.type === 1 || item.type === 4) ctx.fillStyle = '#b45309';
-                else if (item.type === 6) ctx.fillStyle = '#0f172a';
-                else if (item.type === 7) ctx.fillStyle = '#e2e8f0';
-                else if (item.type === 8) ctx.fillStyle = '#fbbf24';
-                else if (item.type === 9) ctx.fillStyle = '#38bdf8';
-                else ctx.fillStyle = '#64748b';
+                ctx.fillStyle = '#fbbf24';
                 ctx.fillRect(item.x, item.y + Math.sin(Date.now() * 0.01) * 3, 14, 14);
             });
 
-            // Draw Night Cave Mobs
+            // Draw Cave Mobs
             currentMobs.forEach(mob => {
                 ctx.fillStyle = '#ef4444';
                 ctx.fillRect(mob.x + 4, mob.y + 4, 24, 24);
@@ -680,7 +748,7 @@
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
                 ctx.fillRect(rpx - 10, rpy - 22, (rp.name.length * 8) + 8, 16);
                 ctx.fillStyle = '#38bdf8';
-                ctx.font = 'bold 11px "Courier New", monospace';
+                ctx.font = 'bold 11px sans-serif';
                 ctx.fillText(rp.name, rpx - 6, rpy - 10);
 
                 ctx.fillStyle = '#ec4899';
@@ -695,13 +763,37 @@
             ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
             ctx.fillRect(hx - 10, hy - 22, (hero.name.length * 8) + 8, 16);
             ctx.fillStyle = '#4ade80';
-            ctx.font = 'bold 11px "Courier New", monospace';
+            ctx.font = 'bold 11px sans-serif';
             ctx.fillText(hero.name, hx - 6, hy - 10);
 
             ctx.fillStyle = '#38bdf8'; ctx.fillRect(hx + 4, hy + 8, 14, 16);
             ctx.fillStyle = '#fde047'; ctx.fillRect(hx + 3, hy, 16, 10);
 
             ctx.restore();
+            drawMiniMap();
+        }
+
+        function drawMiniMap() {
+            minimapCtx.clearRect(0, 0, 180, 110);
+            let scaleX = 180 / WORLD_WIDTH;
+            let scaleY = 110 / WORLD_HEIGHT;
+
+            for (let y = 0; y < WORLD_HEIGHT; y++) {
+                for (let x = 0; x < WORLD_WIDTH; x++) {
+                    let tile = worldMap[y][x];
+                    if (tile > 0) {
+                        if (tile === 3) minimapCtx.fillStyle = '#22c55e';
+                        else if (tile === 5) minimapCtx.fillStyle = '#15803d';
+                        else if (tile >= 6) minimapCtx.fillStyle = '#f59e0b';
+                        else minimapCtx.fillStyle = '#475569';
+                        minimapCtx.fillRect(x * scaleX, y * scaleY, Math.max(1, scaleX), Math.max(1, scaleY));
+                    }
+                }
+            }
+
+            // Draw player position dot on minimap
+            minimapCtx.fillStyle = '#ef4444';
+            minimapCtx.fillRect((hero.x / TILE_SIZE) * scaleX - 1, (hero.y / TILE_SIZE) * scaleY - 1, 3, 3);
         }
 
         function gameLoop() {
