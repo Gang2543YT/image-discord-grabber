@@ -3,334 +3,405 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft-Style Voxel Game</title>
+    <title>2D Minecraft-Style Game</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #000;
+            background-color: #87ceeb;
             font-family: monospace;
+            user-select: none;
         }
-        #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 10px;
-            height: 10px;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 20px;
-            pointer-events: none;
+        canvas {
+            display: block;
         }
         #ui {
             position: absolute;
             top: 10px;
             left: 10px;
             color: white;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
             padding: 10px;
             border-radius: 5px;
             pointer-events: none;
+            font-size: 14px;
+        }
+        #inventory {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .slot {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .slot.active {
+            border-color: yellow;
         }
     </style>
 </head>
 <body>
-    <div id="crosshair">+</div>
     <div id="ui">
-        Controls: WASD to Move, Space to Jump, Mouse to Look<br>
-        Left Click: Break Block (Stone/Ores require a pickaxe)<br>
+        Controls: A/D to Move, Space to Jump<br>
+        Left Click: Mine Block (Stone/Ores require Wooden Pickaxe)<br>
         Right Click: Place Block<br>
-        Inventory/Tool: Press 'E' to toggle dummy crafting/tool check
+        1-5: Select Hotbar Slot
+    </div>
+    <div id="inventory">
+        <div class="slot active" id="slot-0">Pick</div>
+        <div class="slot" id="slot-1">Wood</div>
+        <div class="slot" id="slot-2">Stone</div>
+        <div class="slot" id="slot-3">Dirt</div>
+        <div class="slot" id="slot-4">Plank</div>
     </div>
 
-    <!-- Include Three.js from CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <canvas id="gameCanvas"></canvas>
+
     <script>
-        // --- GAME STATE & CONFIGURATION ---
-        const CHUNK_SIZE = 16;
-        const CHUNK_HEIGHT = 64;
-        const RENDER_DISTANCE = 2;
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // --- GAME CONFIG & CONSTANTS ---
+        const TILE_SIZE = 32;
+        const CHUNK_SIZE = 32; // Width in blocks per chunk
+        const WORLD_HEIGHT = 64; // Height in blocks
         const loadedChunks = new Map();
 
-        let scene, camera, renderer;
-        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, canJump = false;
-        let velocity = new THREE.Vector3();
-        let direction = new THREE.Vector3();
-        let prevTime = performance.now();
-
-        // Player Inventory & Equipment
-        const playerInventory = {
-            selectedTool: { type: 'wooden_pickaxe' }, // Start with a pickaxe for testing
-            items: { wood: 10, stone: 5 },
-            getSelectedToolbarItem() { return this.selectedTool; }
+        // Colors (Minecraft-inspired palette)
+        const COLORS = {
+            sky: '#87ceeb',
+            grass: '#559933',
+            dirt: '#866043',
+            stone: '#7f7f7f',
+            iron_ore: '#9e9e9e',
+            oak_planks: '#a67c52',
+            darkness: '#050510'
         };
 
-        // Block Materials (Minecraft-inspired palette)
-        const blockMaterials = {
-            grass: new THREE.MeshLambertMaterial({ color: 0x559933 }),
-            dirt: new THREE.MeshLambertMaterial({ color: 0x866043 }),
-            stone: new THREE.MeshLambertMaterial({ color: 0x7f7f7f }),
-            iron_ore: new THREE.MeshLambertMaterial({ color: 0x9e9e9e }),
-            oak_planks: new THREE.MeshLambertMaterial({ color: 0xa67c52 })
+        // Player State
+        const player = {
+            x: 0,
+            y: 45 * TILE_SIZE,
+            width: 22,
+            height: 48,
+            vx: 0,
+            vy: 0,
+            speed: 4,
+            jumpForce: -10,
+            gravity: 0.5,
+            grounded: false,
+            inventory: {
+                wooden_pickaxe: 1,
+                oak_planks: 10,
+                stone: 5,
+                dirt: 10
+            },
+            selectedSlot: 0
         };
 
-        // Crafting Recipes System
-        const craftingRecipes = [
-            {
-                input: [['oak_log']],
-                output: { item: 'oak_planks', count: 4 }
-            },
-            {
-                input: [['oak_planks'], ['oak_planks']],
-                output: { item: 'stick', count: 4 }
-            },
-            {
-                input: [
-                    ['oak_planks', 'oak_planks', 'oak_planks'],
-                    [null, 'stick', null],
-                    [null, 'stick', null]
-                ],
-                output: { item: 'wooden_pickaxe', count: 1 }
-            },
-            {
-                input: [
-                    ['stone', 'stone', 'stone'],
-                    [null, 'stick', null],
-                    [null, 'stick', null]
-                ],
-                output: { item: 'stone_pickaxe', count: 1 }
+        const hotbarItems = ['wooden_pickaxe', 'oak_planks', 'stone', 'dirt', 'oak_planks'];
+
+        // Input handling
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code >= 'Digit1' && e.code <= 'Digit5') {
+                player.selectedSlot = parseInt(e.code) - 1;
+                updateInventoryUI();
             }
-        ];
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
 
-        // --- INITIALIZATION ---
-        init();
-        animate();
-
-        function init() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87ceeb);
-            scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
-
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(8, 40, 8);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-
-            const sunLight = new THREE.DirectionalLight(0xffffff, 0.4);
-            sunLight.position.set(50, 100, 50);
-            scene.add(sunLight);
-
-            // Event Listeners
-            setupControls();
-            window.addEventListener('resize', onWindowResize);
-        }
-
-        // --- INFINITE CHUNK GENERATION ---
-        function getChunkKey(cx, cz) {
-            return `${cx},${cz}`;
-        }
-
-        function updateChunks() {
-            const playerChunkX = Math.floor(camera.position.x / CHUNK_SIZE);
-            const playerChunkZ = Math.floor(camera.position.z / CHUNK_SIZE);
-            const activeChunks = new Set();
-
-            for (let x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
-                for (let z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
-                    const cx = playerChunkX + x;
-                    const cz = playerChunkZ + z;
-                    const key = getChunkKey(cx, cz);
-                    activeChunks.add(key);
-
-                    if (!loadedChunks.has(key)) {
-                        generateChunk(cx, cz);
-                    }
-                }
-            }
-
-            // Unload out-of-range chunks
-            for (const [key, chunk] of loadedChunks.entries()) {
-                if (!activeChunks.has(key)) {
-                    scene.remove(chunk.mesh);
-                    loadedChunks.delete(key);
+        function updateInventoryUI() {
+            for (let i = 0; i < 5; i++) {
+                const slotEl = document.getElementById(`slot-${i}`);
+                if (i === player.selectedSlot) {
+                    slotEl.classList.add('active');
+                } else {
+                    slotEl.classList.remove('active');
                 }
             }
         }
 
-        function generateChunk(cx, cz) {
-            const geometry = new THREE.BoxGeometry(1, 1, 1);
-            const instancedBlockGroups = {};
+        // --- PROCEDURAL INFINITE WORLD GENERATION ---
+        function getChunkX(worldX) {
+            return Math.floor(worldX / (CHUNK_SIZE * TILE_SIZE));
+        }
 
-            // Collect block transformations per type for efficiency
+        function generateChunk(cx) {
+            const chunkData = [];
             for (let x = 0; x < CHUNK_SIZE; x++) {
-                for (let z = 0; z < CHUNK_SIZE; z++) {
-                    const worldX = cx * CHUNK_SIZE + x;
-                    const worldZ = cz * CHUNK_SIZE + z;
-                    
-                    const surfaceHeight = Math.floor(20 + Math.sin(worldX * 0.1) * 4 + Math.cos(worldZ * 0.1) * 4);
-
-                    for (let y = 0; y < CHUNK_HEIGHT; y++) {
-                        let blockType = null;
-                        if (y === surfaceHeight) {
-                            blockType = 'grass';
-                        } else if (y < surfaceHeight && y > surfaceHeight - 4) {
-                            blockType = 'dirt';
-                        } else if (y <= surfaceHeight - 4) {
-                            blockType = (y < 10 && Math.random() < 0.08) ? 'iron_ore' : 'stone';
-                        }
-
-                        if (blockType) {
-                            if (!instancedBlockGroups[blockType]) instancedBlockGroups[blockType] = [];
-                            
-                            // Apply Underground Darkness & Smooth Transition starting right below grass
-                            let lightingFactor = 1.0;
-                            if (y < surfaceHeight) {
-                                const depth = surfaceHeight - y;
-                                lightingFactor = Math.max(0.12, 1.0 - (depth * 0.18));
-                            }
-
-                            instancedBlockGroups[blockType].push({
-                                matrix: new THREE.Matrix4().makeTranslation(worldX, y, worldZ),
-                                light: lightingFactor
-                            });
-                        }
+                const worldX = cx * CHUNK_SIZE + x;
+                // Surface height map using sine waves
+                const surfaceHeight = Math.floor(35 + Math.sin(worldX * 0.05) * 6 + Math.cos(worldX * 0.02) * 10);
+                
+                const column = {};
+                for (let y = 0; y < WORLD_HEIGHT; y++) {
+                    let blockType = null;
+                    if (y === surfaceHeight) {
+                        blockType = 'grass';
+                    } else if (y < surfaceHeight && y > surfaceHeight - 4) {
+                        blockType = 'dirt';
+                    } else if (y < surfaceHeight - 3) {
+                        blockType = (y < 15 && Math.random() < 0.08) ? 'iron_ore' : 'stone';
+                    }
+                    if (blockType) {
+                        column[y] = blockType;
                     }
                 }
+                chunkData[x] = { surfaceHeight, blocks: column };
             }
-
-            const chunkGroup = new THREE.Group();
-            for (const [type, dataList] of Object.entries(instancedBlockGroups)) {
-                const mat = blockMaterials[type].clone();
-                const instancedMesh = new THREE.InstancedMesh(geometry, mat, dataList.length);
-                
-                dataList.forEach((item, index) => {
-                    instancedMesh.setMatrixAt(index, item.matrix);
-                    // Tint color for depth/darkness transition
-                    instancedMesh.setColorAt(index, new THREE.Color(item.light, item.light, item.light));
-                });
-                
-                instancedMesh.instanceMatrix.needsUpdate = true;
-                if (instancedMesh.instanceColor) instancedMesh.instanceColor.needsUpdate = true;
-                chunkGroup.add(instancedMesh);
-            }
-
-            scene.add(chunkGroup);
-            loadedChunks.set(getChunkKey(cx, cz), { mesh: chunkGroup });
+            loadedChunks.set(cx, chunkData);
+            return chunkData;
         }
 
-        // --- TOOL-GATED MINING & INTERACTION ---
-        window.addEventListener('mousedown', (e) => {
-            if (document.pointerLockElement !== document.body) {
-                document.body.requestPointerLock();
-                return;
-            }
-
-            // Raycast logic to break/place blocks
-            const raycaster = new THREE.Raycaster();
-            const center = new THREE.Vector2(0, 0);
-            raycaster.setFromCamera(center, camera);
+        function getBlock(worldBlockX, worldBlockY) {
+            const cx = Math.floor(worldBlockX / CHUNK_SIZE);
+            const localX = ((worldBlockX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
             
-            const intersects = raycaster.intersectObjects(scene.children, true);
-            if (intersects.length > 0 && intersects[0].distance < 6) {
-                const intersect = intersects[0];
-                
-                if (e.button === 0) { // Left click: Break
-                    handleBlockBreak(intersect);
-                } else if (e.button === 2) { // Right click: Place
-                    handleBlockPlace(intersect);
+            let chunk = loadedChunks.get(cx);
+            if (!chunk) {
+                chunk = generateChunk(cx);
+            }
+            return chunk[localX]?.blocks[worldBlockY] || null;
+        }
+
+        function setBlock(worldBlockX, worldBlockY, type) {
+            const cx = Math.floor(worldBlockX / CHUNK_SIZE);
+            const localX = ((worldBlockX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+            
+            let chunk = loadedChunks.get(cx);
+            if (!chunk) {
+                chunk = generateChunk(cx);
+            }
+            if (type === null) {
+                delete chunk[localX].blocks[worldBlockY];
+            } else {
+                chunk[localX].blocks[worldBlockY] = type;
+            }
+        }
+
+        function getSurfaceHeightAt(worldBlockX) {
+            const cx = Math.floor(worldBlockX / CHUNK_SIZE);
+            const localX = ((worldBlockX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+            let chunk = loadedChunks.get(cx);
+            if (!chunk) {
+                chunk = generateChunk(cx);
+            }
+            return chunk[localX].surfaceHeight;
+        }
+
+        // --- MOUSE INTERACTIONS (MINE & PLACE) ---
+        window.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // Convert screen coordinates to world block coordinates
+            const worldX = mouseX + camera.x;
+            const worldY = mouseY + camera.y;
+            const blockX = Math.floor(worldX / TILE_SIZE);
+            const blockY = Math.floor(worldY / TILE_SIZE);
+
+            // Check distance from player
+            const playerBlockX = Math.floor((player.x + player.width/2) / TILE_SIZE);
+            const playerBlockY = Math.floor((player.y + player.height/2) / TILE_SIZE);
+            const dist = Math.hypot(blockX - playerBlockX, blockY - playerBlockY);
+
+            if (dist > 6) return; // Too far away
+
+            const currentBlock = getBlock(blockX, blockY);
+
+            if (e.button === 0) { // Left click: Mine
+                if (!currentBlock) return;
+
+                // Tool-gated check for stone and ores
+                if (currentBlock === 'stone' || currentBlock.includes('_ore')) {
+                    if (!player.inventory.wooden_pickaxe) {
+                        console.warn("You need a pickaxe to mine stone/ores!");
+                        return;
+                    }
+                }
+
+                // Break block and add to inventory
+                setBlock(blockX, blockY, null);
+                player.inventory[currentBlock] = (player.inventory[currentBlock] || 0) + 1;
+
+            } else if (e.button === 2) { // Right click: Place
+                if (currentBlock !== null) return; // Space occupied
+
+                const selectedItemName = hotbarItems[player.selectedSlot];
+                if (selectedItemName === 'wooden_pickaxe') return; // Cannot place tools
+
+                if ((player.inventory[selectedItemName] || 0) > 0) {
+                    setBlock(blockX, blockY, selectedItemName);
+                    player.inventory[selectedItemName]--;
                 }
             }
         });
 
-        function handleBlockBreak(intersect) {
-            // Simplified block validation and tool requirement check
-            const requiresPickaxe = true; // Assuming targeted block is stone/ore for simulation
-            if (requiresPickaxe) {
-                const activeTool = playerInventory.getSelectedToolbarItem();
-                const hasPickaxe = activeTool && activeTool.type.includes('pickaxe');
-                if (!hasPickaxe) {
-                    console.warn("You need a pickaxe to mine this block!");
-                    return;
+        window.addEventListener('contextmenu', e => e.preventDefault());
+
+        // --- PHYSICS & COLLISION ---
+        function checkCollision(nx, ny) {
+            const left = Math.floor(nx / TILE_SIZE);
+            const right = Math.floor((nx + player.width - 1) / TILE_SIZE);
+            const top = Math.floor(ny / TILE_SIZE);
+            const bottom = Math.floor((ny + player.height - 1) / TILE_SIZE);
+
+            for (let bx = left; bx <= right; bx++) {
+                for (let by = top; by <= bottom; by++) {
+                    if (getBlock(bx, by) !== null) {
+                        return true;
+                    }
                 }
             }
-            // Remove object mesh instance or chunk element
-            const object = intersect.object;
-            scene.remove(object);
+            return false;
         }
 
-        function handleBlockPlace(intersect) {
-            const position = intersect.point.clone().add(intersect.face.normal.clone().multiplyScalar(0.5));
-            const x = Math.floor(position.x);
-            const y = Math.floor(position.y);
-            const z = Math.floor(position.z);
+        function updatePlayer() {
+            // Horizontal movement
+            player.vx = 0;
+            if (keys['KeyA'] || keys['ArrowLeft']) player.vx = -player.speed;
+            if (keys['KeyD'] || keys['ArrowRight']) player.vx = player.speed;
 
-            const geom = new THREE.BoxGeometry(1, 1, 1);
-            const mesh = new THREE.Mesh(geom, blockMaterials.oak_planks);
-            mesh.position.set(x, y, z);
-            scene.add(mesh);
-        }
+            // Apply horizontal motion & collision
+            player.x += player.vx;
+            if (checkCollision(player.x, player.y)) {
+                player.x -= player.vx;
+            }
 
-        // --- CONTROLS & ANIMATION LOOP ---
-        function setupControls() {
-            document.addEventListener('keydown', (e) => {
-                if (e.code === 'KeyW') moveForward = true;
-                if (e.code === 'KeyS') moveBackward = true;
-                if (e.code === 'KeyA') moveLeft = true;
-                if (e.code === 'KeyD') moveRight = true;
-            });
-            document.addEventListener('keyup', (e) => {
-                if (e.code === 'KeyW') moveForward = false;
-                if (e.code === 'KeyS') moveBackward = false;
-                if (e.code === 'KeyA') moveLeft = false;
-                if (e.code === 'KeyD') moveRight = false;
-            });
-            document.addEventListener('mousemove', (e) => {
-                if (document.pointerLockElement === document.body) {
-                    camera.rotation.y -= e.movementX * 0.002;
-                    camera.rotation.x -= e.movementY * 0.002;
-                    camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+            // Gravity & Vertical motion
+            player.vy += player.gravity;
+            player.y += player.vy;
+            player.grounded = false;
+
+            if (checkCollision(player.x, player.y)) {
+                player.y -= player.vy;
+                if (player.vy > 0) {
+                    player.grounded = true;
                 }
-            });
+                player.vy = 0;
+            }
+
+            // Jump
+            if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && player.grounded) {
+                player.vy = player.jumpForce;
+                player.grounded = false;
+            }
         }
 
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        // --- RENDER LOOP ---
+        const camera = { x: 0, y: 0 };
+
+        function draw() {
+            // Camera follow player smoothly
+            camera.x = player.x - canvas.width / 2 + player.width / 2;
+            camera.y = player.y - canvas.height / 2 + player.height / 2;
+
+            // Background Sky
+            ctx.fillStyle = COLORS.sky;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Render visible chunks & blocks
+            const startChunkX = Math.floor(camera.x / (CHUNK_SIZE * TILE_SIZE)) - 1;
+            const endChunkX = startChunkX + Math.ceil(canvas.width / (CHUNK_SIZE * TILE_SIZE)) + 2;
+
+            for (let cx = startChunkX; cx <= endChunkX; cx++) {
+                let chunk = loadedChunks.get(cx);
+                if (!chunk) chunk = generateChunk(cx);
+
+                for (let localX = 0; localX < CHUNK_SIZE; localX++) {
+                    const worldBlockX = cx * CHUNK_SIZE + localX;
+                    const blockCol = chunk[localX];
+                    const surfaceHeight = blockCol.surfaceHeight;
+
+                    for (const [strY, type] of Object.entries(blockCol.blocks)) {
+                        const worldBlockY = parseInt(strY);
+                        const screenX = worldBlockX * TILE_SIZE - camera.x;
+                        const screenY = worldBlockY * TILE_SIZE - camera.y;
+
+                        // Cull offscreen blocks
+                        if (screenX < -TILE_SIZE || screenX > canvas.width + TILE_SIZE ||
+                            screenY < -TILE_SIZE || screenY > canvas.height + TILE_SIZE) {
+                            continue;
+                        }
+
+                        // Base Block Color
+                        ctx.fillStyle = COLORS[type] || '#fff';
+                        ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+
+                        // --- DARKNESS & SMOOTH TRANSITION SYSTEM ---
+                        // Darkness starts strictly below the grass layer with a smooth gradient transition
+                        if (worldBlockY < surfaceHeight) {
+                            const depth = surfaceHeight - worldBlockY;
+                            // Smooth gradient factor calculating darkness alpha overlay
+                            let darknessAlpha = Math.min(0.88, depth * 0.07);
+                            if (depth === 1) darknessAlpha = 0.15; // Soft transition right under grass
+
+                            ctx.fillStyle = `rgba(5, 5, 16, ${darknessAlpha})`;
+                            ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                        }
+                    }
+                }
+            }
+
+            // Draw Player (Classic 2D Minecraft style placeholder character)
+            const playerScreenX = player.x - camera.x;
+            const playerScreenY = player.y - camera.y;
+            
+            // Body / Outfit
+            ctx.fillStyle = '#cc3333';
+            ctx.fillRect(playerScreenX + 3, playerScreenY + 16, player.width - 6, 22);
+            // Head
+            ctx.fillStyle = '#d4a373';
+            ctx.fillRect(playerScreenX + 4, playerScreenY, 14, 16);
+            // Legs
+            ctx.fillStyle = '#3333cc';
+            ctx.fillRect(playerScreenX + 4, playerScreenY + 38, 6, 10);
+            ctx.fillRect(playerScreenX + 12, playerScreenY + 38, 6, 10);
+
+            // Render Inventory / Item Counts on screen UI
+            ctx.fillStyle = 'white';
+            ctx.font = '14px monospace';
+            ctx.fillText(`Wood: ${player.inventory.oak_planks || 0}`, 20, 60);
+            ctx.fillText(`Stone: ${player.inventory.stone || 0}`, 20, 80);
+            ctx.fillText(`Pickaxe: ${player.inventory.wooden_pickaxe ? 'Yes' : 'No'}`, 20, 100);
         }
 
-        function animate() {
-            requestAnimationFrame(animate);
-
-            const time = performance.now();
-            const delta = (time - prevTime) / 1000;
-
-            // Basic movement physics
-            velocity.x -= velocity.x * 10.0 * delta;
-            velocity.z -= velocity.z * 10.0 * delta;
-
-            direction.z = Number(moveForward) - Number(moveBackward);
-            direction.x = Number(moveRight) - Number(moveLeft);
-            direction.normalize();
-
-            if (moveForward || moveBackward) velocity.z -= direction.z * 50.0 * delta;
-            if (moveLeft || moveRight) velocity.x -= direction.x * 50.0 * delta;
-
-            camera.translateX(velocity.x * delta);
-            camera.translateZ(velocity.z * delta);
-
-            // Update infinite chunks based on player location
-            updateChunks();
-
-            prevTime = time;
-            renderer.render(scene, camera);
+        function loop() {
+            updatePlayer();
+            draw();
+            requestAnimationFrame(loop);
         }
+
+        // Initialize world around spawn point and start
+        generateChunk(0);
+        generateChunk(1);
+        generateChunk(-1);
+        loop();
     </script>
 </body>
 </html>
