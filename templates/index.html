@@ -15,6 +15,80 @@
         canvas {
             display: block;
         }
+        /* Start Screen Styles */
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #151d28, #2c3e50);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            color: white;
+        }
+        .menu-box {
+            background: rgba(0, 0, 0, 0.75);
+            padding: 30px 40px;
+            border-radius: 10px;
+            border: 3px solid #f39c12;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+        }
+        .menu-box h1 {
+            margin-top: 0;
+            color: #f39c12;
+            font-size: 28px;
+            text-shadow: 2px 2px #000;
+        }
+        .menu-box input {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            font-family: 'Courier New', Courier, monospace;
+            background: #222;
+            border: 2px solid #555;
+            color: white;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            outline: none;
+            text-align: center;
+        }
+        .menu-box input:focus {
+            border-color: #f39c12;
+        }
+        .menu-box button {
+            background: #f39c12;
+            color: #111;
+            font-weight: bold;
+            padding: 10px 25px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            transition: background 0.2s;
+        }
+        .menu-box button:hover {
+            background: #e67e22;
+        }
+        #name-error {
+            color: #ff4d4d;
+            font-size: 13px;
+            margin-bottom: 15px;
+            height: 16px;
+            font-weight: bold;
+        }
+        .taken-list {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 15px;
+        }
+
+        /* In-Game UI */
         #ui-overlay {
             position: absolute;
             top: 15px;
@@ -26,13 +100,14 @@
             border: 2px solid #444;
             pointer-events: none;
             font-size: 13px;
+            display: none;
         }
         #hotbar {
             position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            display: flex;
+            display: none;
             gap: 8px;
             background: rgba(0, 0, 0, 0.75);
             padding: 8px;
@@ -67,8 +142,21 @@
     </style>
 </head>
 <body>
+
+    <!-- Start Screen Overlay -->
+    <div id="start-screen">
+        <div class="menu-box">
+            <h1>TERRARIA 2D SANDBOX</h1>
+            <p>Enter your player name:</p>
+            <input type="text" id="player-name-input" placeholder="e.g. PixelKnight" maxlength="16">
+            <div id="name-error"></div>
+            <button id="start-btn">PLAY GAME</button>
+            <div class="taken-list">Taken names: Steve, Terrarian, BuilderX, MinerBro, Notch</div>
+        </div>
+    </div>
+
     <div id="ui-overlay">
-        <strong>Controls:</strong> A/D to Move | Space to Jump | W/S or Mouse to Aim<br>
+        <strong>Controls:</strong> A/D to Move | Space to Jump | Mouse to Aim<br>
         <strong>Left Click:</strong> Swing Sword / Mine Blocks<br>
         <strong>Hotbar:</strong> 1-5 to select items
     </div>
@@ -76,7 +164,7 @@
     <div id="hotbar">
         <div class="slot active" id="slot-0">Sword<span>1</span></div>
         <div class="slot" id="slot-1">Pick<span>2</span></div>
-        <div class="slot" id="slot-2">Wood<span>0</span></div>
+        <div class="slot" id="slot-2">Wood<span>15</span></div>
         <div class="slot" id="slot-3">Stone<span>0</span></div>
         <div class="slot" id="slot-4">Ore<span>0</span></div>
     </div>
@@ -99,6 +187,10 @@
         const CHUNK_WIDTH = 32;
         const WORLD_HEIGHT = 80;
         const loadedChunks = new Map();
+        let gameStarted = false;
+
+        const TAKEN_NAMES = ['steve', 'terrarian', 'builderx', 'minerbro', 'notch'];
+        const RANDOM_NAMES = ['PixelKnight', 'VoxelVoyager', 'CraftMaster', 'DiggingDwarf', 'BlockBuster', 'CaveCrawler'];
 
         const COLORS = {
             skyTop: '#151d28',
@@ -112,10 +204,11 @@
             wood: '#8d6e63'
         };
 
-        // --- PLAYER & ENTITIES ---
+        // --- PLAYER & PARTICLES ---
         const player = {
+            name: 'Player',
             x: 0,
-            y: 45 * TILE_SIZE,
+            y: 40 * TILE_SIZE,
             width: 20,
             height: 38,
             vx: 0,
@@ -124,10 +217,8 @@
             jumpForce: -10.5,
             gravity: 0.45,
             grounded: false,
-            health: 100,
-            maxHealth: 100,
             selectedSlot: 0,
-            facing: 1, // 1 for right, -1 for left
+            facing: 1,
             swingTimer: 0,
             inventory: {
                 copper_broadsword: 1,
@@ -139,25 +230,72 @@
         };
 
         const hotbarKeys = ['copper_broadsword', 'copper_pickaxe', 'wood', 'stone', 'copper_ore'];
+        const particles = [];
+        const clouds = [
+            { x: 100, y: 80, speed: 0.3, width: 120, height: 40 },
+            { x: 450, y: 130, speed: 0.2, width: 180, height: 50 },
+            { x: 900, y: 60, speed: 0.4, width: 100, height: 35 }
+        ];
+
+        // --- START SCREEN LOGIC ---
+        const startBtn = document.getElementById('start-btn');
+        const nameInput = document.getElementById('player-name-input');
+        const nameError = document.getElementById('name-error');
+
+        startBtn.addEventListener('click', startGameHandler);
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') startGameHandler();
+        });
+
+        function startGameHandler() {
+            let enteredName = nameInput.value.trim();
+
+            if (enteredName === '') {
+                // Random name assigned if blank
+                enteredName = RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
+            } else {
+                // Check if name is taken
+                if (TAKEN_NAMES.includes(enteredName.toLowerCase())) {
+                    nameError.innerText = `⚠️ The name "${enteredName}" is already taken! Please choose another.`;
+                    nameInput.style.borderColor = '#ff4d4d';
+                    return;
+                }
+            }
+
+            player.name = enteredName;
+            gameStarted = true;
+
+            // Hide start screen, show game HUD
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('ui-overlay').style.display = 'block';
+            document.getElementById('hotbar').style.display = 'flex';
+
+            // Initialize chunks around player
+            generateChunk(0);
+            generateChunk(1);
+            generateChunk(-1);
+            updateHotbarUI();
+        }
 
         // Input Management
         const keys = {};
         const mouse = { x: 0, y: 0, down: false };
 
         window.addEventListener('keydown', e => {
+            if (!gameStarted) return;
             keys[e.code] = true;
             if (e.code >= 'Digit1' && e.code <= 'Digit5') {
                 player.selectedSlot = parseInt(e.code) - 1;
                 updateHotbarUI();
             }
         });
-        window.addEventListener('keyup', e => { keys[e.code] = false; });
+        window.addEventListener('keyup', e => { if (gameStarted) keys[e.code] = false; });
         window.addEventListener('mousemove', e => {
             const rect = canvas.getBoundingClientRect();
             mouse.x = e.clientX - rect.left;
             mouse.y = e.clientY - rect.top;
         });
-        window.addEventListener('mousedown', () => { mouse.down = true; });
+        window.addEventListener('mousedown', () => { if (gameStarted) mouse.down = true; });
         window.addEventListener('mouseup', () => { mouse.down = false; });
         window.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -277,15 +415,29 @@
                 const playerBx = Math.floor((player.x + player.width / 2) / TILE_SIZE);
                 const playerBy = Math.floor((player.y + player.height / 2) / TILE_SIZE);
 
-                // Reach check (Terraria-style distance limit ~5 tiles)
                 if (Math.hypot(targetBx - playerBx, targetBy - playerBy) < 6) {
                     const block = getBlock(targetBx, targetBy);
                     const selectedItem = hotbarKeys[player.selectedSlot];
 
                     if (selectedItem.includes('pickaxe') || selectedItem.includes('broadsword')) {
-                        player.swingTimer = 12; // Cooldown frames
+                        player.swingTimer = 12;
                         if (block) {
+                            const blockColor = COLORS[block] || '#fff';
                             setBlock(targetBx, targetBy, null);
+                            
+                            // Spawn breaking particles
+                            for (let p = 0; p < 6; p++) {
+                                particles.push({
+                                    x: (targetBx + 0.5) * TILE_SIZE,
+                                    y: (targetBy + 0.5) * TILE_SIZE,
+                                    vx: (Math.random() - 0.5) * 5,
+                                    vy: (Math.random() - 0.7) * 5,
+                                    size: Math.random() * 4 + 2,
+                                    color: blockColor,
+                                    life: 25
+                                });
+                            }
+
                             const dropName = block.includes('ore') ? block : (block === 'stone' ? 'stone' : 'wood');
                             player.inventory[dropName] = (player.inventory[dropName] || 0) + 1;
                             updateHotbarUI();
@@ -299,6 +451,16 @@
                         }
                     }
                 }
+            }
+
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.vy += 0.3; // gravity
+                pt.life--;
+                if (pt.life <= 0) particles.splice(i, 1);
             }
         }
 
@@ -315,6 +477,15 @@
             grad.addColorStop(1, COLORS.skyBottom);
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Parallax Clouds
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+            clouds.forEach(cloud => {
+                cloud.x -= cloud.speed;
+                if (cloud.x < -cloud.width) cloud.x = canvas.width + 200;
+                let renderCloudX = cloud.x - (camera.x * 0.2) % (canvas.width + 400);
+                ctx.fillRect(renderCloudX, cloud.y, cloud.width, cloud.height);
+            });
 
             // Render Chunks & Blocks
             const startChunk = Math.floor(camera.x / (CHUNK_WIDTH * TILE_SIZE)) - 1;
@@ -336,18 +507,24 @@
                         ctx.fillStyle = COLORS[type] || '#fff';
                         ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
 
-                        // Underground Darkness Gradient Overlay
+                        // Underground Darkness starts strictly right after the grass block layer
                         if (by > col.surfaceHeight) {
                             const depth = by - col.surfaceHeight;
-                            const alpha = Math.min(0.85, depth * 0.045);
-                            ctx.fillStyle = `rgba(10, 10, 18, ${alpha})`;
+                            const alpha = Math.min(0.88, depth * 0.05 + 0.1); // Starts right under grass
+                            ctx.fillStyle = `rgba(8, 8, 14, ${alpha})`;
                             ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
                         }
                     }
                 }
             }
 
-            // Draw Player Character (Terraria-style sprite placeholder)
+            // Draw Breaking Particles
+            particles.forEach(pt => {
+                ctx.fillStyle = pt.color;
+                ctx.fillRect(pt.x - camera.x, pt.y - camera.y, pt.size, pt.size);
+            });
+
+            // Draw Player Character
             const px = player.x - camera.x;
             const py = player.y - camera.y;
 
@@ -364,28 +541,35 @@
             ctx.fillStyle = '#e74c3c';
             ctx.fillRect(px + 3, py, 14, 4);
 
+            // Draw Player Name Tag Overhead
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.font = '11px Courier New';
+            ctx.textAlign = 'center';
+            const nameWidth = ctx.measureText(player.name).width;
+            ctx.fillRect(px + player.width/2 - nameWidth/2 - 4, py - 22, nameWidth + 8, 16);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(player.name, px + player.width/2, py - 10);
+
             // Draw Weapon Swing Arc if swinging
             if (player.swingTimer > 0) {
                 ctx.save();
                 ctx.translate(px + player.width / 2, py + player.height / 2);
                 ctx.rotate(player.facing * (1 - player.swingTimer / 12) * Math.PI * 1.2);
                 ctx.fillStyle = '#bdc3c7';
-                ctx.fillRect(10, -4, 20, 6); // Sword blade
+                ctx.fillRect(10, -4, 20, 6);
                 ctx.restore();
             }
         }
 
         function loop() {
-            updatePlayer();
-            draw();
+            if (gameStarted) {
+                updatePlayer();
+                draw();
+            }
             requestAnimationFrame(loop);
         }
 
-        // Initialize surrounding chunks and start
-        generateChunk(0);
-        generateChunk(1);
-        generateChunk(-1);
-        updateHotbarUI();
+        // Start animation loop immediately
         loop();
     </script>
 </body>
