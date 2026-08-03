@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Terraria-Style Sandbox RPG</title>
+    <title>2D Terraria-Style Local Multiplayer</title>
     <style>
         body {
             margin: 0;
@@ -31,30 +31,39 @@
             color: white;
         }
         .menu-box {
-            background: rgba(0, 0, 0, 0.75);
-            padding: 30px 40px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 25px 35px;
             border-radius: 10px;
             border: 3px solid #f39c12;
             text-align: center;
             box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            width: 380px;
         }
         .menu-box h1 {
             margin-top: 0;
             color: #f39c12;
-            font-size: 28px;
+            font-size: 24px;
             text-shadow: 2px 2px #000;
         }
+        .menu-box label {
+            display: block;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #ddd;
+            text-align: left;
+        }
         .menu-box input {
-            width: 80%;
-            padding: 10px;
-            font-size: 16px;
+            width: 100%;
+            padding: 8px;
+            font-size: 14px;
             font-family: 'Courier New', Courier, monospace;
             background: #222;
             border: 2px solid #555;
             color: white;
             border-radius: 5px;
-            margin-bottom: 10px;
+            margin-top: 5px;
             outline: none;
+            box-sizing: border-box;
             text-align: center;
         }
         .menu-box input:focus {
@@ -70,6 +79,8 @@
             border-radius: 5px;
             cursor: pointer;
             font-family: 'Courier New', Courier, monospace;
+            margin-top: 20px;
+            width: 100%;
             transition: background 0.2s;
         }
         .menu-box button:hover {
@@ -77,15 +88,10 @@
         }
         #name-error {
             color: #ff4d4d;
-            font-size: 13px;
-            margin-bottom: 15px;
-            height: 16px;
+            font-size: 12px;
+            margin-top: 10px;
+            min-height: 15px;
             font-weight: bold;
-        }
-        .taken-list {
-            font-size: 11px;
-            color: #aaa;
-            margin-top: 15px;
         }
 
         /* In-Game UI */
@@ -95,28 +101,38 @@
             left: 15px;
             color: white;
             background: rgba(0, 0, 0, 0.7);
-            padding: 12px;
+            padding: 10px 15px;
             border-radius: 6px;
             border: 2px solid #444;
             pointer-events: none;
-            font-size: 13px;
+            font-size: 12px;
             display: none;
+            line-height: 1.5;
         }
-        #hotbar {
+        .hud-container {
             position: absolute;
             bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
             display: none;
-            gap: 8px;
+            gap: 15px;
+        }
+        #hud-p1 { left: 20px; }
+        #hud-p2 { right: 20px; }
+        .player-hud {
             background: rgba(0, 0, 0, 0.75);
-            padding: 8px;
+            padding: 8px 12px;
             border-radius: 8px;
             border: 2px solid #555;
+            color: white;
+            font-size: 12px;
+        }
+        .hotbar {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
         }
         .slot {
-            width: 45px;
-            height: 45px;
+            width: 35px;
+            height: 35px;
             background: rgba(255, 255, 255, 0.1);
             border: 2px solid #666;
             display: flex;
@@ -125,7 +141,7 @@
             justify-content: center;
             color: white;
             font-weight: bold;
-            font-size: 11px;
+            font-size: 10px;
             position: relative;
         }
         .slot.active {
@@ -134,39 +150,48 @@
         }
         .slot span {
             position: absolute;
-            bottom: 2px;
-            right: 4px;
-            font-size: 10px;
+            bottom: 1px;
+            right: 3px;
+            font-size: 9px;
             color: #f1c40f;
         }
     </style>
 </head>
 <body>
 
-    <!-- Start Screen Overlay -->
+    <!-- Start Screen -->
     <div id="start-screen">
         <div class="menu-box">
-            <h1>TERRARIA 2D SANDBOX</h1>
-            <p>Enter your player name:</p>
-            <input type="text" id="player-name-input" placeholder="e.g. PixelKnight" maxlength="16">
+            <h1>2D TERRARIA MULTIPLAYER</h1>
+            <label for="p1-name">Player 1 Name (WASD + Space):</label>
+            <input type="text" id="p1-name" placeholder="Leave blank for random" maxlength="16">
+            
+            <label for="p2-name">Player 2 Name (Arrow Keys + Enter):</label>
+            <input type="text" id="p2-name" placeholder="Leave blank for random" maxlength="16">
+            
             <div id="name-error"></div>
-            <button id="start-btn">PLAY GAME</button>
-            <div class="taken-list">Taken names: Steve, Terrarian, BuilderX, MinerBro, Notch</div>
+            <button id="start-btn">START GAME</button>
         </div>
     </div>
 
     <div id="ui-overlay">
-        <strong>Controls:</strong> A/D to Move | Space to Jump | Mouse to Aim<br>
-        <strong>Left Click:</strong> Swing Sword / Mine Blocks<br>
-        <strong>Hotbar:</strong> 1-5 to select items
+        <strong>P1 Controls:</strong> A/D to Move, W/S or Space to Jump<br>
+        <strong>P2 Controls:</strong> Left/Right Arrows to Move, Up Arrow to Jump<br>
+        <strong>Actions:</strong> Click to Mine/Place blocks (Shared World)
     </div>
 
-    <div id="hotbar">
-        <div class="slot active" id="slot-0">Sword<span>1</span></div>
-        <div class="slot" id="slot-1">Pick<span>2</span></div>
-        <div class="slot" id="slot-2">Wood<span>15</span></div>
-        <div class="slot" id="slot-3">Stone<span>0</span></div>
-        <div class="slot" id="slot-4">Ore<span>0</span></div>
+    <div class="hud-container" id="hud-p1">
+        <div class="player-hud" id="hud-info-p1">
+            <strong id="title-p1">Player 1</strong>
+            <div class="hotbar" id="hotbar-p1"></div>
+        </div>
+    </div>
+
+    <div class="hud-container" id="hud-p2">
+        <div class="player-hud" id="hud-info-p2">
+            <strong id="title-p2">Player 2</strong>
+            <div class="hotbar" id="hotbar-p2"></div>
+        </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -182,33 +207,43 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // --- GAME CONFIG & CONSTANTS ---
+        // --- CONSTANTS & CONFIG ---
         const TILE_SIZE = 24;
         const CHUNK_WIDTH = 32;
         const WORLD_HEIGHT = 80;
         const loadedChunks = new Map();
         let gameStarted = false;
+        let worldSeed = Math.random() * 10000;
+
+        // Expanded Random Name Pool
+        const RANDOM_NAMES = [
+            'PixelKnight', 'VoxelVoyager', 'CraftMaster', 'DiggingDwarf', 'BlockBuster', 
+            'CaveCrawler', 'ShadowMiner', 'BedrockBoss', 'ObsidianOgre', 'GoldGoblin',
+            'CopperCommander', 'IronIcon', 'StoneStalker', 'DirtDefender', 'TreeTrapper',
+            'SkySurfer', 'MagmaMage', 'RelicRider', 'TerraTamer', 'SandboxSlayer',
+            'PixelPioneer', 'BrickBandit', 'CobbleKing', 'SubterraneanSniper', 'ApexAlchemist'
+        ];
 
         const TAKEN_NAMES = ['steve', 'terrarian', 'builderx', 'minerbro', 'notch'];
-        const RANDOM_NAMES = ['PixelKnight', 'VoxelVoyager', 'CraftMaster', 'DiggingDwarf', 'BlockBuster', 'CaveCrawler'];
 
         const COLORS = {
             skyTop: '#151d28',
             skyBottom: '#4a90e2',
-            surface: '#43a047',
             grass: '#558b2f',
             dirt: '#795548',
             stone: '#616161',
             copper_ore: '#d84315',
             iron_ore: '#b0bec5',
-            wood: '#8d6e63'
+            wood: '#8d6e63',
+            leaves: '#2e7d32'
         };
 
-        // --- PLAYER & PARTICLES ---
-        const player = {
-            name: 'Player',
-            x: 0,
-            y: 40 * TILE_SIZE,
+        // --- PLAYERS CONFIGURATION ---
+        const player1 = {
+            id: 1,
+            name: 'Player 1',
+            x: -40,
+            y: 35 * TILE_SIZE,
             width: 20,
             height: 38,
             vx: 0,
@@ -217,78 +252,142 @@
             jumpForce: -10.5,
             gravity: 0.45,
             grounded: false,
-            selectedSlot: 0,
             facing: 1,
             swingTimer: 0,
-            inventory: {
-                copper_broadsword: 1,
-                copper_pickaxe: 1,
-                wood: 15,
-                stone: 0,
-                copper_ore: 0
-            }
+            selectedSlot: 0,
+            inventory: { copper_broadsword: 1, copper_pickaxe: 1, wood: 15, stone: 0, copper_ore: 0 }
+        };
+
+        const player2 = {
+            id: 2,
+            name: 'Player 2',
+            x: 40,
+            y: 35 * TILE_SIZE,
+            width: 20,
+            height: 38,
+            vx: 0,
+            vy: 0,
+            speed: 4.5,
+            jumpForce: -10.5,
+            gravity: 0.45,
+            grounded: false,
+            facing: -1,
+            swingTimer: 0,
+            selectedSlot: 0,
+            inventory: { copper_broadsword: 1, copper_pickaxe: 1, wood: 15, stone: 0, copper_ore: 0 }
         };
 
         const hotbarKeys = ['copper_broadsword', 'copper_pickaxe', 'wood', 'stone', 'copper_ore'];
         const particles = [];
         const clouds = [
             { x: 100, y: 80, speed: 0.3, width: 120, height: 40 },
-            { x: 450, y: 130, speed: 0.2, width: 180, height: 50 },
-            { x: 900, y: 60, speed: 0.4, width: 100, height: 35 }
+            { x: 550, y: 130, speed: 0.2, width: 180, height: 50 },
+            { x: 1000, y: 60, speed: 0.4, width: 100, height: 35 }
         ];
 
-        // --- START SCREEN LOGIC ---
+        // --- START SCREEN HANDLER ---
         const startBtn = document.getElementById('start-btn');
-        const nameInput = document.getElementById('player-name-input');
+        const p1Input = document.getElementById('p1-name');
+        const p2Input = document.getElementById('p2-name');
         const nameError = document.getElementById('name-error');
 
-        startBtn.addEventListener('click', startGameHandler);
-        nameInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') startGameHandler();
-        });
+        startBtn.addEventListener('click', initializeGame);
+        p1Input.addEventListener('keydown', e => { if (e.key === 'Enter') initializeGame(); });
+        p2Input.addEventListener('keydown', e => { if (e.key === 'Enter') initializeGame(); });
 
-        function startGameHandler() {
-            let enteredName = nameInput.value.trim();
+        function getRandomUniqueName(excludeName = '') {
+            let available = RANDOM_NAMES.filter(n => n.toLowerCase() !== excludeName.toLowerCase());
+            return available[Math.floor(Math.random() * available.length)];
+        }
 
-            if (enteredName === '') {
-                // Random name assigned if blank
-                enteredName = RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
-            } else {
-                // Check if name is taken
-                if (TAKEN_NAMES.includes(enteredName.toLowerCase())) {
-                    nameError.innerText = `⚠️ The name "${enteredName}" is already taken! Please choose another.`;
-                    nameInput.style.borderColor = '#ff4d4d';
-                    return;
-                }
+        function initializeGame() {
+            let name1 = p1Input.value.trim();
+            let name2 = p2Input.value.trim();
+
+            if (name1 === '') name1 = getRandomUniqueName();
+            if (name2 === '') name2 = getRandomUniqueName(name1);
+
+            // Check if names match each other
+            if (name1.toLowerCase() === name2.toLowerCase()) {
+                nameError.innerText = `⚠️ Both players cannot have the same name ("${name1}")! Please choose different names.`;
+                return;
             }
 
-            player.name = enteredName;
-            gameStarted = true;
+            // Check system taken names
+            if (TAKEN_NAMES.includes(name1.toLowerCase()) || TAKEN_NAMES.includes(name2.toLowerCase())) {
+                nameError.innerText = `⚠️ One of the names entered is reserved/taken! Please try another.`;
+                return;
+            }
 
-            // Hide start screen, show game HUD
+            player1.name = name1;
+            player2.name = name2;
+
+            gameStarted = true;
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('ui-overlay').style.display = 'block';
-            document.getElementById('hotbar').style.display = 'flex';
+            document.getElementById('hud-p1').style.display = 'block';
+            document.getElementById('hud-p2').style.display = 'block';
 
-            // Initialize chunks around player
+            document.getElementById('title-p1').innerText = player1.name;
+            document.getElementById('title-p2').innerText = player2.name;
+
+            buildHotbarUI('p1', player1);
+            buildHotbarUI('p2', player2);
+
+            // Generate initial random world chunks
             generateChunk(0);
             generateChunk(1);
             generateChunk(-1);
-            updateHotbarUI();
+            generateChunk(2);
+            generateChunk(-2);
         }
 
-        // Input Management
+        function buildHotbarUI(prefix, playerObj) {
+            const container = document.getElementById(`hotbar-${prefix}`);
+            container.innerHTML = '';
+            hotbarKeys.forEach((key, idx) => {
+                const slot = document.createElement('div');
+                slot.className = `slot ${idx === playerObj.selectedSlot ? 'active' : ''}`;
+                slot.id = `slot-${prefix}-${idx}`;
+                slot.innerHTML = `${key.replace('copper_', '').substring(0,4).toUpperCase()}<span>${playerObj.inventory[key]}</span>`;
+                container.appendChild(slot);
+            });
+        }
+
+        function updateHotbarUI(prefix, playerObj) {
+            hotbarKeys.forEach((key, idx) => {
+                const slot = document.getElementById(`slot-${prefix}-${idx}`);
+                if (slot) {
+                    slot.querySelector('span').innerText = playerObj.inventory[key];
+                    if (idx === playerObj.selectedSlot) {
+                        slot.classList.add('active');
+                    } else {
+                        slot.classList.remove('active');
+                    }
+                }
+            });
+        }
+
+        // --- INPUTS ---
         const keys = {};
         const mouse = { x: 0, y: 0, down: false };
 
         window.addEventListener('keydown', e => {
             if (!gameStarted) return;
             keys[e.code] = true;
+
+            // P1 Hotbar selection (1-5)
             if (e.code >= 'Digit1' && e.code <= 'Digit5') {
-                player.selectedSlot = parseInt(e.code) - 1;
-                updateHotbarUI();
+                player1.selectedSlot = parseInt(e.code) - 1;
+                updateHotbarUI('p1', player1);
+            }
+            // P2 Hotbar selection (Numpad 1-5 or F1-F5)
+            if (e.code >= 'Numpad1' && e.code <= 'Numpad5') {
+                player2.selectedSlot = parseInt(e.code) - 'Numpad1';
+                updateHotbarUI('p2', player2);
             }
         });
+
         window.addEventListener('keyup', e => { if (gameStarted) keys[e.code] = false; });
         window.addEventListener('mousemove', e => {
             const rect = canvas.getBoundingClientRect();
@@ -299,28 +398,15 @@
         window.addEventListener('mouseup', () => { mouse.down = false; });
         window.addEventListener('contextmenu', e => e.preventDefault());
 
-        function updateHotbarUI() {
-            for (let i = 0; i < 5; i++) {
-                const slot = document.getElementById(`slot-${i}`);
-                const itemName = hotbarKeys[i];
-                const count = player.inventory[itemName] || 0;
-                slot.querySelector('span').innerText = count;
-                if (i === player.selectedSlot) {
-                    slot.classList.add('active');
-                } else {
-                    slot.classList.remove('active');
-                }
-            }
-        }
-
-        // --- PROCEDURAL WORLD GENERATION ---
+        // --- PROCEDURAL RANDOM WORLD GENERATION ---
         function generateChunk(cx) {
             const chunkData = [];
             for (let x = 0; x < CHUNK_WIDTH; x++) {
                 const worldX = cx * CHUNK_WIDTH + x;
-                const surfaceHeight = Math.floor(40 + Math.sin(worldX * 0.04) * 8 + Math.cos(worldX * 0.015) * 15);
+                // Randomized seed offset applied to sine wave terrain generation
+                const surfaceHeight = Math.floor(40 + Math.sin(worldX * 0.04 + worldSeed) * 9 + Math.cos(worldX * 0.015 + worldSeed * 0.5) * 14);
                 
-                const column = {};
+                const column = { surfaceHeight, blocks: {}, trees: [] };
                 for (let y = 0; y < WORLD_HEIGHT; y++) {
                     let type = null;
                     if (y === surfaceHeight) {
@@ -334,9 +420,32 @@
                             type = 'stone';
                         }
                     }
-                    if (type) column[y] = type;
+                    if (type) column.blocks[y] = type;
                 }
-                chunkData[x] = { surfaceHeight, blocks: column };
+
+                // Random Tree Generation on Surface (Non-solid background decoration)
+                if (Math.random() < 0.25 && x > 2 && x < CHUNK_WIDTH - 2) {
+                    const sh = surfaceHeight;
+                    const treeHeight = 5 + Math.floor(Math.random() * 3);
+                    const treeTrunkX = worldX;
+                    const treeTrunkBaseY = sh - 1;
+
+                    const treeBlocks = [];
+                    // Trunk
+                    for (let th = 0; th < treeHeight; th++) {
+                        treeBlocks.push({ x: treeTrunkX, y: treeTrunkBaseY - th, type: 'wood' });
+                    }
+                    // Leaves Canopy
+                    for (let lx = -2; lx <= 2; lx++) {
+                        for (let ly = -treeHeight - 3; ly <= -treeHeight; ly++) {
+                            if (Math.abs(lx) === 2 && Math.abs(ly + treeHeight + 1.5) > 1.5 && Math.random() < 0.3) continue;
+                            treeBlocks.push({ x: treeTrunkX + lx, y: treeTrunkBaseY + ly, type: 'leaves' });
+                        }
+                    }
+                    column.trees = treeBlocks;
+                }
+
+                chunkData[x] = column;
             }
             loadedChunks.set(cx, chunkData);
             return chunkData;
@@ -362,12 +471,12 @@
             }
         }
 
-        // --- PHYSICS & COLLISION ---
+        // --- PHYSICS & COLLISION (Ignores trees so players walk through them) ---
         function checkCollision(nx, ny) {
             const left = Math.floor(nx / TILE_SIZE);
-            const right = Math.floor((nx + player.width - 1) / TILE_SIZE);
+            const right = Math.floor((nx + player1.width - 1) / TILE_SIZE);
             const top = Math.floor(ny / TILE_SIZE);
-            const bottom = Math.floor((ny + player.height - 1) / TILE_SIZE);
+            const bottom = Math.floor((ny + player1.height - 1) / TILE_SIZE);
 
             for (let bx = left; bx <= right; bx++) {
                 for (let by = top; by <= bottom; by++) {
@@ -377,101 +486,107 @@
             return false;
         }
 
-        function updatePlayer() {
-            player.vx = 0;
-            if (keys['KeyA'] || keys['ArrowLeft']) { player.vx = -player.speed; player.facing = -1; }
-            if (keys['KeyD'] || keys['ArrowRight']) { player.vx = player.speed; player.facing = 1; }
-
-            player.x += player.vx;
-            if (checkCollision(player.x, player.y)) player.x -= player.vx;
-
-            player.vy += player.gravity;
-            player.y += player.vy;
-            player.grounded = false;
-
-            if (checkCollision(player.x, player.y)) {
-                player.y -= player.vy;
-                if (player.vy > 0) player.grounded = true;
-                player.vy = 0;
+        function updatePlayerPhysics(p) {
+            // Horizontal Movement
+            p.vx = 0;
+            if (p.id === 1) {
+                if (keys['KeyA'] || keys['ArrowLeft']) { p.vx = -p.speed; p.facing = -1; }
+                if (keys['KeyD'] || keys['ArrowRight']) { p.vx = p.speed; p.facing = 1; }
+            } else {
+                if (keys['ArrowLeft'] || keys['KeyJ']) { p.vx = -p.speed; p.facing = -1; }
+                if (keys['ArrowRight'] || keys['KeyL']) { p.vx = p.speed; p.facing = 1; }
             }
 
-            if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && player.grounded) {
-                player.vy = player.jumpForce;
-                player.grounded = false;
+            p.x += p.vx;
+            if (checkCollision(p.x, p.y)) p.x -= p.vx;
+
+            // Vertical Movement & Gravity
+            p.vy += p.gravity;
+            p.y += p.vy;
+            p.grounded = false;
+
+            if (checkCollision(p.x, p.y)) {
+                p.y -= p.vy;
+                if (p.vy > 0) p.grounded = true;
+                p.vy = 0;
             }
 
-            if (player.swingTimer > 0) player.swingTimer--;
-
-            // Handle Item / Tool Action (Mining / Swinging)
-            if (mouse.down && player.swingTimer === 0) {
-                const cameraX = player.x - canvas.width / 2;
-                const cameraY = player.y - canvas.height / 2;
-                const worldMouseX = mouse.x + cameraX;
-                const worldMouseY = mouse.y + cameraY;
-
-                const targetBx = Math.floor(worldMouseX / TILE_SIZE);
-                const targetBy = Math.floor(worldMouseY / TILE_SIZE);
-
-                const playerBx = Math.floor((player.x + player.width / 2) / TILE_SIZE);
-                const playerBy = Math.floor((player.y + player.height / 2) / TILE_SIZE);
-
-                if (Math.hypot(targetBx - playerBx, targetBy - playerBy) < 6) {
-                    const block = getBlock(targetBx, targetBy);
-                    const selectedItem = hotbarKeys[player.selectedSlot];
-
-                    if (selectedItem.includes('pickaxe') || selectedItem.includes('broadsword')) {
-                        player.swingTimer = 12;
-                        if (block) {
-                            const blockColor = COLORS[block] || '#fff';
-                            setBlock(targetBx, targetBy, null);
-                            
-                            // Spawn breaking particles
-                            for (let p = 0; p < 6; p++) {
-                                particles.push({
-                                    x: (targetBx + 0.5) * TILE_SIZE,
-                                    y: (targetBy + 0.5) * TILE_SIZE,
-                                    vx: (Math.random() - 0.5) * 5,
-                                    vy: (Math.random() - 0.7) * 5,
-                                    size: Math.random() * 4 + 2,
-                                    color: blockColor,
-                                    life: 25
-                                });
-                            }
-
-                            const dropName = block.includes('ore') ? block : (block === 'stone' ? 'stone' : 'wood');
-                            player.inventory[dropName] = (player.inventory[dropName] || 0) + 1;
-                            updateHotbarUI();
-                        }
-                    } else if (selectedItem === 'wood' || selectedItem === 'stone') {
-                        if (!block && player.inventory[selectedItem] > 0) {
-                            setBlock(targetBx, targetBy, selectedItem);
-                            player.inventory[selectedItem]--;
-                            updateHotbarUI();
-                            player.swingTimer = 10;
-                        }
-                    }
+            // Jumping
+            if (p.id === 1) {
+                if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && p.grounded) {
+                    p.vy = p.jumpForce;
+                    p.grounded = false;
+                }
+            } else {
+                if ((keys['ArrowUp'] || keys['KeyI']) && p.grounded) {
+                    p.vy = p.jumpForce;
+                    p.grounded = false;
                 }
             }
 
-            // Update particles
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const pt = particles[i];
-                pt.x += pt.vx;
-                pt.y += pt.vy;
-                pt.vy += 0.3; // gravity
-                pt.life--;
-                if (pt.life <= 0) particles.splice(i, 1);
+            if (p.swingTimer > 0) p.swingTimer--;
+        }
+
+        function handleMouseInteractions() {
+            if (!mouse.down) return;
+
+            const cameraX = (player1.x + player2.x) / 2 - canvas.width / 2;
+            const cameraY = (player1.y + player2.y) / 2 - canvas.height / 2;
+            const worldMouseX = mouse.x + cameraX;
+            const worldMouseY = mouse.y + cameraY;
+
+            const targetBx = Math.floor(worldMouseX / TILE_SIZE);
+            const targetBy = Math.floor(worldMouseY / TILE_SIZE);
+
+            const p1Bx = Math.floor((player1.x + player1.width / 2) / TILE_SIZE);
+            const p1By = Math.floor((player1.y + player1.height / 2) / TILE_SIZE);
+
+            // Check distance from Player 1 for mining/placing
+            if (Math.hypot(targetBx - p1Bx, targetBy - p1By) < 6 && player1.swingTimer === 0) {
+                const block = getBlock(targetBx, targetBy);
+                const selectedItem = hotbarKeys[player1.selectedSlot];
+
+                if (selectedItem.includes('pickaxe') || selectedItem.includes('broadsword')) {
+                    player1.swingTimer = 12;
+                    if (block) {
+                        const blockColor = COLORS[block] || '#fff';
+                        setBlock(targetBx, targetBy, null);
+                        
+                        for (let p = 0; p < 5; p++) {
+                            particles.push({
+                                x: (targetBx + 0.5) * TILE_SIZE,
+                                y: (targetBy + 0.5) * TILE_SIZE,
+                                vx: (Math.random() - 0.5) * 5,
+                                vy: (Math.random() - 0.7) * 5,
+                                size: Math.random() * 3 + 2,
+                                color: blockColor,
+                                life: 20
+                            });
+                        }
+
+                        const dropName = block.includes('ore') ? block : (block === 'stone' ? 'stone' : 'wood');
+                        player1.inventory[dropName] = (player1.inventory[dropName] || 0) + 1;
+                        updateHotbarUI('p1', player1);
+                    }
+                } else if (selectedItem === 'wood' || selectedItem === 'stone') {
+                    if (!block && player1.inventory[selectedItem] > 0) {
+                        setBlock(targetBx, targetBy, selectedItem);
+                        player1.inventory[selectedItem]--;
+                        updateHotbarUI('p1', player1);
+                        player1.swingTimer = 10;
+                    }
+                }
             }
         }
 
         // --- RENDER LOOP ---
-        const camera = { x: 0, y: 0 };
-
         function draw() {
-            camera.x = player.x - canvas.width / 2 + player.width / 2;
-            camera.y = player.y - canvas.height / 2 + player.height / 2;
+            // Camera tracks midpoint between both players
+            const targetCamX = (player1.x + player2.x) / 2 - canvas.width / 2 + player1.width / 2;
+            const targetCamY = (player1.y + player2.y) / 2 - canvas.height / 2 + player1.height / 2;
+            const camera = { x: targetCamX, y: targetCamY };
 
-            // Gradient Sky Background
+            // Sky Gradient Background
             const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
             grad.addColorStop(0, COLORS.skyTop);
             grad.addColorStop(1, COLORS.skyBottom);
@@ -482,17 +597,32 @@
             ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
             clouds.forEach(cloud => {
                 cloud.x -= cloud.speed;
-                if (cloud.x < -cloud.width) cloud.x = canvas.width + 200;
+                if (cloud.x < -cloud.width) cloud.x = canvas.width + 300;
                 let renderCloudX = cloud.x - (camera.x * 0.2) % (canvas.width + 400);
                 ctx.fillRect(renderCloudX, cloud.y, cloud.width, cloud.height);
             });
 
-            // Render Chunks & Blocks
+            // Render Chunks, Blocks & Background Trees
             const startChunk = Math.floor(camera.x / (CHUNK_WIDTH * TILE_SIZE)) - 1;
             const endChunk = startChunk + Math.ceil(canvas.width / (CHUNK_WIDTH * TILE_SIZE)) + 2;
 
             for (let cx = startChunk; cx <= endChunk; cx++) {
                 let chunk = loadedChunks.get(cx) || generateChunk(cx);
+
+                // Render non-solid background trees first so players walk in front of/through them
+                chunk.forEach(col => {
+                    col.trees.forEach(t => {
+                        const screenX = t.x * TILE_SIZE - camera.x;
+                        const screenY = t.y * TILE_SIZE - camera.y;
+                        if (screenX >= -TILE_SIZE && screenX <= canvas.width + TILE_SIZE &&
+                            screenY >= -TILE_SIZE && screenY <= canvas.height + TILE_SIZE) {
+                            ctx.fillStyle = COLORS[t.type];
+                            ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                        }
+                    });
+                });
+
+                // Render terrain blocks
                 for (let lx = 0; lx < CHUNK_WIDTH; lx++) {
                     const bx = cx * CHUNK_WIDTH + lx;
                     const col = chunk[lx];
@@ -507,10 +637,10 @@
                         ctx.fillStyle = COLORS[type] || '#fff';
                         ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
 
-                        // Underground Darkness starts strictly right after the grass block layer
+                        // Underground darkness starts immediately right below the grass block layer
                         if (by > col.surfaceHeight) {
                             const depth = by - col.surfaceHeight;
-                            const alpha = Math.min(0.88, depth * 0.05 + 0.1); // Starts right under grass
+                            const alpha = Math.min(0.88, depth * 0.05 + 0.12);
                             ctx.fillStyle = `rgba(8, 8, 14, ${alpha})`;
                             ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
                         }
@@ -518,58 +648,75 @@
                 }
             }
 
-            // Draw Breaking Particles
+            // Render Particles
             particles.forEach(pt => {
                 ctx.fillStyle = pt.color;
                 ctx.fillRect(pt.x - camera.x, pt.y - camera.y, pt.size, pt.size);
             });
 
-            // Draw Player Character
-            const px = player.x - camera.x;
-            const py = player.y - camera.y;
+            // Draw Player Helper Function
+            function renderPlayer(p, shirtColor) {
+                const px = p.x - camera.x;
+                const py = p.y - camera.y;
 
-            // Legs
-            ctx.fillStyle = '#2c3e50';
-            ctx.fillRect(px + 3, py + 26, 5, 12);
-            ctx.fillRect(px + 12, py + 26, 5, 12);
-            // Torso / Shirt
-            ctx.fillStyle = '#2980b9';
-            ctx.fillRect(px + 2, py + 12, 16, 16);
-            // Head & Hair
-            ctx.fillStyle = '#f1c40f';
-            ctx.fillRect(px + 3, py + 2, 14, 12);
-            ctx.fillStyle = '#e74c3c';
-            ctx.fillRect(px + 3, py, 14, 4);
+                // Legs
+                ctx.fillStyle = '#2c3e50';
+                ctx.fillRect(px + 3, py + 26, 5, 12);
+                ctx.fillRect(px + 12, py + 26, 5, 12);
+                // Torso
+                ctx.fillStyle = shirtColor;
+                ctx.fillRect(px + 2, py + 12, 16, 16);
+                // Head
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(px + 3, py + 2, 14, 12);
+                ctx.fillStyle = '#d35400';
+                ctx.fillRect(px + 3, py, 14, 4);
 
-            // Draw Player Name Tag Overhead
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            ctx.font = '11px Courier New';
-            ctx.textAlign = 'center';
-            const nameWidth = ctx.measureText(player.name).width;
-            ctx.fillRect(px + player.width/2 - nameWidth/2 - 4, py - 22, nameWidth + 8, 16);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillText(player.name, px + player.width/2, py - 10);
+                // Name tag overhead
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.font = '11px Courier New';
+                ctx.textAlign = 'center';
+                const nameWidth = ctx.measureText(p.name).width;
+                ctx.fillRect(px + p.width/2 - nameWidth/2 - 4, py - 22, nameWidth + 8, 16);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(p.name, px + p.width/2, py - 10);
 
-            // Draw Weapon Swing Arc if swinging
-            if (player.swingTimer > 0) {
-                ctx.save();
-                ctx.translate(px + player.width / 2, py + player.height / 2);
-                ctx.rotate(player.facing * (1 - player.swingTimer / 12) * Math.PI * 1.2);
-                ctx.fillStyle = '#bdc3c7';
-                ctx.fillRect(10, -4, 20, 6);
-                ctx.restore();
+                // Swing animation
+                if (p.swingTimer > 0) {
+                    ctx.save();
+                    ctx.translate(px + p.width / 2, py + p.height / 2);
+                    ctx.rotate(p.facing * (1 - p.swingTimer / 12) * Math.PI * 1.2);
+                    ctx.fillStyle = '#bdc3c7';
+                    ctx.fillRect(10, -4, 20, 6);
+                    ctx.restore();
+                }
             }
+
+            renderPlayer(player1, '#2980b9'); // Blue shirt for Player 1
+            renderPlayer(player2, '#8e44ad'); // Purple shirt for Player 2
         }
 
         function loop() {
             if (gameStarted) {
-                updatePlayer();
+                updatePlayerPhysics(player1);
+                updatePlayerPhysics(player2);
+                handleMouseInteractions();
+
+                // Update particles
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const pt = particles[i];
+                    pt.x += pt.vx;
+                    pt.y += pt.vy;
+                    pt.vy += 0.3;
+                    pt.life--;
+                    if (pt.life <= 0) particles.splice(i, 1);
+                }
+
                 draw();
             }
             requestAnimationFrame(loop);
         }
 
-        // Start animation loop immediately
         loop();
     </script>
 </body>
