@@ -3,874 +3,333 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚔️ PixelCraft Professional MMO</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <title>Minecraft-Style Voxel Game</title>
     <style>
-        * { box-sizing: border-box; user-select: none; }
-        body, html {
-            margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden;
-            background: #020617; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #f8fafc;
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: monospace;
         }
-        canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; width: 100vw; height: 100vh; cursor: crosshair; }
-        
-        .screen {
-            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            display: none; flex-direction: column; justify-content: center; align-items: center;
-            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); z-index: 10;
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            pointer-events: none;
         }
-        .screen.active { display: flex; }
-        h1 { font-size: 3.2rem; margin-bottom: 5px; color: #38bdf8; text-shadow: 3px 3px #020617; letter-spacing: 2px; font-weight: 800; }
-        p { color: #94a3b8; font-size: 1.1rem; margin-bottom: 25px; }
-        input {
-            background: #090d16; border: 2px solid #334155; color: #fff; padding: 12px 20px;
-            font-size: 1.1rem; text-align: center; outline: none; border-radius: 6px; margin-bottom: 15px; width: 280px;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.6); transition: border-color 0.2s;
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: none;
         }
-        input:focus { border-color: #38bdf8; }
-        .pixel-btn {
-            background: linear-gradient(to bottom, #0ea5e9, #0284c7); border: 2px solid #38bdf8; color: white; padding: 12px 32px;
-            font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4); transition: transform 0.1s, filter 0.1s;
-        }
-        .pixel-btn:hover { filter: brightness(1.1); }
-        .pixel-btn:active { transform: translateY(2px); }
-        
-        #hud { position: absolute; top: 20px; left: 20px; display: none; flex-direction: column; gap: 10px; pointer-events: none; z-index: 5; }
-        #hud.active { display: flex; }
-        .hud-box {
-            background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px);
-            padding: 10px 16px; font-size: 0.95rem; font-weight: 600; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; gap: 15px;
-        }
-        
-        #minimap-container {
-            position: absolute; top: 20px; right: 20px; width: 180px; height: 110px;
-            background: rgba(15, 23, 42, 0.85); border: 2px solid #334155; border-radius: 6px;
-            overflow: hidden; z-index: 5; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-        #minimap-container.active { display: block; }
-        #minimap-canvas { width: 100%; height: 100%; image-rendering: pixelated; }
-
-        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: none; gap: 6px; z-index: 5; pointer-events: auto; background: rgba(15, 23, 42, 0.85); padding: 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
-        #hotbar.active { display: flex; }
-        .slot {
-            width: 46px; height: 46px; background: rgba(9, 13, 22, 0.7); border: 2px solid #334155; border-radius: 6px;
-            display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: border-color 0.1s;
-        }
-        .slot.selected { border-color: #38bdf8; background: rgba(30, 41, 59, 0.9); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
-        .slot canvas { width: 28px; height: 28px; }
-        .slot .count { position: absolute; bottom: 2px; right: 4px; font-size: 0.7rem; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
-
-        #inventory-ui {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 480px; background: #1e293b; border: 2px solid #475569; border-radius: 10px;
-            padding: 20px; display: none; flex-direction: column; gap: 15px; z-index: 20; color: #f8fafc;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.7);
-        }
-        #inventory-ui.active { display: flex; }
-        .inv-title { font-weight: bold; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; }
-        .inv-grid-container { display: grid; grid-template-columns: repeat(9, 1fr); gap: 5px; background: #0f172a; padding: 8px; border-radius: 6px; border: 1px solid #334155; }
-        .inv-cell {
-            width: 40px; height: 40px; background: #1e293b; border: 2px solid #334155; border-radius: 4px;
-            display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: background 0.1s;
-        }
-        .inv-cell:hover { background: #334155; }
-        .inv-cell canvas { width: 26px; height: 26px; }
-        .inv-cell .count { position: absolute; bottom: 1px; right: 3px; font-size: 0.65rem; font-weight: bold; color: #fff; text-shadow: 1px 1px #000; }
-
-        #tooltip {
-            position: absolute; background: rgba(15, 23, 42, 0.95); border: 1px solid #38bdf8; padding: 4px 8px;
-            font-size: 0.75rem; border-radius: 4px; pointer-events: none; z-index: 30; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.4);
-        }
-
-        .crafting-section { display: flex; flex-direction: column; gap: 8px; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155; }
-        .craft-btn { background: #334155; border: 1px solid #475569; color: #fff; padding: 8px; font-weight: 600; cursor: pointer; border-radius: 4px; text-align: left; font-size: 0.85rem; transition: background 0.1s; }
-        .craft-btn:hover { background: #475569; }
-
-        .controls-overlay {
-            position: absolute; bottom: 95px; left: 50%; transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px;
-            font-size: 0.85rem; color: #cbd5e1; text-align: center; pointer-events: none; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 5; display: none;
-        }
-        .controls-overlay.active { display: block; }
     </style>
 </head>
 <body>
-
-    <div id="title-screen" class="screen active">
-        <h1>PIXELCRAFT MMO</h1>
-        <p>Explore Detailed Biomes, Deep Caves & Illuminate the Dark!</p>
-        <input id="name-input" maxlength="15" placeholder="Hero Name..." /><br>
-        <input id="room-input" maxlength="15" placeholder="Server Room (e.g. alpha)" value="main" /><br>
-        <button class="pixel-btn" onclick="connectToServer()">ENTER WORLD</button>
+    <div id="crosshair">+</div>
+    <div id="ui">
+        Controls: WASD to Move, Space to Jump, Mouse to Look<br>
+        Left Click: Break Block (Stone/Ores require a pickaxe)<br>
+        Right Click: Place Block<br>
+        Inventory/Tool: Press 'E' to toggle dummy crafting/tool check
     </div>
 
-    <div id="hud">
-        <div class="hud-box">
-            <span>🛡️ <span id="hud-name">Hero</span></span>
-            <span>TIME: <span id="hud-time" style="color:#38bdf8;">Day</span></span>
-            <span>TOOL: <span id="hud-tool" style="color:#fbbf24;">Fists</span></span>
-        </div>
-    </div>
-
-    <div id="minimap-container">
-        <canvas id="minimap-canvas" width="180" height="110"></canvas>
-    </div>
-
-    <div id="inventory-ui">
-        <div class="inv-title">
-            <span>Inventory & Crafting</span>
-            <span style="cursor:pointer; color:#94a3b8;" onclick="toggleInventory()">✕</span>
-        </div>
-        <div>
-            <div style="font-size: 0.8rem; margin-bottom: 4px; font-weight:600; color:#94a3b8;">Main Inventory Storage</div>
-            <div id="main-inventory-grid" class="inv-grid-container"></div>
-        </div>
-        <div>
-            <div style="font-size: 0.8rem; margin-bottom: 4px; font-weight:600; color:#94a3b8;">Hotbar</div>
-            <div id="inventory-hotbar-grid" class="inv-grid-container" style="grid-template-columns: repeat(9, 1fr);"></div>
-        </div>
-        <div class="crafting-section">
-            <div style="font-size: 0.8rem; font-weight:600; color:#94a3b8;">Crafting Station</div>
-            <button class="craft-btn" onclick="craftItem('wooden_pickaxe')">🛠️ Wooden Pickaxe (Req: 5 Wood)</button>
-            <button class="craft-btn" onclick="craftItem('stone_pickaxe')">⛏️ Stone Pickaxe (Req: 5 Stone)</button>
-            <button class="craft-btn" onclick="craftItem('crafting_table_block')">📦 Crafting Table Block (Req: 4 Wood)</button>
-        </div>
-    </div>
-
-    <div id="tooltip"></div>
-
-    <div id="controls-hint" class="controls-overlay">
-        Move: <b>A/D</b> | Jump: <b>W/Space</b> | Inventory: <b>E</b> | <b>Left-Click</b>: Mine | <b>Right-Click</b>: Place
-    </div>
-
-    <div id="hotbar">
-        <div class="slot selected" id="hotbar-slot-0" onclick="selectHotbarSlot(0)"><span class="count" id="hc-0"></span></div>
-        <div class="slot" id="hotbar-slot-1" onclick="selectHotbarSlot(1)"><span class="count" id="hc-1"></span></div>
-        <div class="slot" id="hotbar-slot-2" onclick="selectHotbarSlot(2)"><span class="count" id="hc-2"></span></div>
-        <div class="slot" id="hotbar-slot-3" onclick="selectHotbarSlot(3)"><span class="count" id="hc-3"></span></div>
-        <div class="slot" id="hotbar-slot-4" onclick="selectHotbarSlot(4)"><span class="count" id="hc-4"></span></div>
-        <div class="slot" id="hotbar-slot-5" onclick="selectHotbarSlot(5)"><span class="count" id="hc-5"></span></div>
-        <div class="slot" id="hotbar-slot-6" onclick="selectHotbarSlot(6)"><span class="count" id="hc-6"></span></div>
-        <div class="slot" id="hotbar-slot-7" onclick="selectHotbarSlot(7)"><span class="count" id="hc-7"></span></div>
-        <div class="slot" id="hotbar-slot-8" onclick="selectHotbarSlot(8)"><span class="count" id="hc-8"></span></div>
-    </div>
-
-    <canvas id="game-canvas"></canvas>
-
+    <!-- Include Three.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        const socket = io();
-        const titleScreen = document.getElementById('title-screen');
-        const hud = document.getElementById('hud');
-        const hotbar = document.getElementById('hotbar');
-        const controlsHint = document.getElementById('controls-hint');
-        const inventoryUi = document.getElementById('inventory-ui');
-        const minimapContainer = document.getElementById('minimap-container');
-        const tooltip = document.getElementById('tooltip');
-        const nameInput = document.getElementById('name-input');
-        const roomInput = document.getElementById('room-input');
-        const canvas = document.getElementById('game-canvas');
-        const ctx = canvas.getContext('2d');
-        const minimapCanvas = document.getElementById('minimap-canvas');
-        const minimapCtx = minimapCanvas.getContext('2d');
+        // --- GAME STATE & CONFIGURATION ---
+        const CHUNK_SIZE = 16;
+        const CHUNK_HEIGHT = 64;
+        const RENDER_DISTANCE = 2;
+        const loadedChunks = new Map();
 
-        ctx.imageSmoothingEnabled = false;
-        minimapCtx.imageSmoothingEnabled = false;
+        let scene, camera, renderer;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, canJump = false;
+        let velocity = new THREE.Vector3();
+        let direction = new THREE.Vector3();
+        let prevTime = performance.now();
 
-        let screenWidth = window.innerWidth;
-        let screenHeight = window.innerHeight;
-        canvas.width = screenWidth;
-        canvas.height = screenHeight;
-
-        window.addEventListener('resize', () => {
-            screenWidth = window.innerWidth;
-            screenHeight = window.innerHeight;
-            canvas.width = screenWidth;
-            canvas.height = screenHeight;
-        });
-
-        const TILE_SIZE = 32;
-        const WORLD_WIDTH = 150; 
-        const WORLD_HEIGHT = 55; 
-
-        let worldMap = []; 
-        let droppedItems = []; 
-        let remotePlayers = {}; 
-        let currentMobs = [];
-        let worldTime = 0;
-        let currentRoom = 'main';
-        let gameStarted = false;
-        let inventoryOpen = false;
-
-        let inventorySlots = Array(36).fill(null).map(() => ({ type: null, count: 0 }));
-        let selectedHotbarIndex = 0;
-
-        let hero = {
-            name: 'Hero',
-            x: 100,
-            y: 100,
-            width: 22,
-            height: 30,
-            vx: 0,
-            vy: 0,
-            speed: 3.5,
-            jumpForce: -11,
-            gravity: 0.5,
-            grounded: false,
-            facing: 'right',
-            frame: 0,
-            tool: 'Fists',
-            toolTier: 1
+        // Player Inventory & Equipment
+        const playerInventory = {
+            selectedTool: { type: 'wooden_pickaxe' }, // Start with a pickaxe for testing
+            items: { wood: 10, stone: 5 },
+            getSelectedToolbarItem() { return this.selectedTool; }
         };
 
-        const tileNames = {
-            1: 'Dirt', 2: 'Stone', 3: 'Grass', 4: 'Wood', 5: 'Leaves',
-            6: 'Coal Ore', 7: 'Iron Ore', 8: 'Gold Ore', 9: 'Diamond Ore', 10: 'Crafting Table'
+        // Block Materials (Minecraft-inspired palette)
+        const blockMaterials = {
+            grass: new THREE.MeshLambertMaterial({ color: 0x559933 }),
+            dirt: new THREE.MeshLambertMaterial({ color: 0x866043 }),
+            stone: new THREE.MeshLambertMaterial({ color: 0x7f7f7f }),
+            iron_ore: new THREE.MeshLambertMaterial({ color: 0x9e9e9e }),
+            oak_planks: new THREE.MeshLambertMaterial({ color: 0xa67c52 })
         };
 
-        // Highly Detailed Procedural Block Graphics Renderer
-        function drawBlockIcon(targetCtx, tileType, size) {
-            targetCtx.clearRect(0, 0, size, size);
-            if (!tileType) return;
-            
-            targetCtx.save();
-            targetCtx.scale(size / 32, size / 32);
-
-            if (tileType === 3) {
-                // Detailed Grass Block: Rich soil body with randomized specks & vibrant layered turf top
-                targetCtx.fillStyle = '#854d0e'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#713f12'; targetCtx.fillRect(4, 12, 4, 4); targetCtx.fillRect(18, 22, 6, 6); targetCtx.fillRect(10, 26, 4, 4);
-                targetCtx.fillStyle = '#22c55e'; targetCtx.fillRect(0, 0, 32, 10);
-                targetCtx.fillStyle = '#16a34a'; targetCtx.fillRect(0, 7, 32, 3);
-                targetCtx.fillStyle = '#4ade80'; 
-                targetCtx.fillRect(2, 2, 4, 3); targetCtx.fillRect(10, 1, 6, 3); targetCtx.fillRect(22, 2, 5, 3);
-            } else if (tileType === 1) {
-                // Detailed Dirt Block: Layered organic soil grains with pebble speckles
-                targetCtx.fillStyle = '#964B00'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#78350f'; 
-                targetCtx.fillRect(3, 3, 6, 5); targetCtx.fillRect(18, 5, 8, 4); targetCtx.fillRect(8, 14, 5, 7); targetCtx.fillRect(20, 20, 7, 6);
-                targetCtx.fillStyle = '#b45309';
-                targetCtx.fillRect(12, 4, 3, 3); targetCtx.fillRect(5, 23, 4, 4); targetCtx.fillRect(24, 12, 3, 4);
-            } else if (tileType === 2) {
-                // Detailed Stone Block: Multi-toned slate texture with crevices & mineral chips
-                targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#475569'; 
-                targetCtx.fillRect(4, 4, 10, 8); targetCtx.fillRect(18, 16, 11, 10); targetCtx.fillRect(3, 20, 8, 8);
-                targetCtx.fillStyle = '#334155';
-                targetCtx.fillRect(14, 3, 4, 4); targetCtx.fillRect(16, 14, 2, 3); targetCtx.fillRect(6, 14, 3, 3);
-                targetCtx.fillStyle = '#94a3b8';
-                targetCtx.fillRect(5, 5, 2, 2); targetCtx.fillRect(20, 18, 3, 2);
-            } else if (tileType === 4) {
-                // Detailed Wood Block: Vertical bark grain texture with rings/streaks
-                targetCtx.fillStyle = '#5c2c16'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#78350f'; targetCtx.fillRect(0, 0, 8, 32); targetCtx.fillRect(14, 0, 6, 32); targetCtx.fillRect(26, 0, 6, 32);
-                targetCtx.fillStyle = '#3b1805'; targetCtx.fillRect(8, 0, 2, 32); targetCtx.fillRect(22, 0, 2, 32);
-            } else if (tileType === 5) {
-                // Detailed Leaves Block: Fluffy multi-cluster canopy shading
-                targetCtx.fillStyle = '#14532d'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#166534'; targetCtx.fillRect(2, 2, 12, 12); targetCtx.fillRect(16, 14, 14, 14);
-                targetCtx.fillStyle = '#22c55e'; targetCtx.fillRect(6, 6, 8, 8); targetCtx.fillRect(18, 4, 10, 8); targetCtx.fillRect(4, 18, 10, 10);
-                targetCtx.fillStyle = '#86efac'; targetCtx.fillRect(8, 8, 3, 3); targetCtx.fillRect(21, 7, 3, 3);
-            } else if (tileType === 6) {
-                // Coal Ore: Stone embedded with dark coal crystal clusters
-                targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#334155'; targetCtx.fillRect(4, 4, 8, 8); targetCtx.fillRect(18, 16, 9, 8);
-                targetCtx.fillStyle = '#0f172a'; 
-                targetCtx.fillRect(5, 5, 6, 6); targetCtx.fillRect(20, 18, 7, 6); targetCtx.fillRect(12, 12, 4, 4);
-                targetCtx.fillStyle = '#1e293b'; targetCtx.fillRect(6, 6, 4, 4); targetCtx.fillRect(22, 20, 4, 4);
-            } else if (tileType === 7) {
-                // Iron Ore: Stone embedded with metallic iron ore deposits
-                targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#475569'; targetCtx.fillRect(4, 4, 8, 8); targetCtx.fillRect(18, 16, 9, 8);
-                targetCtx.fillStyle = '#cbd5e1'; 
-                targetCtx.fillRect(5, 5, 6, 6); targetCtx.fillRect(20, 18, 7, 6); targetCtx.fillRect(12, 12, 4, 4);
-                targetCtx.fillStyle = '#f1f5f9'; targetCtx.fillRect(6, 6, 3, 3); targetCtx.fillRect(21, 19, 3, 3);
-            } else if (tileType === 8) {
-                // Gold Ore: Stone with gleaming golden mineral clusters
-                targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#475569'; targetCtx.fillRect(4, 4, 8, 8); targetCtx.fillRect(18, 16, 9, 8);
-                targetCtx.fillStyle = '#d97706'; 
-                targetCtx.fillRect(5, 5, 6, 6); targetCtx.fillRect(20, 18, 7, 6); targetCtx.fillRect(12, 12, 4, 4);
-                targetCtx.fillStyle = '#fbbf24'; targetCtx.fillRect(6, 6, 3, 3); targetCtx.fillRect(21, 19, 3, 3);
-            } else if (tileType === 9) {
-                // Diamond Ore: Stone with radiant cyan diamond crystal sparkles
-                targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#475569'; targetCtx.fillRect(4, 4, 8, 8); targetCtx.fillRect(18, 16, 9, 8);
-                targetCtx.fillStyle = '#0284c7'; 
-                targetCtx.fillRect(5, 5, 6, 6); targetCtx.fillRect(20, 18, 7, 6); targetCtx.fillRect(12, 12, 4, 4);
-                targetCtx.fillStyle = '#38bdf8'; targetCtx.fillRect(6, 6, 3, 3); targetCtx.fillRect(21, 19, 3, 3);
-                targetCtx.fillStyle = '#bae6fd'; targetCtx.fillRect(7, 7, 1, 1);
-            } else if (tileType === 10) {
-                // Crafting Table Block: Detailed wooden workbench with grid top and tools
-                targetCtx.fillStyle = '#92400e'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#b45309'; targetCtx.fillRect(0, 0, 32, 8);
-                targetCtx.fillStyle = '#78350f'; 
-                targetCtx.fillRect(2, 2, 12, 4); targetCtx.fillRect(18, 2, 12, 4);
-                targetCtx.fillRect(4, 8, 4, 24); targetCtx.fillRect(24, 8, 4, 24);
-                targetCtx.fillStyle = '#451a03'; targetCtx.fillRect(0, 7, 32, 2);
+        // Crafting Recipes System
+        const craftingRecipes = [
+            {
+                input: [['oak_log']],
+                output: { item: 'oak_planks', count: 4 }
+            },
+            {
+                input: [['oak_planks'], ['oak_planks']],
+                output: { item: 'stick', count: 4 }
+            },
+            {
+                input: [
+                    ['oak_planks', 'oak_planks', 'oak_planks'],
+                    [null, 'stick', null],
+                    [null, 'stick', null]
+                ],
+                output: { item: 'wooden_pickaxe', count: 1 }
+            },
+            {
+                input: [
+                    ['stone', 'stone', 'stone'],
+                    [null, 'stick', null],
+                    [null, 'stick', null]
+                ],
+                output: { item: 'stone_pickaxe', count: 1 }
             }
-            targetCtx.restore();
+        ];
+
+        // --- INITIALIZATION ---
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(8, 40, 8);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffffff, 0.4);
+            sunLight.position.set(50, 100, 50);
+            scene.add(sunLight);
+
+            // Event Listeners
+            setupControls();
+            window.addEventListener('resize', onWindowResize);
         }
 
-        function selectHotbarSlot(index) {
-            selectedHotbarIndex = index;
-            document.querySelectorAll('#hotbar .slot').forEach((s, i) => {
-                if (i === index) s.classList.add('selected');
-                else s.classList.remove('selected');
-            });
+        // --- INFINITE CHUNK GENERATION ---
+        function getChunkKey(cx, cz) {
+            return `${cx},${cz}`;
         }
 
-        function toggleInventory() {
-            inventoryOpen = !inventoryOpen;
-            if (inventoryOpen) {
-                inventoryUi.classList.add('active');
-                renderInventoryUI();
-            } else {
-                inventoryUi.classList.remove('active');
-                tooltip.style.display = 'none';
-            }
-        }
+        function updateChunks() {
+            const playerChunkX = Math.floor(camera.position.x / CHUNK_SIZE);
+            const playerChunkZ = Math.floor(camera.position.z / CHUNK_SIZE);
+            const activeChunks = new Set();
 
-        function addItemToInventory(tileType) {
-            for (let i = 0; i < 36; i++) {
-                if (inventorySlots[i].type === tileType) {
-                    inventorySlots[i].count++;
-                    updateHotbarUI();
-                    return;
-                }
-            }
-            for (let i = 0; i < 36; i++) {
-                if (inventorySlots[i].type === null) {
-                    inventorySlots[i].type = tileType;
-                    inventorySlots[i].count = 1;
-                    updateHotbarUI();
-                    return;
-                }
-            }
-        }
+            for (let x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
+                for (let z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
+                    const cx = playerChunkX + x;
+                    const cz = playerChunkZ + z;
+                    const key = getChunkKey(cx, cz);
+                    activeChunks.add(key);
 
-        function updateHotbarUI() {
-            for (let i = 0; i < 9; i++) {
-                let slotEl = document.getElementById(`hotbar-slot-${i}`);
-                let countEl = document.getElementById(`hc-${i}`);
-                let item = inventorySlots[i];
-                
-                let iconCanvas = slotEl.querySelector('canvas');
-                if (!iconCanvas) {
-                    iconCanvas = document.createElement('canvas');
-                    iconCanvas.width = 28; iconCanvas.height = 28;
-                    slotEl.insertBefore(iconCanvas, countEl);
-                }
-                
-                if (item.type !== null && item.count > 0) {
-                    drawBlockIcon(iconCanvas.getContext('2d'), item.type, 28);
-                    countEl.textContent = item.count;
-                } else {
-                    iconCanvas.getContext('2d').clearRect(0, 0, 28, 28);
-                    countEl.textContent = '';
-                }
-            }
-        }
-
-        function renderInventoryUI() {
-            const mainGrid = document.getElementById('main-inventory-grid');
-            const hotbarGrid = document.getElementById('inventory-hotbar-grid');
-            mainGrid.innerHTML = '';
-            hotbarGrid.innerHTML = '';
-
-            let createCellHTML = (item) => {
-                let cell = document.createElement('div');
-                cell.className = 'inv-cell';
-                if (item.type !== null && item.count > 0) {
-                    let c = document.createElement('canvas');
-                    c.width = 26; c.height = 26;
-                    drawBlockIcon(c.getContext('2d'), item.type, 26);
-                    cell.appendChild(c);
-                    
-                    let cnt = document.createElement('span');
-                    cnt.className = 'count';
-                    cnt.textContent = item.count;
-                    cell.appendChild(cnt);
-
-                    cell.addEventListener('mousemove', (e) => {
-                        tooltip.textContent = tileNames[item.type] || 'Block';
-                        tooltip.style.left = (e.pageX + 12) + 'px';
-                        tooltip.style.top = (e.pageY + 12) + 'px';
-                        tooltip.style.display = 'block';
-                    });
-                    cell.addEventListener('mouseleave', () => {
-                        tooltip.style.display = 'none';
-                    });
-                }
-                return cell;
-            };
-
-            for (let i = 9; i < 36; i++) {
-                mainGrid.appendChild(createCellHTML(inventorySlots[i]));
-            }
-            for (let i = 0; i < 9; i++) {
-                hotbarGrid.appendChild(createCellHTML(inventorySlots[i]));
-            }
-        }
-
-        function craftItem(recipeType) {
-            let countType = (type) => {
-                let total = 0;
-                for (let s of inventorySlots) {
-                    if (s.type === type) total += s.count;
-                }
-                return total;
-            };
-
-            let deductItems = (type, amount) => {
-                for (let s of inventorySlots) {
-                    if (s.type === type) {
-                        let take = Math.min(s.count, amount);
-                        s.count -= take;
-                        amount -= take;
-                        if (s.count === 0) s.type = null;
-                        if (amount <= 0) break;
-                    }
-                }
-            };
-
-            if (recipeType === 'wooden_pickaxe') {
-                if (countType(4) >= 5) {
-                    deductItems(4, 5);
-                    hero.tool = 'Wooden Pickaxe';
-                    hero.toolTier = 2;
-                    alert('Crafted Wooden Pickaxe!');
-                } else { alert('Need 5 Wood blocks!'); }
-            } else if (recipeType === 'stone_pickaxe') {
-                if (countType(2) >= 5) {
-                    deductItems(2, 5);
-                    hero.tool = 'Stone Pickaxe';
-                    hero.toolTier = 3;
-                    alert('Crafted Stone Pickaxe!');
-                } else { alert('Need 5 Stone blocks!'); }
-            } else if (recipeType === 'crafting_table_block') {
-                if (countType(4) >= 4) {
-                    deductItems(4, 4);
-                    addItemToInventory(10);
-                    alert('Crafted Crafting Table Block!');
-                } else { alert('Need 4 Wood blocks!'); }
-            }
-            document.getElementById('hud-tool').textContent = hero.tool;
-            updateHotbarUI();
-            if (inventoryOpen) renderInventoryUI();
-        }
-
-        function connectToServer() {
-            let name = nameInput.value.trim();
-            if (name) hero.name = name;
-            let room = roomInput.value.trim().toLowerCase();
-            if (room) currentRoom = room;
-
-            document.getElementById('hud-name').textContent = hero.name;
-            socket.emit('join_server', { name: hero.name, room: currentRoom });
-        }
-
-        socket.on('init_world', (data) => {
-            worldMap = data.world;
-            remotePlayers = data.players;
-            droppedItems = data.items || [];
-            worldTime = data.time || 0;
-            if (socket.id && remotePlayers[socket.id]) delete remotePlayers[socket.id];
-
-            hero.x = 4 * TILE_SIZE;
-            for (let y = 0; y < WORLD_HEIGHT; y++) {
-                if (worldMap[y][4] > 0) {
-                    hero.y = (y - 2) * TILE_SIZE;
-                    break;
-                }
-            }
-
-            if (!gameStarted) {
-                gameStarted = true;
-                titleScreen.classList.remove('active');
-                hud.classList.add('active');
-                hotbar.classList.add('active');
-                minimapContainer.classList.add('active');
-                controlsHint.classList.add('active');
-                requestAnimationFrame(gameLoop);
-            }
-        });
-
-        socket.on('player_joined', (player) => { remotePlayers[player.id] = player; });
-        socket.on('player_moved', (player) => { remotePlayers[player.id] = player; });
-        socket.on('player_left', (data) => { delete remotePlayers[data.id]; });
-        socket.on('tile_updated', (data) => {
-            if (worldMap.length > 0 && data.y < worldMap.length && data.x < worldMap[0].length) {
-                worldMap[data.y][data.x] = data.tile;
-            }
-        });
-        socket.on('sync_items', (items) => { droppedItems = items; });
-        socket.on('world_tick', (data) => {
-            worldTime = data.time;
-            currentMobs = data.mobs || [];
-            let isNight = worldTime >= 600;
-            document.getElementById('hud-time').textContent = isNight ? '🌙 Night' : '☀️ Day';
-        });
-
-        const keys = {};
-        window.addEventListener('keydown', e => {
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
-            if (e.key.toLowerCase() === 'e') {
-                toggleInventory();
-                return;
-            }
-            if (inventoryOpen) return;
-
-            keys[e.key] = true;
-            keys[e.key.toLowerCase()] = true;
-            if (e.key >= '1' && e.key <= '9') selectHotbarSlot(parseInt(e.key) - 1);
-        });
-
-        window.addEventListener('keyup', e => {
-            keys[e.key] = false;
-            keys[e.key.toLowerCase()] = false;
-        });
-
-        window.addEventListener('mousedown', e => {
-            if (!gameStarted || inventoryOpen) return;
-            if (e.button !== 0 && e.button !== 2) return;
-
-            let cameraX = Math.max(0, Math.min(WORLD_WIDTH * TILE_SIZE - screenWidth, hero.x - screenWidth / 2 + hero.width / 2));
-            let cameraY = Math.max(0, Math.min(WORLD_HEIGHT * TILE_SIZE - screenHeight, hero.y - screenHeight / 2 + hero.height / 2));
-
-            let worldMouseX = e.clientX + cameraX;
-            let worldMouseY = e.clientY + cameraY;
-
-            let tileX = Math.floor(worldMouseX / TILE_SIZE);
-            let tileY = Math.floor(worldMouseY / TILE_SIZE);
-
-            if (tileX < 0 || tileX >= WORLD_WIDTH || tileY < 0 || tileY >= WORLD_HEIGHT) return;
-            let dist = Math.hypot((hero.x + hero.width/2) - worldMouseX, (hero.y + hero.height/2) - worldMouseY);
-            if (dist > 140) return;
-
-            if (e.button === 0) {
-                let currentTile = worldMap[tileY][tileX];
-                if (currentTile > 0) {
-                    worldMap[tileY][tileX] = 0;
-                    socket.emit('update_tile', { room: currentRoom, x: tileX, y: tileY, tile: 0 });
-
-                    let newItem = {
-                        id: Math.random().toString(36).substring(2, 9),
-                        type: currentTile,
-                        x: tileX * TILE_SIZE + 8,
-                        y: tileY * TILE_SIZE + 8,
-                        vx: (Math.random() - 0.5) * 4,
-                        vy: -5
-                    };
-                    droppedItems.push(newItem);
-                    socket.emit('spawn_item', { room: currentRoom, item: newItem });
-                }
-            } else if (e.button === 2) {
-                let activeItem = inventorySlots[selectedHotbarIndex];
-                if (worldMap[tileY][tileX] === 0 && activeItem.type !== null && activeItem.count > 0) {
-                    let pBox = { x: hero.x, y: hero.y, w: hero.width, h: hero.height };
-                    let tBox = { x: tileX * TILE_SIZE, y: tileY * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
-                    let overlapping = !(pBox.x + pBox.w < tBox.x || pBox.x > tBox.x + tBox.w || pBox.y + pBox.h < tBox.y || pBox.y > tBox.y + tBox.h);
-                    
-                    if (!overlapping) {
-                        let tileToPlace = activeItem.type;
-                        activeItem.count--;
-                        if (activeItem.count <= 0) activeItem.type = null;
-                        worldMap[tileY][tileX] = tileToPlace;
-                        socket.emit('update_tile', { room: currentRoom, x: tileX, y: tileY, tile: tileToPlace });
-                        updateHotbarUI();
+                    if (!loadedChunks.has(key)) {
+                        generateChunk(cx, cz);
                     }
                 }
             }
-        });
 
-        window.addEventListener('contextmenu', e => e.preventDefault());
-
-        function checkCollision(nx, ny, w, h) {
-            if (worldMap.length === 0) return false;
-            let startX = Math.floor(nx / TILE_SIZE);
-            let endX = Math.floor((nx + w - 1) / TILE_SIZE);
-            let startY = Math.floor(ny / TILE_SIZE);
-            let endY = Math.floor((ny + h - 1) / TILE_SIZE);
-
-            if (startX < 0 || endX >= WORLD_WIDTH || startY < 0 || endY >= WORLD_HEIGHT) return true;
-
-            for (let y = startY; y <= endY; y++) {
-                for (let x = startX; x <= endX; x++) {
-                    if (worldMap[y] && worldMap[y][x] > 0) return true;
+            // Unload out-of-range chunks
+            for (const [key, chunk] of loadedChunks.entries()) {
+                if (!activeChunks.has(key)) {
+                    scene.remove(chunk.mesh);
+                    loadedChunks.delete(key);
                 }
-            }
-            return false;
-        }
-
-        let netSyncCounter = 0;
-
-        function updateGame() {
-            if (!inventoryOpen) {
-                hero.vx = 0;
-                if (keys['a'] || keys['arrowleft']) { hero.vx = -hero.speed; hero.facing = 'left'; }
-                if (keys['d'] || keys['arrowright']) { hero.vx = hero.speed; hero.facing = 'right'; }
-
-                hero.x += hero.vx;
-                if (checkCollision(hero.x, hero.y, hero.width, hero.height)) hero.x -= hero.vx;
-
-                if ((keys['w'] || keys['arrowup'] || keys[' ']) && hero.grounded) {
-                    hero.vy = hero.jumpForce;
-                    hero.grounded = false;
-                }
-
-                hero.vy += hero.gravity;
-                hero.y += hero.vy;
-                hero.grounded = false;
-
-                if (checkCollision(hero.x, hero.y, hero.width, hero.height)) {
-                    hero.y -= hero.vy;
-                    if (hero.vy > 0) hero.grounded = true;
-                    hero.vy = 0;
-                }
-
-                if (hero.vx !== 0 && hero.grounded) {
-                    hero.animTimer++;
-                    if (hero.animTimer > 8) { hero.frame = (hero.frame + 1) % 4; hero.animTimer = 0; }
-                } else {
-                    hero.frame = 0;
-                }
-            }
-
-            for (let i = droppedItems.length - 1; i >= 0; i--) {
-                let item = droppedItems[i];
-                item.vy += 0.45;
-                item.x += item.vx;
-                item.y += item.vy;
-
-                let tx = Math.floor((item.x + 8) / TILE_SIZE);
-                let ty = Math.floor((item.y + 16) / TILE_SIZE);
-                if (ty >= 0 && ty < WORLD_HEIGHT && tx >= 0 && tx < WORLD_WIDTH && worldMap[ty][tx] > 0) {
-                    item.y = ty * TILE_SIZE - 16;
-                    item.vy = -item.vy * 0.3;
-                    item.vx *= 0.75;
-                }
-
-                let pBox = { x: hero.x, y: hero.y, w: hero.width, h: hero.height };
-                let iBox = { x: item.x, y: item.y, w: 16, h: 16 };
-                let colliding = !(pBox.x + pBox.w < iBox.x || pBox.x > iBox.x + iBox.w || pBox.y + pBox.h < iBox.y || pBox.y > iBox.y + iBox.h);
-
-                if (colliding) {
-                    addItemToInventory(item.type);
-                    socket.emit('collect_item', { room: currentRoom, index: i });
-                    droppedItems.splice(i, 1);
-                }
-            }
-
-            netSyncCounter++;
-            if (netSyncCounter > 2) {
-                socket.emit('player_update', { room: currentRoom, x: hero.x, y: hero.y, facing: hero.facing, frame: hero.frame });
-                netSyncCounter = 0;
             }
         }
 
-        function drawGame() {
-            let isNight = worldTime >= 600;
-            let gradient = ctx.createLinearGradient(0, 0, 0, screenHeight);
-            if (isNight) {
-                gradient.addColorStop(0, '#020617');
-                gradient.addColorStop(1, '#0f172a');
-            } else {
-                gradient.addColorStop(0, '#0284c7');
-                gradient.addColorStop(0.5, '#38bdf8');
-                gradient.addColorStop(1, '#bae6fd');
-            }
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, screenWidth, screenHeight);
+        function generateChunk(cx, cz) {
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const instancedBlockGroups = {};
 
-            if (worldMap.length === 0) return;
+            // Collect block transformations per type for efficiency
+            for (let x = 0; x < CHUNK_SIZE; x++) {
+                for (let z = 0; z < CHUNK_SIZE; z++) {
+                    const worldX = cx * CHUNK_SIZE + x;
+                    const worldZ = cz * CHUNK_SIZE + z;
+                    
+                    const surfaceHeight = Math.floor(20 + Math.sin(worldX * 0.1) * 4 + Math.cos(worldZ * 0.1) * 4);
 
-            let cameraX = Math.max(0, Math.min(WORLD_WIDTH * TILE_SIZE - screenWidth, hero.x - screenWidth / 2 + hero.width / 2));
-            let cameraY = Math.max(0, Math.min(WORLD_HEIGHT * TILE_SIZE - screenHeight, hero.y - screenHeight / 2 + hero.height / 2));
+                    for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                        let blockType = null;
+                        if (y === surfaceHeight) {
+                            blockType = 'grass';
+                        } else if (y < surfaceHeight && y > surfaceHeight - 4) {
+                            blockType = 'dirt';
+                        } else if (y <= surfaceHeight - 4) {
+                            blockType = (y < 10 && Math.random() < 0.08) ? 'iron_ore' : 'stone';
+                        }
 
-            ctx.save();
-            ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
+                        if (blockType) {
+                            if (!instancedBlockGroups[blockType]) instancedBlockGroups[blockType] = [];
+                            
+                            // Apply Underground Darkness & Smooth Transition starting right below grass
+                            let lightingFactor = 1.0;
+                            if (y < surfaceHeight) {
+                                const depth = surfaceHeight - y;
+                                lightingFactor = Math.max(0.12, 1.0 - (depth * 0.18));
+                            }
 
-            let startCol = Math.floor(cameraX / TILE_SIZE);
-            let endCol = startCol + Math.ceil(screenWidth / TILE_SIZE) + 1;
-            let startRow = Math.floor(cameraY / TILE_SIZE);
-            let endRow = startRow + Math.ceil(screenHeight / TILE_SIZE) + 1;
-
-            // Draw World Blocks with High Detail textures
-            for (let y = startRow; y <= endRow && y < WORLD_HEIGHT; y++) {
-                for (let x = startCol; x <= endCol && x < WORLD_WIDTH; x++) {
-                    let tile = worldMap[y][x];
-                    if (tile > 0) {
-                        let rx = x * TILE_SIZE;
-                        let ry = y * TILE_SIZE;
-                        if (tile === 3) {
-                            ctx.fillStyle = '#854d0e'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#713f12'; ctx.fillRect(rx + 4, ry + 12, 4, 4); ctx.fillRect(rx + 18, ry + 22, 6, 6);
-                            ctx.fillStyle = '#22c55e'; ctx.fillRect(rx, ry, TILE_SIZE, 10);
-                            ctx.fillStyle = '#16a34a'; ctx.fillRect(rx, ry + 7, TILE_SIZE, 3);
-                            ctx.fillStyle = '#4ade80'; ctx.fillRect(rx + 2, ry + 2, 4, 3); ctx.fillRect(rx + 10, ry + 1, 6, 3); ctx.fillRect(rx + 22, ry + 2, 5, 3);
-                        } else if (tile === 1) {
-                            ctx.fillStyle = '#964B00'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#78350f'; ctx.fillRect(rx + 3, ry + 3, 6, 5); ctx.fillRect(rx + 18, ry + 5, 8, 4); ctx.fillRect(rx + 8, ry + 14, 5, 7); ctx.fillRect(rx + 20, ry + 20, 7, 6);
-                            ctx.fillStyle = '#b45309'; ctx.fillRect(rx + 12, ry + 4, 3, 3); ctx.fillRect(rx + 5, ry + 23, 4, 4);
-                        } else if (tile === 2) {
-                            ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#475569'; ctx.fillRect(rx + 4, ry + 4, 10, 8); ctx.fillRect(rx + 18, ry + 16, 11, 10); ctx.fillRect(rx + 3, ry + 20, 8, 8);
-                            ctx.fillStyle = '#334155'; ctx.fillRect(rx + 14, ry + 3, 4, 4); ctx.fillRect(rx + 6, ry + 14, 3, 3);
-                            ctx.fillStyle = '#94a3b8'; ctx.fillRect(rx + 5, ry + 5, 2, 2); ctx.fillRect(rx + 20, ry + 18, 3, 2);
-                        } else if (tile === 4) {
-                            ctx.fillStyle = '#5c2c16'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#78350f'; ctx.fillRect(rx, ry, 8, TILE_SIZE); ctx.fillRect(rx + 14, ry, 6, TILE_SIZE); ctx.fillRect(rx + 26, ry, 6, TILE_SIZE);
-                            ctx.fillStyle = '#3b1805'; ctx.fillRect(rx + 8, ry, 2, TILE_SIZE); ctx.fillRect(rx + 22, ry, 2, TILE_SIZE);
-                        } else if (tile === 5) {
-                            ctx.fillStyle = '#14532d'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#166534'; ctx.fillRect(rx + 2, ry + 2, 12, 12); ctx.fillRect(rx + 16, ry + 14, 14, 14);
-                            ctx.fillStyle = '#22c55e'; ctx.fillRect(rx + 6, ry + 6, 8, 8); ctx.fillRect(rx + 18, ry + 4, 10, 8);
-                            ctx.fillStyle = '#86efac'; ctx.fillRect(rx + 8, ry + 8, 3, 3);
-                        } else if (tile === 6) {
-                            ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#334155'; ctx.fillRect(rx + 4, ry + 4, 8, 8); ctx.fillRect(rx + 18, ry + 16, 9, 8);
-                            ctx.fillStyle = '#0f172a'; ctx.fillRect(rx + 5, ry + 5, 6, 6); ctx.fillRect(rx + 20, ry + 18, 7, 6); ctx.fillRect(rx + 12, ry + 12, 4, 4);
-                            ctx.fillStyle = '#1e293b'; ctx.fillRect(rx + 6, ry + 6, 4, 4);
-                        } else if (tile === 7) {
-                            ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#475569'; ctx.fillRect(rx + 4, ry + 4, 8, 8); ctx.fillRect(rx + 18, ry + 16, 9, 8);
-                            ctx.fillStyle = '#cbd5e1'; ctx.fillRect(rx + 5, ry + 5, 6, 6); ctx.fillRect(rx + 20, ry + 18, 7, 6); ctx.fillRect(rx + 12, ry + 12, 4, 4);
-                            ctx.fillStyle = '#f1f5f9'; ctx.fillRect(rx + 6, ry + 6, 3, 3);
-                        } else if (tile === 8) {
-                            ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#475569'; ctx.fillRect(rx + 4, ry + 4, 8, 8); ctx.fillRect(rx + 18, ry + 16, 9, 8);
-                            ctx.fillStyle = '#d97706'; ctx.fillRect(rx + 5, ry + 5, 6, 6); ctx.fillRect(rx + 20, ry + 18, 7, 6); ctx.fillRect(rx + 12, ry + 12, 4, 4);
-                            ctx.fillStyle = '#fbbf24'; ctx.fillRect(rx + 6, ry + 6, 3, 3);
-                        } else if (tile === 9) {
-                            ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#475569'; ctx.fillRect(rx + 4, ry + 4, 8, 8); ctx.fillRect(rx + 18, ry + 16, 9, 8);
-                            ctx.fillStyle = '#0284c7'; ctx.fillRect(rx + 5, ry + 5, 6, 6); ctx.fillRect(rx + 20, ry + 18, 7, 6); ctx.fillRect(rx + 12, ry + 12, 4, 4);
-                            ctx.fillStyle = '#38bdf8'; ctx.fillRect(rx + 6, ry + 6, 3, 3);
-                        } else if (tile === 10) {
-                            ctx.fillStyle = '#92400e'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#b45309'; ctx.fillRect(rx, ry, TILE_SIZE, 8);
-                            ctx.fillStyle = '#78350f'; ctx.fillRect(rx + 2, ry + 2, 12, 4); ctx.fillRect(rx + 18, ry + 2, 12, 4);
-                            ctx.fillStyle = '#451a03'; ctx.fillRect(rx, ry + 7, TILE_SIZE, 2);
+                            instancedBlockGroups[blockType].push({
+                                matrix: new THREE.Matrix4().makeTranslation(worldX, y, worldZ),
+                                light: lightingFactor
+                            });
                         }
                     }
                 }
             }
 
-            // Smooth Underground Twilight Transition & Detailed Player Lighting Illumination Shader
-            for (let y = startRow; y <= endRow && y < WORLD_HEIGHT; y++) {
-                for (let x = startCol; x <= endCol && x < WORLD_WIDTH; x++) {
-                    let rx = x * TILE_SIZE;
-                    let ry = y * TILE_SIZE;
-                    
-                    // Smooth twilight layer transition around y = 22 to 26 before plunging into subterranean dark
-                    let baseDarkness = 0;
-                    if (y >= 26) {
-                        baseDarkness = 0.90;
-                    } else if (y >= 22) {
-                        baseDarkness = (y - 22) / 4 * 0.90; // smooth gradient transition from surface to underground
-                    }
-
-                    let distToHero = Math.hypot((hero.x + 11) - (rx + 16), (hero.y + 15) - (ry + 16));
-                    let innerRadius = 50;  // Warm inner glow
-                    let outerRadius = 180; // Detailed lighting radius falloff
-
-                    let lightFactor = 0;
-                    if (distToHero < innerRadius) {
-                        lightFactor = 1.0;
-                    } else if (distToHero < outerRadius) {
-                        let progress = (distToHero - innerRadius) / (outerRadius - innerRadius);
-                        lightFactor = Math.pow(1.0 - progress, 1.8); // smooth non-linear falloff for detailed lighting effect
-                    }
-
-                    let finalDarkness = Math.max(0, baseDarkness - (lightFactor * 0.85));
-                    if (finalDarkness > 0.02) {
-                        ctx.fillStyle = `rgba(2, 6, 23, ${finalDarkness})`;
-                        ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                    }
-
-                    // Add subtle warm radial torch glow highlight directly over blocks near the player
-                    if (distToHero < outerRadius && baseDarkness > 0.2) {
-                        let glowAlpha = (1.0 - (distToHero / outerRadius)) * 0.25;
-                        ctx.fillStyle = `rgba(251, 191, 36, ${glowAlpha})`;
-                        ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                    }
-                }
+            const chunkGroup = new THREE.Group();
+            for (const [type, dataList] of Object.entries(instancedBlockGroups)) {
+                const mat = blockMaterials[type].clone();
+                const instancedMesh = new THREE.InstancedMesh(geometry, mat, dataList.length);
+                
+                dataList.forEach((item, index) => {
+                    instancedMesh.setMatrixAt(index, item.matrix);
+                    // Tint color for depth/darkness transition
+                    instancedMesh.setColorAt(index, new THREE.Color(item.light, item.light, item.light));
+                });
+                
+                instancedMesh.instanceMatrix.needsUpdate = true;
+                if (instancedMesh.instanceColor) instancedMesh.instanceColor.needsUpdate = true;
+                chunkGroup.add(instancedMesh);
             }
 
-            // Draw dropped items
-            droppedItems.forEach(item => {
-                ctx.fillStyle = '#fbbf24';
-                ctx.fillRect(item.x, item.y + Math.sin(Date.now() * 0.01) * 3, 14, 14);
-            });
-
-            // Draw Cave Mobs
-            currentMobs.forEach(mob => {
-                ctx.fillStyle = '#ef4444';
-                ctx.fillRect(mob.x + 4, mob.y + 4, 24, 24);
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(mob.x + 8, mob.y + 10, 4, 4);
-                ctx.fillRect(mob.x + 20, mob.y + 10, 4, 4);
-            });
-
-            for (let id in remotePlayers) {
-                let rp = remotePlayers[id];
-                let rpx = Math.floor(rp.x);
-                let rpy = Math.floor(rp.y);
-
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                ctx.fillRect(rpx - 10, rpy - 22, (rp.name.length * 8) + 8, 16);
-                ctx.fillStyle = '#38bdf8';
-                ctx.font = 'bold 11px sans-serif';
-                ctx.fillText(rp.name, rpx - 6, rpy - 10);
-
-                ctx.fillStyle = '#ec4899';
-                ctx.fillRect(rpx + 4, rpy + 8, 14, 16);
-                ctx.fillStyle = '#fbcfe8';
-                ctx.fillRect(rpx + 3, rpy, 16, 10);
-            }
-
-            let hx = Math.floor(hero.x);
-            let hy = Math.floor(hero.y);
-
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            ctx.fillRect(hx - 10, hy - 22, (hero.name.length * 8) + 8, 16);
-            ctx.fillStyle = '#4ade80';
-            ctx.font = 'bold 11px sans-serif';
-            ctx.fillText(hero.name, hx - 6, hy - 10);
-
-            ctx.fillStyle = '#38bdf8'; ctx.fillRect(hx + 4, hy + 8, 14, 16);
-            ctx.fillStyle = '#fde047'; ctx.fillRect(hx + 3, hy, 16, 10);
-
-            ctx.restore();
-            drawMiniMap();
+            scene.add(chunkGroup);
+            loadedChunks.set(getChunkKey(cx, cz), { mesh: chunkGroup });
         }
 
-        function drawMiniMap() {
-            minimapCtx.clearRect(0, 0, 180, 110);
-            let scaleX = 180 / WORLD_WIDTH;
-            let scaleY = 110 / WORLD_HEIGHT;
-
-            for (let y = 0; y < WORLD_HEIGHT; y++) {
-                for (let x = 0; x < WORLD_WIDTH; x++) {
-                    let tile = worldMap[y][x];
-                    if (tile > 0) {
-                        if (tile === 3) minimapCtx.fillStyle = '#22c55e';
-                        else if (tile === 5) minimapCtx.fillStyle = '#15803d';
-                        else if (tile >= 6) minimapCtx.fillStyle = '#f59e0b';
-                        else minimapCtx.fillStyle = '#475569';
-                        minimapCtx.fillRect(x * scaleX, y * scaleY, Math.max(1, scaleX), Math.max(1, scaleY));
-                    }
-                }
+        // --- TOOL-GATED MINING & INTERACTION ---
+        window.addEventListener('mousedown', (e) => {
+            if (document.pointerLockElement !== document.body) {
+                document.body.requestPointerLock();
+                return;
             }
 
-            minimapCtx.fillStyle = '#ef4444';
-            minimapCtx.fillRect((hero.x / TILE_SIZE) * scaleX - 1, (hero.y / TILE_SIZE) * scaleY - 1, 3, 3);
+            // Raycast logic to break/place blocks
+            const raycaster = new THREE.Raycaster();
+            const center = new THREE.Vector2(0, 0);
+            raycaster.setFromCamera(center, camera);
+            
+            const intersects = raycaster.intersectObjects(scene.children, true);
+            if (intersects.length > 0 && intersects[0].distance < 6) {
+                const intersect = intersects[0];
+                
+                if (e.button === 0) { // Left click: Break
+                    handleBlockBreak(intersect);
+                } else if (e.button === 2) { // Right click: Place
+                    handleBlockPlace(intersect);
+                }
+            }
+        });
+
+        function handleBlockBreak(intersect) {
+            // Simplified block validation and tool requirement check
+            const requiresPickaxe = true; // Assuming targeted block is stone/ore for simulation
+            if (requiresPickaxe) {
+                const activeTool = playerInventory.getSelectedToolbarItem();
+                const hasPickaxe = activeTool && activeTool.type.includes('pickaxe');
+                if (!hasPickaxe) {
+                    console.warn("You need a pickaxe to mine this block!");
+                    return;
+                }
+            }
+            // Remove object mesh instance or chunk element
+            const object = intersect.object;
+            scene.remove(object);
         }
 
-        function gameLoop() {
-            updateGame();
-            drawGame();
-            requestAnimationFrame(gameLoop);
+        function handleBlockPlace(intersect) {
+            const position = intersect.point.clone().add(intersect.face.normal.clone().multiplyScalar(0.5));
+            const x = Math.floor(position.x);
+            const y = Math.floor(position.y);
+            const z = Math.floor(position.z);
+
+            const geom = new THREE.BoxGeometry(1, 1, 1);
+            const mesh = new THREE.Mesh(geom, blockMaterials.oak_planks);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+        }
+
+        // --- CONTROLS & ANIMATION LOOP ---
+        function setupControls() {
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'KeyW') moveForward = true;
+                if (e.code === 'KeyS') moveBackward = true;
+                if (e.code === 'KeyA') moveLeft = true;
+                if (e.code === 'KeyD') moveRight = true;
+            });
+            document.addEventListener('keyup', (e) => {
+                if (e.code === 'KeyW') moveForward = false;
+                if (e.code === 'KeyS') moveBackward = false;
+                if (e.code === 'KeyA') moveLeft = false;
+                if (e.code === 'KeyD') moveRight = false;
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (document.pointerLockElement === document.body) {
+                    camera.rotation.y -= e.movementX * 0.002;
+                    camera.rotation.x -= e.movementY * 0.002;
+                    camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+                }
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+
+            // Basic movement physics
+            velocity.x -= velocity.x * 10.0 * delta;
+            velocity.z -= velocity.z * 10.0 * delta;
+
+            direction.z = Number(moveForward) - Number(moveBackward);
+            direction.x = Number(moveRight) - Number(moveLeft);
+            direction.normalize();
+
+            if (moveForward || moveBackward) velocity.z -= direction.z * 50.0 * delta;
+            if (moveLeft || moveRight) velocity.x -= direction.x * 50.0 * delta;
+
+            camera.translateX(velocity.x * delta);
+            camera.translateZ(velocity.z * delta);
+
+            // Update infinite chunks based on player location
+            updateChunks();
+
+            prevTime = time;
+            renderer.render(scene, camera);
         }
     </script>
 </body>
