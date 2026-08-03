@@ -32,12 +32,14 @@
             box-shadow: 0 6px 0 #0369a1, 0 10px 10px rgba(0,0,0,0.5); transition: transform 0.1s, box-shadow 0.1s;
         }
         .pixel-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #0369a1, 0 5px 5px rgba(0,0,0,0.5); }
+        
         #hud { position: absolute; top: 20px; left: 20px; display: none; flex-direction: column; gap: 10px; pointer-events: none; z-index: 5; }
         #hud.active { display: flex; }
         .hud-box {
             background: rgba(15, 23, 42, 0.85); border: 3px solid #334155; padding: 10px 18px;
             font-size: 1rem; font-weight: bold; box-shadow: 4px 4px 0px rgba(0,0,0,0.5); display: flex; gap: 15px;
         }
+        
         #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: none; gap: 8px; z-index: 5; pointer-events: auto; }
         #hotbar.active { display: flex; }
         .slot {
@@ -48,6 +50,23 @@
         .slot.selected { border-color: #38bdf8; background: rgba(30, 41, 59, 0.95); }
         .slot .icon { font-size: 1.2rem; }
         .slot .count { position: absolute; bottom: 2px; right: 4px; font-size: 0.7rem; color: #f8fafc; font-weight: bold; }
+
+        /* Inventory & Crafting UI Overlay */
+        #inventory-ui {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 480px; background: rgba(15, 23, 42, 0.95); border: 4px solid #334155;
+            padding: 20px; display: none; flex-direction: column; gap: 15px; z-index: 20; box-shadow: 8px 8px 0px rgba(0,0,0,0.7);
+        }
+        #inventory-ui.active { display: flex; }
+        .inv-section-title { font-size: 1.1rem; color: #38bdf8; border-bottom: 2px solid #334155; padding-bottom: 5px; }
+        .inv-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        .crafting-container { display: flex; gap: 20px; align-items: center; }
+        .recipe-btn {
+            background: #1e293b; border: 2px solid #475569; color: #f8fafc; padding: 8px 12px;
+            font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; cursor: pointer; text-align: left;
+        }
+        .recipe-btn:hover { background: #334155; border-color: #38bdf8; }
+
         .controls-overlay {
             position: absolute; bottom: 85px; left: 50%; transform: translateX(-50%);
             background: rgba(15, 23, 42, 0.9); border: 3px solid #334155; padding: 8px 16px;
@@ -60,7 +79,7 @@
 
     <div id="title-screen" class="screen active">
         <h1>TERRA-QUEST MMO</h1>
-        <p>Live Shared World Mining & Building</p>
+        <p>Explore, Mine Ores, Craft Tools & Build!</p>
         <input id="name-input" maxlength="15" placeholder="Hero Name..." /><br>
         <input id="room-input" maxlength="15" placeholder="Server Room (e.g. alpha)" value="main" /><br>
         <button class="pixel-btn" onclick="connectToServer()">JOIN WORLD</button>
@@ -70,14 +89,34 @@
         <div class="hud-box">
             <span>🛡️ <span id="hud-name">Hero</span></span>
             <span>ROOM: <span id="hud-room" style="color:#38bdf8;">main</span></span>
-            <span>LVL: <span id="hud-lvl">1</span></span>
-            <span>HP: <span id="hud-hp" style="color:#f87171;">100</span>/<span id="hud-max-hp">100</span></span>
-            <span>GOLD: <span id="hud-gold" style="color:#fbbf24;">0</span></span>
+            <span>TOOL: <span id="hud-tool" style="color:#fbbf24;">Fists</span></span>
+        </div>
+    </div>
+
+    <!-- Inventory Screen -->
+    <div id="inventory-ui">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="inv-section-title" style="border:none; font-size: 1.4rem;">🎒 INVENTORY & CRAFTING</span>
+            <span style="cursor:pointer; color:#ef4444; font-weight:bold;" onclick="toggleInventory()">[X]</span>
+        </div>
+        <div>
+            <div class="inv-section-title">Item Storage (Blank until collected)</div>
+            <div id="inventory-slots" class="inv-grid" style="margin-top: 10px;">
+                <!-- Dynamically filled slots -->
+            </div>
+        </div>
+        <div>
+            <div class="inv-section-title">Crafting Bench</div>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                <button class="recipe-btn" onclick="craftItem('wooden_pickaxe')">🛠️ Craft Wooden Pickaxe (Req: 5 Wood)</button>
+                <button class="recipe-btn" onclick="craftItem('stone_pickaxe')">⛏️ Craft Stone Pickaxe (Req: 5 Stone)</button>
+                <button class="recipe-btn" onclick="craftItem('iron_pickaxe')">⚙️ Craft Iron Pickaxe (Req: 5 Iron)</button>
+            </div>
         </div>
     </div>
 
     <div id="controls-hint" class="controls-overlay">
-        Move: <b>A/D</b> | Jump: <b>W/Space</b> | <b>Left-Click</b>: Mine | <b>Right-Click</b>: Place | Select: <b>1, 2, 3</b>
+        Move: <b>A/D</b> | Jump: <b>W/Space</b> | Inventory: <b>E</b> | <b>Left-Click</b>: Mine/Attack | <b>Right-Click</b>: Place
     </div>
 
     <div id="hotbar">
@@ -94,6 +133,7 @@
         const hud = document.getElementById('hud');
         const hotbar = document.getElementById('hotbar');
         const controlsHint = document.getElementById('controls-hint');
+        const inventoryUi = document.getElementById('inventory-ui');
         const nameInput = document.getElementById('name-input');
         const roomInput = document.getElementById('room-input');
         const canvas = document.getElementById('game-canvas');
@@ -114,19 +154,21 @@
         });
 
         const TILE_SIZE = 32;
-        const WORLD_WIDTH = 120; 
-        const WORLD_HEIGHT = 45; 
+        const WORLD_WIDTH = 140; 
+        const WORLD_HEIGHT = 50; 
 
         let worldMap = []; 
-        let entities = []; 
-        let particles = []; 
+        let droppedItems = []; 
         let remotePlayers = {}; 
         let currentRoom = 'main';
         let gameStarted = false;
+        let inventoryOpen = false;
 
-        let inventory = { 1: 0, 2: 0, 3: 0 };
+        // Inventory mapping: Tile/Item IDs
+        // 1: Dirt, 2: Stone, 3: Grass, 4: Wood, 5: Leaves, 6: Coal, 7: Iron, 8: Gold, 9: Diamond
+        let inventory = {}; 
         let selectedSlotIndex = 0;
-        const hotbarMapping = [1, 2, 3];
+        const hotbarMapping = [1, 2, 4]; // Dirt, Stone, Wood in hotbar by default
 
         let hero = {
             name: 'Hero',
@@ -143,13 +185,20 @@
             facing: 'right',
             animTimer: 0,
             frame: 0,
-            hp: 100,
-            maxHp: 100,
-            level: 1,
-            exp: 0,
-            maxExp: 50,
-            gold: 0,
-            atk: 15
+            tool: 'Fists',
+            toolTier: 1
+        };
+
+        const tileNames = {
+            1: 'Dirt Block',
+            2: 'Stone Block',
+            3: 'Grass Block',
+            4: 'Wood Block',
+            5: 'Leaves',
+            6: 'Coal Ore',
+            7: 'Iron Ore',
+            8: 'Gold Ore',
+            9: 'Diamond Ore'
         };
 
         function selectSlot(index) {
@@ -158,6 +207,69 @@
                 if (i === index) s.classList.add('selected');
                 else s.classList.remove('selected');
             });
+        }
+
+        function toggleInventory() {
+            inventoryOpen = !inventoryOpen;
+            if (inventoryOpen) {
+                inventoryUi.classList.add('active');
+                renderInventoryUI();
+            } else {
+                inventoryUi.classList.remove('active');
+            }
+        }
+
+        function renderInventoryUI() {
+            const slotsContainer = document.getElementById('inventory-slots');
+            slotsContainer.innerHTML = '';
+            
+            // Render only items that have quantity > 0 (Blank until collected)
+            for (let id in inventory) {
+                if (inventory[id] > 0) {
+                    let slotDiv = document.createElement('div');
+                    slotDiv.className = 'slot';
+                    slotDiv.style.width = '100%';
+                    slotDiv.style.height = '60px';
+                    slotDiv.innerHTML = `<span class="icon">📦</span><span style="font-size:0.65rem">${tileNames[id] || 'Item'}</span><span class="count">${inventory[id]}</span>`;
+                    slotsContainer.appendChild(slotDiv);
+                }
+            }
+            if (slotsContainer.children.length === 0) {
+                slotsContainer.innerHTML = '<div style="color: #64748b; font-size: 0.85rem; grid-column: span 5; text-align:center; padding:15px;">Inventory is empty. Mine blocks to collect items!</div>';
+            }
+        }
+
+        function craftItem(recipeType) {
+            if (recipeType === 'wooden_pickaxe') {
+                if ((inventory[4] || 0) >= 5) {
+                    inventory[4] -= 5;
+                    hero.tool = 'Wooden Pickaxe';
+                    hero.toolTier = 2;
+                    alert('Successfully crafted Wooden Pickaxe!');
+                } else {
+                    alert('Not enough Wood! Need 5 Wood blocks.');
+                }
+            } else if (recipeType === 'stone_pickaxe') {
+                if ((inventory[2] || 0) >= 5) {
+                    inventory[2] -= 5;
+                    hero.tool = 'Stone Pickaxe';
+                    hero.toolTier = 3;
+                    alert('Successfully crafted Stone Pickaxe!');
+                } else {
+                    alert('Not enough Stone! Need 5 Stone blocks.');
+                }
+            } else if (recipeType === 'iron_pickaxe') {
+                if ((inventory[7] || 0) >= 5) {
+                    inventory[7] -= 5;
+                    hero.tool = 'Iron Pickaxe';
+                    hero.toolTier = 4;
+                    alert('Successfully crafted Iron Pickaxe!');
+                } else {
+                    alert('Not enough Iron! Need 5 Iron Ore.');
+                }
+            }
+            document.getElementById('hud-tool').textContent = hero.tool;
+            renderInventoryUI();
         }
 
         function connectToServer() {
@@ -175,11 +287,11 @@
         socket.on('init_world', (data) => {
             worldMap = data.world;
             remotePlayers = data.players;
+            droppedItems = data.items || [];
             if (socket.id && remotePlayers[socket.id]) {
                 delete remotePlayers[socket.id];
             }
 
-            // Find valid safe spawn point on surface
             hero.x = 4 * TILE_SIZE;
             for (let y = 0; y < WORLD_HEIGHT; y++) {
                 if (worldMap[y][4] > 0) {
@@ -198,27 +310,25 @@
             }
         });
 
-        socket.on('player_joined', (player) => {
-            remotePlayers[player.id] = player;
-        });
-
-        socket.on('player_moved', (player) => {
-            remotePlayers[player.id] = player;
-        });
-
-        socket.on('player_left', (data) => {
-            delete remotePlayers[data.id];
-        });
-
+        socket.on('player_joined', (player) => { remotePlayers[player.id] = player; });
+        socket.on('player_moved', (player) => { remotePlayers[player.id] = player; });
+        socket.on('player_left', (data) => { delete remotePlayers[data.id]; });
         socket.on('tile_updated', (data) => {
             if (worldMap.length > 0 && data.y < worldMap.length && data.x < worldMap[0].length) {
                 worldMap[data.y][data.x] = data.tile;
             }
         });
+        socket.on('sync_items', (items) => { droppedItems = items; });
 
         const keys = {};
         window.addEventListener('keydown', e => {
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+            if (e.key.toLowerCase() === 'e') {
+                toggleInventory();
+                return;
+            }
+            if (inventoryOpen) return;
+
             keys[e.key] = true;
             keys[e.key.toLowerCase()] = true;
             if (e.key === '1') selectSlot(0);
@@ -232,12 +342,10 @@
         });
 
         window.addEventListener('mousedown', e => {
-            if (!gameStarted) return;
+            if (!gameStarted || inventoryOpen) return;
 
-            let cameraX = hero.x - screenWidth / 2 + hero.width / 2;
-            let cameraY = hero.y - screenHeight / 2 + hero.height / 2;
-            cameraX = Math.max(0, Math.min(WORLD_WIDTH * TILE_SIZE - screenWidth, cameraX));
-            cameraY = Math.max(0, Math.min(WORLD_HEIGHT * TILE_SIZE - screenHeight, cameraY));
+            let cameraX = Math.max(0, Math.min(WORLD_WIDTH * TILE_SIZE - screenWidth, hero.x - screenWidth / 2 + hero.width / 2));
+            let cameraY = Math.max(0, Math.min(WORLD_HEIGHT * TILE_SIZE - screenHeight, hero.y - screenHeight / 2 + hero.height / 2));
 
             let worldMouseX = e.clientX + cameraX;
             let worldMouseY = e.clientY + cameraY;
@@ -253,13 +361,24 @@
             if (e.button === 0) {
                 let currentTile = worldMap[tileY][tileX];
                 if (currentTile > 0) {
-                    inventory[currentTile] = (inventory[currentTile] || 0) + 1;
                     worldMap[tileY][tileX] = 0;
                     socket.emit('update_tile', { room: currentRoom, x: tileX, y: tileY, tile: 0 });
+
+                    // Spawn physical drop item with bouncy animation velocity
+                    let newItem = {
+                        id: Math.random().toString(36).substring(2, 9),
+                        type: currentTile,
+                        x: tileX * TILE_SIZE + 8,
+                        y: tileY * TILE_SIZE + 8,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: -5
+                    };
+                    droppedItems.push(newItem);
+                    socket.emit('spawn_item', { room: currentRoom, item: newItem });
                 }
             } else if (e.button === 2) {
                 let activeTileType = hotbarMapping[selectedSlotIndex];
-                if (worldMap[tileY][tileX] === 0 && inventory[activeTileType] > 0) {
+                if (worldMap[tileY][tileX] === 0 && (inventory[activeTileType] || 0) > 0) {
                     let pBox = { x: hero.x, y: hero.y, w: hero.width, h: hero.height };
                     let tBox = { x: tileX * TILE_SIZE, y: tileY * TILE_SIZE, w: TILE_SIZE, h: TILE_SIZE };
                     let overlapping = !(pBox.x + pBox.w < tBox.x || pBox.x > tBox.x + tBox.w || pBox.y + pBox.h < tBox.y || pBox.y > tBox.y + tBox.h);
@@ -295,33 +414,61 @@
         let netSyncCounter = 0;
 
         function updateGame() {
-            hero.vx = 0;
-            if (keys['a'] || keys['arrowleft']) { hero.vx = -hero.speed; hero.facing = 'left'; }
-            if (keys['d'] || keys['arrowright']) { hero.vx = hero.speed; hero.facing = 'right'; }
+            if (!inventoryOpen) {
+                hero.vx = 0;
+                if (keys['a'] || keys['arrowleft']) { hero.vx = -hero.speed; hero.facing = 'left'; }
+                if (keys['d'] || keys['arrowright']) { hero.vx = hero.speed; hero.facing = 'right'; }
 
-            hero.x += hero.vx;
-            if (checkCollision(hero.x, hero.y, hero.width, hero.height)) hero.x -= hero.vx;
+                hero.x += hero.vx;
+                if (checkCollision(hero.x, hero.y, hero.width, hero.height)) hero.x -= hero.vx;
 
-            if ((keys['w'] || keys['arrowup'] || keys[' ']) && hero.grounded) {
-                hero.vy = hero.jumpForce;
+                if ((keys['w'] || keys['arrowup'] || keys[' ']) && hero.grounded) {
+                    hero.vy = hero.jumpForce;
+                    hero.grounded = false;
+                }
+
+                hero.vy += hero.gravity;
+                hero.y += hero.vy;
                 hero.grounded = false;
+
+                if (checkCollision(hero.x, hero.y, hero.width, hero.height)) {
+                    hero.y -= hero.vy;
+                    if (hero.vy > 0) hero.grounded = true;
+                    hero.vy = 0;
+                }
+
+                if (hero.vx !== 0 && hero.grounded) {
+                    hero.animTimer++;
+                    if (hero.animTimer > 8) { hero.frame = (hero.frame + 1) % 4; hero.animTimer = 0; }
+                } else {
+                    hero.frame = 0;
+                }
             }
 
-            hero.vy += hero.gravity;
-            hero.y += hero.vy;
-            hero.grounded = false;
+            // Update item physics & animation drop bounces
+            for (let i = droppedItems.length - 1; i >= 0; i--) {
+                let item = droppedItems[i];
+                item.vy += 0.45;
+                item.x += item.vx;
+                item.y += item.vy;
 
-            if (checkCollision(hero.x, hero.y, hero.width, hero.height)) {
-                hero.y -= hero.vy;
-                if (hero.vy > 0) hero.grounded = true;
-                hero.vy = 0;
-            }
+                let tx = Math.floor((item.x + 8) / TILE_SIZE);
+                let ty = Math.floor((item.y + 16) / TILE_SIZE);
+                if (ty >= 0 && ty < WORLD_HEIGHT && tx >= 0 && tx < WORLD_WIDTH && worldMap[ty][tx] > 0) {
+                    item.y = ty * TILE_SIZE - 16;
+                    item.vy = -item.vy * 0.3; // Bounce animation effect
+                    item.vx *= 0.75;
+                }
 
-            if (hero.vx !== 0 && hero.grounded) {
-                hero.animTimer++;
-                if (hero.animTimer > 8) { hero.frame = (hero.frame + 1) % 4; hero.animTimer = 0; }
-            } else {
-                hero.frame = 0;
+                let pBox = { x: hero.x, y: hero.y, w: hero.width, h: hero.height };
+                let iBox = { x: item.x, y: item.y, w: 16, h: 16 };
+                let colliding = !(pBox.x + pBox.w < iBox.x || pBox.x > iBox.x + iBox.w || pBox.y + pBox.h < iBox.y || pBox.y > iBox.y + iBox.h);
+
+                if (colliding) {
+                    inventory[item.type] = (inventory[item.type] || 0) + 1;
+                    socket.emit('collect_item', { room: currentRoom, index: i });
+                    droppedItems.splice(i, 1);
+                }
             }
 
             netSyncCounter++;
@@ -330,9 +477,9 @@
                 netSyncCounter = 0;
             }
 
-            document.getElementById('count-1').textContent = inventory[1];
-            document.getElementById('count-2').textContent = inventory[2];
-            document.getElementById('count-3').textContent = inventory[3];
+            document.getElementById('count-1').textContent = inventory[1] || 0;
+            document.getElementById('count-2').textContent = inventory[2] || 0;
+            document.getElementById('count-3').textContent = inventory[4] || 0; // Hotbar slot 3 set to wood blocks
         }
 
         function drawGame() {
@@ -371,10 +518,39 @@
                         } else if (tile === 2) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
                             ctx.fillStyle = '#475569'; ctx.fillRect(rx + 6, ry + 6, 10, 10);
+                        } else if (tile === 4) {
+                            ctx.fillStyle = '#78350f'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#451a03'; ctx.fillRect(rx + 4, ry + 4, 8, 24);
+                        } else if (tile === 5) {
+                            ctx.fillStyle = '#15803d'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                        } else if (tile === 6) { // Coal
+                            ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#0f172a'; ctx.fillRect(rx + 5, ry + 5, 10, 10);
+                        } else if (tile === 7) { // Iron
+                            ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#e2e8f0'; ctx.fillRect(rx + 5, ry + 5, 10, 10);
+                        } else if (tile === 8) { // Gold
+                            ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#fbbf24'; ctx.fillRect(rx + 5, ry + 5, 10, 10);
+                        } else if (tile === 9) { // Diamond
+                            ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#38bdf8'; ctx.fillRect(rx + 5, ry + 5, 10, 10);
                         }
                     }
                 }
             }
+
+            // Draw dropped item animations with floating visual offsets
+            droppedItems.forEach(item => {
+                if (item.type === 3 || item.type === 5) ctx.fillStyle = '#22c55e';
+                else if (item.type === 1 || item.type === 4) ctx.fillStyle = '#b45309';
+                else if (item.type === 6) ctx.fillStyle = '#0f172a';
+                else if (item.type === 7) ctx.fillStyle = '#e2e8f0';
+                else if (item.type === 8) ctx.fillStyle = '#fbbf24';
+                else if (item.type === 9) ctx.fillStyle = '#38bdf8';
+                else ctx.fillStyle = '#64748b';
+                ctx.fillRect(item.x, item.y + Math.sin(Date.now() * 0.01) * 3, 14, 14);
+            });
 
             for (let id in remotePlayers) {
                 let rp = remotePlayers[id];

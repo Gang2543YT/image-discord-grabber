@@ -11,18 +11,21 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'terra-quest-secret-key'
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
-WORLD_WIDTH = 120
-WORLD_HEIGHT = 45
+WORLD_WIDTH = 140
+WORLD_HEIGHT = 50
 
 rooms_players = {}
 rooms_worlds = {}
+rooms_items = {}
 
 def generate_server_world():
     world = [[0 for _ in range(WORLD_WIDTH)] for _ in range(WORLD_HEIGHT)]
     surface_height = 18
+    
+    # Generate terrain profile
     for x in range(WORLD_WIDTH):
-        surface_height += math.floor(math.sin(x * 0.15) * 1.5 + (random.random() * 0.6 - 0.3))
-        surface_height = max(12, min(28, surface_height))
+        surface_height += math.floor(math.sin(x * 0.12) * 1.5 + (random.random() * 0.6 - 0.3))
+        surface_height = max(12, min(30, surface_height))
 
         for y in range(surface_height, WORLD_HEIGHT):
             if y == surface_height:
@@ -30,7 +33,39 @@ def generate_server_world():
             elif y < surface_height + 5:
                 world[y][x] = 1  # Dirt
             else:
-                world[y][x] = 2  # Stone
+                # Ore distribution based on depth
+                rand = random.random()
+                if y > 38 and rand < 0.025:
+                    world[y][x] = 9  # Diamond Ore
+                elif y > 30 and rand < 0.04:
+                    world[y][x] = 8  # Gold Ore
+                elif y > 24 and rand < 0.06:
+                    world[y][x] = 7  # Iron Ore
+                elif y > 20 and rand < 0.08:
+                    world[y][x] = 6  # Coal Ore
+                else:
+                    world[y][x] = 2  # Stone
+
+    # Spawn trees on the surface
+    for x in range(5, WORLD_WIDTH - 5, 7):
+        if random.random() < 0.7:
+            # Find surface y
+            sy = 0
+            for y in range(WORLD_HEIGHT):
+                if world[y][x] == 3:
+                    sy = y
+                    break
+            if sy > 0:
+                # Trunk (3 blocks high)
+                for ty in range(1, 4):
+                    if sy - ty >= 0:
+                        world[sy - ty][x] = 4  # Wood
+                # Leaves canopy
+                for lx in range(x - 2, x + 3):
+                    for ly in range(sy - 6, sy - 3):
+                        if 0 <= lx < WORLD_WIDTH and 0 <= ly < WORLD_HEIGHT and world[ly][lx] == 0:
+                            world[ly][lx] = 5  # Leaves
+
     return world
 
 @app.route('/')
@@ -46,6 +81,7 @@ def handle_join(data):
     
     if room not in rooms_worlds:
         rooms_worlds[room] = generate_server_world()
+        rooms_items[room] = []
     
     player_data = {
         'id': request.sid,
@@ -61,8 +97,11 @@ def handle_join(data):
         rooms_players[room] = {}
     rooms_players[room][request.sid] = player_data
     
-    # Send the current world map and players to the newly connected user
-    emit('init_world', {'world': rooms_worlds[room], 'players': rooms_players[room]})
+    emit('init_world', {
+        'world': rooms_worlds[room], 
+        'players': rooms_players[room], 
+        'items': rooms_items[room]
+    })
     emit('player_joined', player_data, to=room, include_self=False)
 
 @socketio.on('player_update')
@@ -89,6 +128,23 @@ def handle_tile_update(data):
             rooms_worlds[room][y][x] = tile
             emit('tile_updated', data, to=room, include_self=False)
 
+@socketio.on('spawn_item')
+def handle_spawn_item(data):
+    room = data.get('room')
+    item = data.get('item')
+    if room and item and room in rooms_items:
+        rooms_items[room].append(item)
+        emit('sync_items', rooms_items[room], to=room)
+
+@socketio.on('collect_item')
+def handle_collect_item(data):
+    room = data.get('room')
+    index = data.get('index')
+    if room and room in rooms_items:
+        if 0 <= index < len(rooms_items[room]):
+            rooms_items[room].pop(index)
+            emit('sync_items', rooms_items[room], to=room)
+
 @socketio.on('disconnect')
 def handle_disconnect():
     for room, players in list(rooms_players.items()):
@@ -100,6 +156,8 @@ def handle_disconnect():
                     del rooms_players[room]
                 if room in rooms_worlds:
                     del rooms_worlds[room]
+                if room in rooms_items:
+                    del rooms_items[room]
             break
 
 if __name__ == '__main__':
