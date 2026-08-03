@@ -24,7 +24,6 @@ def generate_server_world():
     world = [[0 for _ in range(WORLD_WIDTH)] for _ in range(WORLD_HEIGHT)]
     surface_height = 20
     
-    # Flatter, smoother terrain profile
     for x in range(WORLD_WIDTH):
         surface_height += math.floor(math.sin(x * 0.06) * 0.5 + (random.random() * 0.2 - 0.1))
         surface_height = max(16, min(24, surface_height))
@@ -53,7 +52,7 @@ def generate_server_world():
     for _ in range(16):
         cx = random.randint(10, WORLD_WIDTH - 10)
         cy = random.randint(26, WORLD_HEIGHT - 6)
-        carve_radius = random.randint(2, 4)  # Smaller cave size
+        carve_radius = random.randint(2, 4)
         for _ in range(25):
             cx += random.randint(-2, 2)
             cy += random.randint(-1, 1)
@@ -61,7 +60,7 @@ def generate_server_world():
                 for kx in range(cx - carve_radius, cx + carve_radius + 1):
                     if 0 < kx < WORLD_WIDTH - 1 and 23 < ky < WORLD_HEIGHT - 1:
                         if math.hypot(kx - cx, ky - cy) <= carve_radius:
-                            if world[ky][kx] != 3:  # Keep surface grass intact
+                            if world[ky][kx] != 3:
                                 world[ky][kx] = 0  # Cave Air
 
     # Trees on surface
@@ -188,7 +187,7 @@ def background_world_ticker():
                     if len(mobs) < 6 and random.random() < 0.25:
                         mx = random.randint(10, WORLD_WIDTH - 10)
                         my = random.randint(26, WORLD_HEIGHT - 5)
-                        if rooms_worlds[room][my][mx] == 0:  # Cave air spawn
+                        if rooms_worlds[room][my][mx] == 0:
                             mobs.append({'id': random.randint(1000, 9999), 'x': mx * 32, 'y': my * 32, 'hp': 40})
                 else:
                     mobs = []

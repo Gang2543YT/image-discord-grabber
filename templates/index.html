@@ -42,7 +42,6 @@
             padding: 10px 16px; font-size: 0.95rem; font-weight: 600; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; gap: 15px;
         }
         
-        /* Mini Map container */
         #minimap-container {
             position: absolute; top: 20px; right: 20px; width: 180px; height: 110px;
             background: rgba(15, 23, 42, 0.85); border: 2px solid #334155; border-radius: 6px;
@@ -51,7 +50,6 @@
         #minimap-container.active { display: block; }
         #minimap-canvas { width: 100%; height: 100%; image-rendering: pixelated; }
 
-        /* Hotbar bar on bottom */
         #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: none; gap: 6px; z-index: 5; pointer-events: auto; background: rgba(15, 23, 42, 0.85); padding: 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
         #hotbar.active { display: flex; }
         .slot {
@@ -62,7 +60,6 @@
         .slot canvas { width: 28px; height: 28px; }
         .slot .count { position: absolute; bottom: 2px; right: 4px; font-size: 0.7rem; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
 
-        /* Minecraft Professional Inventory Screen */
         #inventory-ui {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 480px; background: #1e293b; border: 2px solid #475569; border-radius: 10px;
@@ -80,7 +77,6 @@
         .inv-cell canvas { width: 26px; height: 26px; }
         .inv-cell .count { position: absolute; bottom: 1px; right: 3px; font-size: 0.65rem; font-weight: bold; color: #fff; text-shadow: 1px 1px #000; }
 
-        /* Tooltip hover container */
         #tooltip {
             position: absolute; background: rgba(15, 23, 42, 0.95); border: 1px solid #38bdf8; padding: 4px 8px;
             font-size: 0.75rem; border-radius: 4px; pointer-events: none; z-index: 30; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.4);
@@ -102,7 +98,7 @@
 
     <div id="title-screen" class="screen active">
         <h1>PIXELCRAFT MMO</h1>
-        <p>Explore Flat Plains, Deep Dark Caves & Survive the Night!</p>
+        <p>Explore Detailed Biomes, Deep Caves & Illuminate the Dark!</p>
         <input id="name-input" maxlength="15" placeholder="Hero Name..." /><br>
         <input id="room-input" maxlength="15" placeholder="Server Room (e.g. alpha)" value="main" /><br>
         <button class="pixel-btn" onclick="connectToServer()">ENTER WORLD</button>
@@ -116,12 +112,10 @@
         </div>
     </div>
 
-    <!-- Mini Map Container -->
     <div id="minimap-container">
         <canvas id="minimap-canvas" width="180" height="110"></canvas>
     </div>
 
-    <!-- Inventory Screen -->
     <div id="inventory-ui">
         <div class="inv-title">
             <span>Inventory & Crafting</span>
@@ -143,14 +137,12 @@
         </div>
     </div>
 
-    <!-- Floating Tooltip Container -->
     <div id="tooltip"></div>
 
     <div id="controls-hint" class="controls-overlay">
         Move: <b>A/D</b> | Jump: <b>W/Space</b> | Inventory: <b>E</b> | <b>Left-Click</b>: Mine | <b>Right-Click</b>: Place
     </div>
 
-    <!-- Hotbar Slots on Bottom Screen -->
     <div id="hotbar">
         <div class="slot selected" id="hotbar-slot-0" onclick="selectHotbarSlot(0)"><span class="count" id="hc-0"></span></div>
         <div class="slot" id="hotbar-slot-1" onclick="selectHotbarSlot(1)"><span class="count" id="hc-1"></span></div>
@@ -209,7 +201,6 @@
         let gameStarted = false;
         let inventoryOpen = false;
 
-        // 36 inventory slots (0-8 hotbar, 9-35 main inventory)
         let inventorySlots = Array(36).fill(null).map(() => ({ type: null, count: 0 }));
         let selectedHotbarIndex = 0;
 
@@ -236,7 +227,7 @@
             6: 'Coal Ore', 7: 'Iron Ore', 8: 'Gold Ore', 9: 'Diamond Ore', 10: 'Crafting Table'
         };
 
-        // Draw individual mini icon graphic onto a small canvas context
+        // Highly Detailed Procedural Block Graphics Renderer
         function drawBlockIcon(targetCtx, tileType, size) {
             targetCtx.clearRect(0, 0, size, size);
             if (!tileType) return;
@@ -245,36 +236,77 @@
             targetCtx.scale(size / 32, size / 32);
 
             if (tileType === 3) {
-                targetCtx.fillStyle = '#22c55e'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#16a34a'; targetCtx.fillRect(0, 26, 32, 6);
+                // Detailed Grass Block: Rich soil body with randomized specks & vibrant layered turf top
+                targetCtx.fillStyle = '#854d0e'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#713f12'; targetCtx.fillRect(4, 12, 4, 4); targetCtx.fillRect(18, 22, 6, 6); targetCtx.fillRect(10, 26, 4, 4);
+                targetCtx.fillStyle = '#22c55e'; targetCtx.fillRect(0, 0, 32, 10);
+                targetCtx.fillStyle = '#16a34a'; targetCtx.fillRect(0, 7, 32, 3);
+                targetCtx.fillStyle = '#4ade80'; 
+                targetCtx.fillRect(2, 2, 4, 3); targetCtx.fillRect(10, 1, 6, 3); targetCtx.fillRect(22, 2, 5, 3);
             } else if (tileType === 1) {
-                targetCtx.fillStyle = '#b45309'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#92400e'; targetCtx.fillRect(4, 4, 8, 8); targetCtx.fillRect(18, 18, 8, 8);
+                // Detailed Dirt Block: Layered organic soil grains with pebble speckles
+                targetCtx.fillStyle = '#964B00'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#78350f'; 
+                targetCtx.fillRect(3, 3, 6, 5); targetCtx.fillRect(18, 5, 8, 4); targetCtx.fillRect(8, 14, 5, 7); targetCtx.fillRect(20, 20, 7, 6);
+                targetCtx.fillStyle = '#b45309';
+                targetCtx.fillRect(12, 4, 3, 3); targetCtx.fillRect(5, 23, 4, 4); targetCtx.fillRect(24, 12, 3, 4);
             } else if (tileType === 2) {
+                // Detailed Stone Block: Multi-toned slate texture with crevices & mineral chips
                 targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#475569'; targetCtx.fillRect(6, 6, 10, 10);
+                targetCtx.fillStyle = '#475569'; 
+                targetCtx.fillRect(4, 4, 10, 8); targetCtx.fillRect(18, 16, 11, 10); targetCtx.fillRect(3, 20, 8, 8);
+                targetCtx.fillStyle = '#334155';
+                targetCtx.fillRect(14, 3, 4, 4); targetCtx.fillRect(16, 14, 2, 3); targetCtx.fillRect(6, 14, 3, 3);
+                targetCtx.fillStyle = '#94a3b8';
+                targetCtx.fillRect(5, 5, 2, 2); targetCtx.fillRect(20, 18, 3, 2);
             } else if (tileType === 4) {
-                targetCtx.fillStyle = '#78350f'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#451a03'; targetCtx.fillRect(4, 4, 8, 24);
+                // Detailed Wood Block: Vertical bark grain texture with rings/streaks
+                targetCtx.fillStyle = '#5c2c16'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#78350f'; targetCtx.fillRect(0, 0, 8, 32); targetCtx.fillRect(14, 0, 6, 32); targetCtx.fillRect(26, 0, 6, 32);
+                targetCtx.fillStyle = '#3b1805'; targetCtx.fillRect(8, 0, 2, 32); targetCtx.fillRect(22, 0, 2, 32);
             } else if (tileType === 5) {
-                targetCtx.fillStyle = '#15803d'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#166534'; targetCtx.fillRect(6, 6, 8, 8); targetCtx.fillRect(18, 16, 8, 8);
+                // Detailed Leaves Block: Fluffy multi-cluster canopy shading
+                targetCtx.fillStyle = '#14532d'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#166534'; targetCtx.fillRect(2, 2, 12, 12); targetCtx.fillRect(16, 14, 14, 14);
+                targetCtx.fillStyle = '#22c55e'; targetCtx.fillRect(6, 6, 8, 8); targetCtx.fillRect(18, 4, 10, 8); targetCtx.fillRect(4, 18, 10, 10);
+                targetCtx.fillStyle = '#86efac'; targetCtx.fillRect(8, 8, 3, 3); targetCtx.fillRect(21, 7, 3, 3);
             } else if (tileType === 6) {
+                // Coal Ore: Stone embedded with dark coal crystal clusters
                 targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#0f172a'; targetCtx.fillRect(6, 6, 10, 10);
+                targetCtx.fillStyle = '#334155'; targetCtx.fillRect(4, 4, 8, 8); targetCtx.fillRect(18, 16, 9, 8);
+                targetCtx.fillStyle = '#0f172a'; 
+                targetCtx.fillRect(5, 5, 6, 6); targetCtx.fillRect(20, 18, 7, 6); targetCtx.fillRect(12, 12, 4, 4);
+                targetCtx.fillStyle = '#1e293b'; targetCtx.fillRect(6, 6, 4, 4); targetCtx.fillRect(22, 20, 4, 4);
             } else if (tileType === 7) {
+                // Iron Ore: Stone embedded with metallic iron ore deposits
                 targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#e2e8f0'; targetCtx.fillRect(6, 6, 10, 10);
+                targetCtx.fillStyle = '#475569'; targetCtx.fillRect(4, 4, 8, 8); targetCtx.fillRect(18, 16, 9, 8);
+                targetCtx.fillStyle = '#cbd5e1'; 
+                targetCtx.fillRect(5, 5, 6, 6); targetCtx.fillRect(20, 18, 7, 6); targetCtx.fillRect(12, 12, 4, 4);
+                targetCtx.fillStyle = '#f1f5f9'; targetCtx.fillRect(6, 6, 3, 3); targetCtx.fillRect(21, 19, 3, 3);
             } else if (tileType === 8) {
+                // Gold Ore: Stone with gleaming golden mineral clusters
                 targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#fbbf24'; targetCtx.fillRect(6, 6, 10, 10);
+                targetCtx.fillStyle = '#475569'; targetCtx.fillRect(4, 4, 8, 8); targetCtx.fillRect(18, 16, 9, 8);
+                targetCtx.fillStyle = '#d97706'; 
+                targetCtx.fillRect(5, 5, 6, 6); targetCtx.fillRect(20, 18, 7, 6); targetCtx.fillRect(12, 12, 4, 4);
+                targetCtx.fillStyle = '#fbbf24'; targetCtx.fillRect(6, 6, 3, 3); targetCtx.fillRect(21, 19, 3, 3);
             } else if (tileType === 9) {
+                // Diamond Ore: Stone with radiant cyan diamond crystal sparkles
                 targetCtx.fillStyle = '#64748b'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#38bdf8'; targetCtx.fillRect(6, 6, 10, 10);
+                targetCtx.fillStyle = '#475569'; targetCtx.fillRect(4, 4, 8, 8); targetCtx.fillRect(18, 16, 9, 8);
+                targetCtx.fillStyle = '#0284c7'; 
+                targetCtx.fillRect(5, 5, 6, 6); targetCtx.fillRect(20, 18, 7, 6); targetCtx.fillRect(12, 12, 4, 4);
+                targetCtx.fillStyle = '#38bdf8'; targetCtx.fillRect(6, 6, 3, 3); targetCtx.fillRect(21, 19, 3, 3);
+                targetCtx.fillStyle = '#bae6fd'; targetCtx.fillRect(7, 7, 1, 1);
             } else if (tileType === 10) {
-                targetCtx.fillStyle = '#b45309'; targetCtx.fillRect(0, 0, 32, 32);
-                targetCtx.fillStyle = '#78350f'; targetCtx.fillRect(2, 2, 28, 6);
-                targetCtx.fillStyle = '#451a03'; targetCtx.fillRect(6, 8, 4, 24); targetCtx.fillRect(22, 8, 4, 24);
+                // Crafting Table Block: Detailed wooden workbench with grid top and tools
+                targetCtx.fillStyle = '#92400e'; targetCtx.fillRect(0, 0, 32, 32);
+                targetCtx.fillStyle = '#b45309'; targetCtx.fillRect(0, 0, 32, 8);
+                targetCtx.fillStyle = '#78350f'; 
+                targetCtx.fillRect(2, 2, 12, 4); targetCtx.fillRect(18, 2, 12, 4);
+                targetCtx.fillRect(4, 8, 4, 24); targetCtx.fillRect(24, 8, 4, 24);
+                targetCtx.fillStyle = '#451a03'; targetCtx.fillRect(0, 7, 32, 2);
             }
             targetCtx.restore();
         }
@@ -359,7 +391,6 @@
                     cnt.textContent = item.count;
                     cell.appendChild(cnt);
 
-                    // Hover event listeners for block name tooltip
                     cell.addEventListener('mousemove', (e) => {
                         tooltip.textContent = tileNames[item.type] || 'Block';
                         tooltip.style.left = (e.pageX + 12) + 'px';
@@ -664,6 +695,7 @@
             let startRow = Math.floor(cameraY / TILE_SIZE);
             let endRow = startRow + Math.ceil(screenHeight / TILE_SIZE) + 1;
 
+            // Draw World Blocks with High Detail textures
             for (let y = startRow; y <= endRow && y < WORLD_HEIGHT; y++) {
                 for (let x = startCol; x <= endCol && x < WORLD_WIDTH; x++) {
                     let tile = worldMap[y][x];
@@ -671,56 +703,96 @@
                         let rx = x * TILE_SIZE;
                         let ry = y * TILE_SIZE;
                         if (tile === 3) {
-                            ctx.fillStyle = '#22c55e'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#16a34a'; ctx.fillRect(rx, ry + TILE_SIZE - 6, TILE_SIZE, 6);
+                            ctx.fillStyle = '#854d0e'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#713f12'; ctx.fillRect(rx + 4, ry + 12, 4, 4); ctx.fillRect(rx + 18, ry + 22, 6, 6);
+                            ctx.fillStyle = '#22c55e'; ctx.fillRect(rx, ry, TILE_SIZE, 10);
+                            ctx.fillStyle = '#16a34a'; ctx.fillRect(rx, ry + 7, TILE_SIZE, 3);
+                            ctx.fillStyle = '#4ade80'; ctx.fillRect(rx + 2, ry + 2, 4, 3); ctx.fillRect(rx + 10, ry + 1, 6, 3); ctx.fillRect(rx + 22, ry + 2, 5, 3);
                         } else if (tile === 1) {
-                            ctx.fillStyle = '#b45309'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#92400e'; ctx.fillRect(rx + 4, ry + 4, 8, 8);
+                            ctx.fillStyle = '#964B00'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#78350f'; ctx.fillRect(rx + 3, ry + 3, 6, 5); ctx.fillRect(rx + 18, ry + 5, 8, 4); ctx.fillRect(rx + 8, ry + 14, 5, 7); ctx.fillRect(rx + 20, ry + 20, 7, 6);
+                            ctx.fillStyle = '#b45309'; ctx.fillRect(rx + 12, ry + 4, 3, 3); ctx.fillRect(rx + 5, ry + 23, 4, 4);
                         } else if (tile === 2) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#475569'; ctx.fillRect(rx + 6, ry + 6, 10, 10);
+                            ctx.fillStyle = '#475569'; ctx.fillRect(rx + 4, ry + 4, 10, 8); ctx.fillRect(rx + 18, ry + 16, 11, 10); ctx.fillRect(rx + 3, ry + 20, 8, 8);
+                            ctx.fillStyle = '#334155'; ctx.fillRect(rx + 14, ry + 3, 4, 4); ctx.fillRect(rx + 6, ry + 14, 3, 3);
+                            ctx.fillStyle = '#94a3b8'; ctx.fillRect(rx + 5, ry + 5, 2, 2); ctx.fillRect(rx + 20, ry + 18, 3, 2);
                         } else if (tile === 4) {
-                            ctx.fillStyle = '#78350f'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#451a03'; ctx.fillRect(rx + 4, ry + 4, 8, 24);
+                            ctx.fillStyle = '#5c2c16'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#78350f'; ctx.fillRect(rx, ry, 8, TILE_SIZE); ctx.fillRect(rx + 14, ry, 6, TILE_SIZE); ctx.fillRect(rx + 26, ry, 6, TILE_SIZE);
+                            ctx.fillStyle = '#3b1805'; ctx.fillRect(rx + 8, ry, 2, TILE_SIZE); ctx.fillRect(rx + 22, ry, 2, TILE_SIZE);
                         } else if (tile === 5) {
-                            ctx.fillStyle = '#15803d'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#14532d'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#166534'; ctx.fillRect(rx + 2, ry + 2, 12, 12); ctx.fillRect(rx + 16, ry + 14, 14, 14);
+                            ctx.fillStyle = '#22c55e'; ctx.fillRect(rx + 6, ry + 6, 8, 8); ctx.fillRect(rx + 18, ry + 4, 10, 8);
+                            ctx.fillStyle = '#86efac'; ctx.fillRect(rx + 8, ry + 8, 3, 3);
                         } else if (tile === 6) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#0f172a'; ctx.fillRect(rx + 6, ry + 6, 10, 10);
+                            ctx.fillStyle = '#334155'; ctx.fillRect(rx + 4, ry + 4, 8, 8); ctx.fillRect(rx + 18, ry + 16, 9, 8);
+                            ctx.fillStyle = '#0f172a'; ctx.fillRect(rx + 5, ry + 5, 6, 6); ctx.fillRect(rx + 20, ry + 18, 7, 6); ctx.fillRect(rx + 12, ry + 12, 4, 4);
+                            ctx.fillStyle = '#1e293b'; ctx.fillRect(rx + 6, ry + 6, 4, 4);
                         } else if (tile === 7) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#e2e8f0'; ctx.fillRect(rx + 6, ry + 6, 10, 10);
+                            ctx.fillStyle = '#475569'; ctx.fillRect(rx + 4, ry + 4, 8, 8); ctx.fillRect(rx + 18, ry + 16, 9, 8);
+                            ctx.fillStyle = '#cbd5e1'; ctx.fillRect(rx + 5, ry + 5, 6, 6); ctx.fillRect(rx + 20, ry + 18, 7, 6); ctx.fillRect(rx + 12, ry + 12, 4, 4);
+                            ctx.fillStyle = '#f1f5f9'; ctx.fillRect(rx + 6, ry + 6, 3, 3);
                         } else if (tile === 8) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#fbbf24'; ctx.fillRect(rx + 6, ry + 6, 10, 10);
+                            ctx.fillStyle = '#475569'; ctx.fillRect(rx + 4, ry + 4, 8, 8); ctx.fillRect(rx + 18, ry + 16, 9, 8);
+                            ctx.fillStyle = '#d97706'; ctx.fillRect(rx + 5, ry + 5, 6, 6); ctx.fillRect(rx + 20, ry + 18, 7, 6); ctx.fillRect(rx + 12, ry + 12, 4, 4);
+                            ctx.fillStyle = '#fbbf24'; ctx.fillRect(rx + 6, ry + 6, 3, 3);
                         } else if (tile === 9) {
                             ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#38bdf8'; ctx.fillRect(rx + 6, ry + 6, 10, 10);
+                            ctx.fillStyle = '#475569'; ctx.fillRect(rx + 4, ry + 4, 8, 8); ctx.fillRect(rx + 18, ry + 16, 9, 8);
+                            ctx.fillStyle = '#0284c7'; ctx.fillRect(rx + 5, ry + 5, 6, 6); ctx.fillRect(rx + 20, ry + 18, 7, 6); ctx.fillRect(rx + 12, ry + 12, 4, 4);
+                            ctx.fillStyle = '#38bdf8'; ctx.fillRect(rx + 6, ry + 6, 3, 3);
                         } else if (tile === 10) {
-                            ctx.fillStyle = '#b45309'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                            ctx.fillStyle = '#78350f'; ctx.fillRect(rx, ry, TILE_SIZE, 6);
+                            ctx.fillStyle = '#92400e'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#b45309'; ctx.fillRect(rx, ry, TILE_SIZE, 8);
+                            ctx.fillStyle = '#78350f'; ctx.fillRect(rx + 2, ry + 2, 12, 4); ctx.fillRect(rx + 18, ry + 2, 12, 4);
+                            ctx.fillStyle = '#451a03'; ctx.fillRect(rx, ry + 7, TILE_SIZE, 2);
                         }
                     }
                 }
             }
 
-            // Underground Darkness / Lighting effect for caves & underground terrain
+            // Smooth Underground Twilight Transition & Detailed Player Lighting Illumination Shader
             for (let y = startRow; y <= endRow && y < WORLD_HEIGHT; y++) {
                 for (let x = startCol; x <= endCol && x < WORLD_WIDTH; x++) {
                     let rx = x * TILE_SIZE;
                     let ry = y * TILE_SIZE;
+                    
+                    // Smooth twilight layer transition around y = 22 to 26 before plunging into subterranean dark
+                    let baseDarkness = 0;
                     if (y >= 26) {
-                        let distToHero = Math.hypot((hero.x + 11) - (rx + 16), (hero.y + 15) - (ry + 16));
-                        let maxRadius = 160; // torch/sight light radius underground
-                        if (distToHero > maxRadius) {
-                            let alpha = Math.min(0.92, (distToHero - maxRadius) / 120 + 0.3);
-                            ctx.fillStyle = `rgba(2, 6, 23, ${alpha})`;
-                            ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                        } else {
-                            let alpha = Math.max(0, (distToHero / maxRadius) * 0.6);
-                            ctx.fillStyle = `rgba(2, 6, 23, ${alpha})`;
-                            ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-                        }
+                        baseDarkness = 0.90;
+                    } else if (y >= 22) {
+                        baseDarkness = (y - 22) / 4 * 0.90; // smooth gradient transition from surface to underground
+                    }
+
+                    let distToHero = Math.hypot((hero.x + 11) - (rx + 16), (hero.y + 15) - (ry + 16));
+                    let innerRadius = 50;  // Warm inner glow
+                    let outerRadius = 180; // Detailed lighting radius falloff
+
+                    let lightFactor = 0;
+                    if (distToHero < innerRadius) {
+                        lightFactor = 1.0;
+                    } else if (distToHero < outerRadius) {
+                        let progress = (distToHero - innerRadius) / (outerRadius - innerRadius);
+                        lightFactor = Math.pow(1.0 - progress, 1.8); // smooth non-linear falloff for detailed lighting effect
+                    }
+
+                    let finalDarkness = Math.max(0, baseDarkness - (lightFactor * 0.85));
+                    if (finalDarkness > 0.02) {
+                        ctx.fillStyle = `rgba(2, 6, 23, ${finalDarkness})`;
+                        ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                    }
+
+                    // Add subtle warm radial torch glow highlight directly over blocks near the player
+                    if (distToHero < outerRadius && baseDarkness > 0.2) {
+                        let glowAlpha = (1.0 - (distToHero / outerRadius)) * 0.25;
+                        ctx.fillStyle = `rgba(251, 191, 36, ${glowAlpha})`;
+                        ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
                     }
                 }
             }
@@ -791,7 +863,6 @@
                 }
             }
 
-            // Draw player position dot on minimap
             minimapCtx.fillStyle = '#ef4444';
             minimapCtx.fillRect((hero.x / TILE_SIZE) * scaleX - 1, (hero.y / TILE_SIZE) * scaleY - 1, 3, 3);
         }
