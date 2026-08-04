@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Terraria-Style Local Multiplayer</title>
+    <title>2D Terraria Online Multiplayer</title>
     <style>
         body {
             margin: 0;
@@ -15,7 +15,7 @@
         canvas {
             display: block;
         }
-        /* Start Screen Styles */
+        /* Connection & Lobby Screen */
         #start-screen {
             position: absolute;
             top: 0;
@@ -31,8 +31,8 @@
             color: white;
         }
         .menu-box {
-            background: rgba(0, 0, 0, 0.8);
-            padding: 25px 35px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 30px 40px;
             border-radius: 10px;
             border: 3px solid #f39c12;
             text-align: center;
@@ -42,14 +42,14 @@
         .menu-box h1 {
             margin-top: 0;
             color: #f39c12;
-            font-size: 24px;
+            font-size: 22px;
             text-shadow: 2px 2px #000;
         }
         .menu-box label {
             display: block;
-            margin-top: 10px;
-            font-size: 14px;
-            color: #ddd;
+            margin-top: 12px;
+            font-size: 13px;
+            color: #ccc;
             text-align: left;
         }
         .menu-box input {
@@ -61,7 +61,7 @@
             border: 2px solid #555;
             color: white;
             border-radius: 5px;
-            margin-top: 5px;
+            margin-top: 4px;
             outline: none;
             box-sizing: border-box;
             text-align: center;
@@ -73,28 +73,49 @@
             background: #f39c12;
             color: #111;
             font-weight: bold;
-            padding: 10px 25px;
-            font-size: 16px;
+            padding: 10px 20px;
+            font-size: 15px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-family: 'Courier New', Courier, monospace;
-            margin-top: 20px;
+            margin-top: 18px;
             width: 100%;
             transition: background 0.2s;
         }
         .menu-box button:hover {
             background: #e67e22;
         }
-        #name-error {
+        #error-msg {
             color: #ff4d4d;
             font-size: 12px;
-            margin-top: 10px;
+            margin-top: 12px;
             min-height: 15px;
             font-weight: bold;
         }
+        .mode-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 8px;
+            background: #333;
+            border: 2px solid #555;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .mode-btn.active {
+            background: #f39c12;
+            color: #111;
+            border-color: #f39c12;
+            font-weight: bold;
+        }
 
-        /* In-Game UI */
+        /* In-Game HUD */
         #ui-overlay {
             position: absolute;
             top: 15px;
@@ -109,30 +130,21 @@
             display: none;
             line-height: 1.5;
         }
-        .hud-container {
+        #hotbar {
             position: absolute;
             bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             display: none;
-            gap: 15px;
-        }
-        #hud-p1 { left: 20px; }
-        #hud-p2 { right: 20px; }
-        .player-hud {
+            gap: 8px;
             background: rgba(0, 0, 0, 0.75);
-            padding: 8px 12px;
+            padding: 8px;
             border-radius: 8px;
             border: 2px solid #555;
-            color: white;
-            font-size: 12px;
-        }
-        .hotbar {
-            display: flex;
-            gap: 5px;
-            margin-top: 5px;
         }
         .slot {
-            width: 35px;
-            height: 35px;
+            width: 42px;
+            height: 42px;
             background: rgba(255, 255, 255, 0.1);
             border: 2px solid #666;
             display: flex;
@@ -150,8 +162,8 @@
         }
         .slot span {
             position: absolute;
-            bottom: 1px;
-            right: 3px;
+            bottom: 2px;
+            right: 4px;
             font-size: 9px;
             color: #f1c40f;
         }
@@ -159,43 +171,50 @@
 </head>
 <body>
 
-    <!-- Start Screen -->
+    <!-- Connection / Lobby Start Screen -->
     <div id="start-screen">
         <div class="menu-box">
-            <h1>2D TERRARIA MULTIPLAYER</h1>
-            <label for="p1-name">Player 1 Name (WASD + Space):</label>
-            <input type="text" id="p1-name" placeholder="Leave blank for random" maxlength="16">
-            
-            <label for="p2-name">Player 2 Name (Arrow Keys + Enter):</label>
-            <input type="text" id="p2-name" placeholder="Leave blank for random" maxlength="16">
-            
-            <div id="name-error"></div>
-            <button id="start-btn">START GAME</button>
+            <h1>ONLINE MULTIPLAYER</h1>
+            <div class="mode-buttons">
+                <button class="mode-btn active" id="btn-host" onclick="setMode('host')">Host Room</button>
+                <button class="mode-btn" id="btn-join" onclick="setMode('join')">Join Room</button>
+            </div>
+
+            <label for="player-name">Your Player Name:</label>
+            <input type="text" id="player-name" placeholder="Leave blank for random" maxlength="16">
+
+            <div id="join-section" style="display: none;">
+                <label for="room-code-input">Room Code / ID:</label>
+                <input type="text" id="room-code-input" placeholder="Paste host room code">
+            </div>
+
+            <div id="host-section">
+                <label for="room-code-display">Your Room Code (Share with friends):</label>
+                <input type="text" id="room-code-display" readonly style="background: #111; color: #f39c12; font-weight: bold;">
+            </div>
+
+            <div id="error-msg"></div>
+            <button id="connect-btn" onclick="startConnection()">CONNECT & PLAY</button>
         </div>
     </div>
 
     <div id="ui-overlay">
-        <strong>P1 Controls:</strong> A/D to Move, W/S or Space to Jump<br>
-        <strong>P2 Controls:</strong> Left/Right Arrows to Move, Up Arrow to Jump<br>
-        <strong>Actions:</strong> Click to Mine/Place blocks (Shared World)
+        <strong>Controls:</strong> A/D to Move | Space to Jump | Mouse to Aim & Mine<br>
+        <strong>Hotbar:</strong> 1-5 to select items
     </div>
 
-    <div class="hud-container" id="hud-p1">
-        <div class="player-hud" id="hud-info-p1">
-            <strong id="title-p1">Player 1</strong>
-            <div class="hotbar" id="hotbar-p1"></div>
-        </div>
-    </div>
-
-    <div class="hud-container" id="hud-p2">
-        <div class="player-hud" id="hud-info-p2">
-            <strong id="title-p2">Player 2</strong>
-            <div class="hotbar" id="hotbar-p2"></div>
-        </div>
+    <div id="hotbar">
+        <div class="slot active" id="slot-0">Sword<span>1</span></div>
+        <div class="slot" id="slot-1">Pick<span>2</span></div>
+        <div class="slot" id="slot-2">Wood<span>15</span></div>
+        <div class="slot" id="slot-3">Stone<span>0</span></div>
+        <div class="slot" id="slot-4">Ore<span>0</span></div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
+    <!-- PeerJS for true P2P online multiplayer connectivity -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -213,17 +232,17 @@
         const WORLD_HEIGHT = 80;
         const loadedChunks = new Map();
         let gameStarted = false;
-        let worldSeed = Math.random() * 10000;
+        let isHost = true;
+        let peer = null;
+        let conn = null;
+        let hostConnections = []; // If host, holds connections to all connected clients
+        let worldSeed = 12345;
 
-        // Expanded Random Name Pool
         const RANDOM_NAMES = [
             'PixelKnight', 'VoxelVoyager', 'CraftMaster', 'DiggingDwarf', 'BlockBuster', 
             'CaveCrawler', 'ShadowMiner', 'BedrockBoss', 'ObsidianOgre', 'GoldGoblin',
-            'CopperCommander', 'IronIcon', 'StoneStalker', 'DirtDefender', 'TreeTrapper',
-            'SkySurfer', 'MagmaMage', 'RelicRider', 'TerraTamer', 'SandboxSlayer',
-            'PixelPioneer', 'BrickBandit', 'CobbleKing', 'SubterraneanSniper', 'ApexAlchemist'
+            'CopperCommander', 'IronIcon', 'StoneStalker', 'DirtDefender', 'TreeTrapper'
         ];
-
         const TAKEN_NAMES = ['steve', 'terrarian', 'builderx', 'minerbro', 'notch'];
 
         const COLORS = {
@@ -238,11 +257,11 @@
             leaves: '#2e7d32'
         };
 
-        // --- PLAYERS CONFIGURATION ---
-        const player1 = {
-            id: 1,
-            name: 'Player 1',
-            x: -40,
+        // Local Player State
+        const localPlayer = {
+            id: null,
+            name: '',
+            x: 0,
             y: 35 * TILE_SIZE,
             width: 20,
             height: 38,
@@ -258,25 +277,8 @@
             inventory: { copper_broadsword: 1, copper_pickaxe: 1, wood: 15, stone: 0, copper_ore: 0 }
         };
 
-        const player2 = {
-            id: 2,
-            name: 'Player 2',
-            x: 40,
-            y: 35 * TILE_SIZE,
-            width: 20,
-            height: 38,
-            vx: 0,
-            vy: 0,
-            speed: 4.5,
-            jumpForce: -10.5,
-            gravity: 0.45,
-            grounded: false,
-            facing: -1,
-            swingTimer: 0,
-            selectedSlot: 0,
-            inventory: { copper_broadsword: 1, copper_pickaxe: 1, wood: 15, stone: 0, copper_ore: 0 }
-        };
-
+        // Dictionary of remote online players { peerId: { x, y, name, facing, swingTimer, selectedSlot } }
+        const remotePlayers = {};
         const hotbarKeys = ['copper_broadsword', 'copper_pickaxe', 'wood', 'stone', 'copper_ore'];
         const particles = [];
         const clouds = [
@@ -285,109 +287,184 @@
             { x: 1000, y: 60, speed: 0.4, width: 100, height: 35 }
         ];
 
-        // --- START SCREEN HANDLER ---
-        const startBtn = document.getElementById('start-btn');
-        const p1Input = document.getElementById('p1-name');
-        const p2Input = document.getElementById('p2-name');
-        const nameError = document.getElementById('name-error');
-
-        startBtn.addEventListener('click', initializeGame);
-        p1Input.addEventListener('keydown', e => { if (e.key === 'Enter') initializeGame(); });
-        p2Input.addEventListener('keydown', e => { if (e.key === 'Enter') initializeGame(); });
-
-        function getRandomUniqueName(excludeName = '') {
-            let available = RANDOM_NAMES.filter(n => n.toLowerCase() !== excludeName.toLowerCase());
-            return available[Math.floor(Math.random() * available.length)];
+        // --- LOBBY & PEERJS SETUP ---
+        function setMode(mode) {
+            isHost = (mode === 'host');
+            document.getElementById('btn-host').classList.toggle('active', isHost);
+            document.getElementById('btn-join').classList.toggle('active', !isHost);
+            document.getElementById('host-section').style.display = isHost ? 'block' : 'none';
+            document.getElementById('join-section').style.display = isHost ? 'none' : 'block';
         }
 
-        function initializeGame() {
-            let name1 = p1Input.value.trim();
-            let name2 = p2Input.value.trim();
+        // Initialize PeerJS node once name input is ready
+        window.addEventListener('load', () => {
+            peer = new Peer(); // Free public PeerJS signaling server
+            peer.on('open', (id) => {
+                localPlayer.id = id;
+                if (isHost) {
+                    document.getElementById('room-code-display').value = id;
+                }
+            });
 
-            if (name1 === '') name1 = getRandomUniqueName();
-            if (name2 === '') name2 = getRandomUniqueName(name1);
+            peer.on('connection', (incomingConn) => {
+                if (!isHost) return; // Only host accepts incoming client connections
+                hostConnections.push(incomingConn);
 
-            // Check if names match each other
-            if (name1.toLowerCase() === name2.toLowerCase()) {
-                nameError.innerText = `⚠️ Both players cannot have the same name ("${name1}")! Please choose different names.`;
+                incomingConn.on('data', (data) => {
+                    handleHostNetworkData(incomingConn, data);
+                });
+
+                incomingConn.on('close', () => {
+                    delete remotePlayers[incomingConn.peer];
+                    hostConnections = hostConnections.filter(c => c !== incomingConn);
+                    broadcastToClients({ type: 'PLAYER_DISCONNECTED', id: incomingConn.peer });
+                });
+            });
+        });
+
+        function startConnection() {
+            let name = document.getElementById('player-name').value.trim();
+            if (name === '') {
+                name = RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
+            }
+            if (TAKEN_NAMES.includes(name.toLowerCase())) {
+                document.getElementById('error-msg').innerText = `⚠️ The name "${name}" is reserved or taken! Choose another.`;
                 return;
             }
+            localPlayer.name = name;
 
-            // Check system taken names
-            if (TAKEN_NAMES.includes(name1.toLowerCase()) || TAKEN_NAMES.includes(name2.toLowerCase())) {
-                nameError.innerText = `⚠️ One of the names entered is reserved/taken! Please try another.`;
-                return;
+            if (isHost) {
+                // Host generates world seed and starts immediately
+                worldSeed = Math.random() * 10000;
+                launchGame();
+            } else {
+                // Client connects to Host using Room Code
+                const roomCode = document.getElementById('room-code-input').value.trim();
+                if (!roomCode) {
+                    document.getElementById('error-msg').innerText = "⚠️ Please enter a valid host room code!";
+                    return;
+                }
+
+                document.getElementById('error-msg').innerText = "Connecting to room...";
+                conn = peer.connect(roomCode);
+
+                conn.on('open', () => {
+                    // Send join request with name
+                    conn.send({ type: 'JOIN_REQUEST', name: localPlayer.name });
+                });
+
+                conn.on('data', (data) => {
+                    handleClientNetworkData(data);
+                });
+
+                conn.on('error', (err) => {
+                    document.getElementById('error-msg').innerText = "Connection failed! Check the room code.";
+                });
             }
+        }
 
-            player1.name = name1;
-            player2.name = name2;
-
+        function launchGame() {
             gameStarted = true;
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('ui-overlay').style.display = 'block';
-            document.getElementById('hud-p1').style.display = 'block';
-            document.getElementById('hud-p2').style.display = 'block';
+            document.getElementById('hotbar').style.display = 'flex';
 
-            document.getElementById('title-p1').innerText = player1.name;
-            document.getElementById('title-p2').innerText = player2.name;
-
-            buildHotbarUI('p1', player1);
-            buildHotbarUI('p2', player2);
-
-            // Generate initial random world chunks
+            // Generate initial chunks around spawn
             generateChunk(0);
             generateChunk(1);
             generateChunk(-1);
             generateChunk(2);
             generateChunk(-2);
+            updateHotbarUI();
         }
 
-        function buildHotbarUI(prefix, playerObj) {
-            const container = document.getElementById(`hotbar-${prefix}`);
-            container.innerHTML = '';
-            hotbarKeys.forEach((key, idx) => {
-                const slot = document.createElement('div');
-                slot.className = `slot ${idx === playerObj.selectedSlot ? 'active' : ''}`;
-                slot.id = `slot-${prefix}-${idx}`;
-                slot.innerHTML = `${key.replace('copper_', '').substring(0,4).toUpperCase()}<span>${playerObj.inventory[key]}</span>`;
-                container.appendChild(slot);
-            });
+        // --- MULTIPLAYER PACKET HANDLERS ---
+        function handleHostNetworkData(connection, data) {
+            if (data.type === 'JOIN_REQUEST') {
+                // Check if name is taken among host/clients
+                let clientName = data.name;
+                if (clientName.toLowerCase() === localPlayer.name.toLowerCase()) {
+                    clientName += '_2';
+                }
+
+                remotePlayers[connection.peer] = {
+                    id: connection.peer,
+                    name: clientName,
+                    x: 0, y: 35 * TILE_SIZE,
+                    facing: 1, swingTimer: 0
+                };
+
+                // Send world seed and current chunks back to client
+                connection.send({
+                    type: 'INIT_SUCCESS',
+                    seed: worldSeed,
+                    name: clientName,
+                    players: remotePlayers
+                });
+
+                // Broadcast new player to other clients
+                broadcastToClients({ type: 'PLAYER_JOINED', player: remotePlayers[connection.peer] }, connection.peer);
+            } 
+            else if (data.type === 'PLAYER_UPDATE') {
+                if (remotePlayers[connection.peer]) {
+                    Object.assign(remotePlayers[connection.peer], data.state);
+                }
+                // Relay update to all other connected clients
+                broadcastToClients({ type: 'REMOTE_PLAYER_UPDATE', id: connection.peer, state: data.state }, connection.peer);
+            }
+            else if (data.type === 'BLOCK_ACTION') {
+                // Host processes block mine/place and broadcasts update to all clients
+                setBlock(data.bx, data.by, data.typeAction);
+                broadcastToClients(data);
+            }
         }
 
-        function updateHotbarUI(prefix, playerObj) {
-            hotbarKeys.forEach((key, idx) => {
-                const slot = document.getElementById(`slot-${prefix}-${idx}`);
-                if (slot) {
-                    slot.querySelector('span').innerText = playerObj.inventory[key];
-                    if (idx === playerObj.selectedSlot) {
-                        slot.classList.add('active');
-                    } else {
-                        slot.classList.remove('active');
-                    }
+        function handleClientNetworkData(data) {
+            if (data.type === 'INIT_SUCCESS') {
+                worldSeed = data.seed;
+                localPlayer.name = data.name;
+                if (data.players) {
+                    Object.assign(remotePlayers, data.players);
+                }
+                launchGame();
+            }
+            else if (data.type === 'PLAYER_JOINED') {
+                remotePlayers[data.player.id] = data.player;
+            }
+            else if (data.type === 'REMOTE_PLAYER_UPDATE') {
+                if (!remotePlayers[data.id]) {
+                    remotePlayers[data.id] = { id: data.id, name: 'Player', x: 0, y: 0 };
+                }
+                Object.assign(remotePlayers[data.id], data.state);
+            }
+            else if (data.type === 'PLAYER_DISCONNECTED') {
+                delete remotePlayers[data.id];
+            }
+            else if (data.type === 'BLOCK_ACTION') {
+                setBlock(data.bx, data.by, data.typeAction);
+            }
+        }
+
+        function broadcastToClients(packet, excludePeerId = null) {
+            hostConnections.forEach(c => {
+                if (c.peer !== excludePeerId) {
+                    c.send(packet);
                 }
             });
         }
 
-        // --- INPUTS ---
+        // --- INPUTS & UI ---
         const keys = {};
         const mouse = { x: 0, y: 0, down: false };
 
         window.addEventListener('keydown', e => {
             if (!gameStarted) return;
             keys[e.code] = true;
-
-            // P1 Hotbar selection (1-5)
             if (e.code >= 'Digit1' && e.code <= 'Digit5') {
-                player1.selectedSlot = parseInt(e.code) - 1;
-                updateHotbarUI('p1', player1);
-            }
-            // P2 Hotbar selection (Numpad 1-5 or F1-F5)
-            if (e.code >= 'Numpad1' && e.code <= 'Numpad5') {
-                player2.selectedSlot = parseInt(e.code) - 'Numpad1';
-                updateHotbarUI('p2', player2);
+                localPlayer.selectedSlot = parseInt(e.code) - 1;
+                updateHotbarUI();
             }
         });
-
         window.addEventListener('keyup', e => { if (gameStarted) keys[e.code] = false; });
         window.addEventListener('mousemove', e => {
             const rect = canvas.getBoundingClientRect();
@@ -398,12 +475,20 @@
         window.addEventListener('mouseup', () => { mouse.down = false; });
         window.addEventListener('contextmenu', e => e.preventDefault());
 
-        // --- PROCEDURAL RANDOM WORLD GENERATION ---
+        function updateHotbarUI() {
+            for (let i = 0; i < 5; i++) {
+                const slot = document.getElementById(`slot-${i}`);
+                const itemName = hotbarKeys[i];
+                slot.querySelector('span').innerText = localPlayer.inventory[itemName] || 0;
+                slot.classList.toggle('active', i === localPlayer.selectedSlot);
+            }
+        }
+
+        // --- PROCEDURAL WORLD GENERATION ---
         function generateChunk(cx) {
             const chunkData = [];
             for (let x = 0; x < CHUNK_WIDTH; x++) {
                 const worldX = cx * CHUNK_WIDTH + x;
-                // Randomized seed offset applied to sine wave terrain generation
                 const surfaceHeight = Math.floor(40 + Math.sin(worldX * 0.04 + worldSeed) * 9 + Math.cos(worldX * 0.015 + worldSeed * 0.5) * 14);
                 
                 const column = { surfaceHeight, blocks: {}, trees: [] };
@@ -423,7 +508,7 @@
                     if (type) column.blocks[y] = type;
                 }
 
-                // Random Tree Generation on Surface (Non-solid background decoration)
+                // Background Trees (non-solid, walk through)
                 if (Math.random() < 0.25 && x > 2 && x < CHUNK_WIDTH - 2) {
                     const sh = surfaceHeight;
                     const treeHeight = 5 + Math.floor(Math.random() * 3);
@@ -431,11 +516,9 @@
                     const treeTrunkBaseY = sh - 1;
 
                     const treeBlocks = [];
-                    // Trunk
                     for (let th = 0; th < treeHeight; th++) {
                         treeBlocks.push({ x: treeTrunkX, y: treeTrunkBaseY - th, type: 'wood' });
                     }
-                    // Leaves Canopy
                     for (let lx = -2; lx <= 2; lx++) {
                         for (let ly = -treeHeight - 3; ly <= -treeHeight; ly++) {
                             if (Math.abs(lx) === 2 && Math.abs(ly + treeHeight + 1.5) > 1.5 && Math.random() < 0.3) continue;
@@ -471,12 +554,12 @@
             }
         }
 
-        // --- PHYSICS & COLLISION (Ignores trees so players walk through them) ---
+        // --- PHYSICS & COLLISION ---
         function checkCollision(nx, ny) {
             const left = Math.floor(nx / TILE_SIZE);
-            const right = Math.floor((nx + player1.width - 1) / TILE_SIZE);
+            const right = Math.floor((nx + localPlayer.width - 1) / TILE_SIZE);
             const top = Math.floor(ny / TILE_SIZE);
-            const bottom = Math.floor((ny + player1.height - 1) / TILE_SIZE);
+            const bottom = Math.floor((ny + localPlayer.height - 1) / TILE_SIZE);
 
             for (let bx = left; bx <= right; bx++) {
                 for (let by = top; by <= bottom; by++) {
@@ -486,107 +569,108 @@
             return false;
         }
 
-        function updatePlayerPhysics(p) {
-            // Horizontal Movement
-            p.vx = 0;
-            if (p.id === 1) {
-                if (keys['KeyA'] || keys['ArrowLeft']) { p.vx = -p.speed; p.facing = -1; }
-                if (keys['KeyD'] || keys['ArrowRight']) { p.vx = p.speed; p.facing = 1; }
-            } else {
-                if (keys['ArrowLeft'] || keys['KeyJ']) { p.vx = -p.speed; p.facing = -1; }
-                if (keys['ArrowRight'] || keys['KeyL']) { p.vx = p.speed; p.facing = 1; }
+        function updateLocalPlayer() {
+            localPlayer.vx = 0;
+            if (keys['KeyA'] || keys['ArrowLeft']) { localPlayer.vx = -localPlayer.speed; localPlayer.facing = -1; }
+            if (keys['KeyD'] || keys['ArrowRight']) { localPlayer.vx = localPlayer.speed; localPlayer.facing = 1; }
+
+            localPlayer.x += localPlayer.vx;
+            if (checkCollision(localPlayer.x, localPlayer.y)) localPlayer.x -= localPlayer.vx;
+
+            localPlayer.vy += localPlayer.gravity;
+            localPlayer.y += localPlayer.vy;
+            localPlayer.grounded = false;
+
+            if (checkCollision(localPlayer.x, localPlayer.y)) {
+                localPlayer.y -= localPlayer.vy;
+                if (localPlayer.vy > 0) localPlayer.grounded = true;
+                localPlayer.vy = 0;
             }
 
-            p.x += p.vx;
-            if (checkCollision(p.x, p.y)) p.x -= p.vx;
-
-            // Vertical Movement & Gravity
-            p.vy += p.gravity;
-            p.y += p.vy;
-            p.grounded = false;
-
-            if (checkCollision(p.x, p.y)) {
-                p.y -= p.vy;
-                if (p.vy > 0) p.grounded = true;
-                p.vy = 0;
+            if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && localPlayer.grounded) {
+                localPlayer.vy = localPlayer.jumpForce;
+                localPlayer.grounded = false;
             }
 
-            // Jumping
-            if (p.id === 1) {
-                if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && p.grounded) {
-                    p.vy = p.jumpForce;
-                    p.grounded = false;
-                }
-            } else {
-                if ((keys['ArrowUp'] || keys['KeyI']) && p.grounded) {
-                    p.vy = p.jumpForce;
-                    p.grounded = false;
-                }
-            }
+            if (localPlayer.swingTimer > 0) localPlayer.swingTimer--;
 
-            if (p.swingTimer > 0) p.swingTimer--;
-        }
+            // Mouse Action: Mine or Place blocks
+            if (mouse.down && localPlayer.swingTimer === 0) {
+                const cameraX = localPlayer.x - canvas.width / 2;
+                const cameraY = localPlayer.y - canvas.height / 2;
+                const worldMouseX = mouse.x + cameraX;
+                const worldMouseY = mouse.y + cameraY;
 
-        function handleMouseInteractions() {
-            if (!mouse.down) return;
+                const targetBx = Math.floor(worldMouseX / TILE_SIZE);
+                const targetBy = Math.floor(worldMouseY / TILE_SIZE);
+                const pBx = Math.floor((localPlayer.x + localPlayer.width / 2) / TILE_SIZE);
+                const pBy = Math.floor((localPlayer.y + localPlayer.height / 2) / TILE_SIZE);
 
-            const cameraX = (player1.x + player2.x) / 2 - canvas.width / 2;
-            const cameraY = (player1.y + player2.y) / 2 - canvas.height / 2;
-            const worldMouseX = mouse.x + cameraX;
-            const worldMouseY = mouse.y + cameraY;
+                if (Math.hypot(targetBx - pBx, targetBy - pBy) < 6) {
+                    const block = getBlock(targetBx, targetBy);
+                    const selectedItem = hotbarKeys[localPlayer.selectedSlot];
 
-            const targetBx = Math.floor(worldMouseX / TILE_SIZE);
-            const targetBy = Math.floor(worldMouseY / TILE_SIZE);
+                    if (selectedItem.includes('pickaxe') || selectedItem.includes('broadsword')) {
+                        localPlayer.swingTimer = 12;
+                        if (block) {
+                            const blockColor = COLORS[block] || '#fff';
+                            setBlock(targetBx, targetBy, null);
 
-            const p1Bx = Math.floor((player1.x + player1.width / 2) / TILE_SIZE);
-            const p1By = Math.floor((player1.y + player1.height / 2) / TILE_SIZE);
+                            for (let p = 0; p < 5; p++) {
+                                particles.push({
+                                    x: (targetBx + 0.5) * TILE_SIZE, y: (targetBy + 0.5) * TILE_SIZE,
+                                    vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.7) * 5,
+                                    size: Math.random() * 3 + 2, color: blockColor, life: 20
+                                });
+                            }
 
-            // Check distance from Player 1 for mining/placing
-            if (Math.hypot(targetBx - p1Bx, targetBy - p1By) < 6 && player1.swingTimer === 0) {
-                const block = getBlock(targetBx, targetBy);
-                const selectedItem = hotbarKeys[player1.selectedSlot];
+                            const dropName = block.includes('ore') ? block : (block === 'stone' ? 'stone' : 'wood');
+                            localPlayer.inventory[dropName] = (localPlayer.inventory[dropName] || 0) + 1;
+                            updateHotbarUI();
 
-                if (selectedItem.includes('pickaxe') || selectedItem.includes('broadsword')) {
-                    player1.swingTimer = 12;
-                    if (block) {
-                        const blockColor = COLORS[block] || '#fff';
-                        setBlock(targetBx, targetBy, null);
-                        
-                        for (let p = 0; p < 5; p++) {
-                            particles.push({
-                                x: (targetBx + 0.5) * TILE_SIZE,
-                                y: (targetBy + 0.5) * TILE_SIZE,
-                                vx: (Math.random() - 0.5) * 5,
-                                vy: (Math.random() - 0.7) * 5,
-                                size: Math.random() * 3 + 2,
-                                color: blockColor,
-                                life: 20
-                            });
+                            // Send action over network
+                            const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: null };
+                            if (isHost) broadcastToClients(packet);
+                            else if (conn) conn.send(packet);
                         }
+                    } else if (selectedItem === 'wood' || selectedItem === 'stone') {
+                        if (!block && localPlayer.inventory[selectedItem] > 0) {
+                            setBlock(targetBx, targetBy, selectedItem);
+                            localPlayer.inventory[selectedItem]--;
+                            updateHotbarUI();
+                            localPlayer.swingTimer = 10;
 
-                        const dropName = block.includes('ore') ? block : (block === 'stone' ? 'stone' : 'wood');
-                        player1.inventory[dropName] = (player1.inventory[dropName] || 0) + 1;
-                        updateHotbarUI('p1', player1);
-                    }
-                } else if (selectedItem === 'wood' || selectedItem === 'stone') {
-                    if (!block && player1.inventory[selectedItem] > 0) {
-                        setBlock(targetBx, targetBy, selectedItem);
-                        player1.inventory[selectedItem]--;
-                        updateHotbarUI('p1', player1);
-                        player1.swingTimer = 10;
+                            const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: selectedItem };
+                            if (isHost) broadcastToClients(packet);
+                            else if (conn) conn.send(packet);
+                        }
                     }
                 }
+            }
+
+            // Transmit position update to peers
+            const statePayload = {
+                x: localPlayer.x,
+                y: localPlayer.y,
+                facing: localPlayer.facing,
+                swingTimer: localPlayer.swingTimer,
+                name: localPlayer.name
+            };
+            if (isHost) {
+                broadcastToClients({ type: 'REMOTE_PLAYER_UPDATE', id: localPlayer.id, state: statePayload });
+            } else if (conn && conn.open) {
+                conn.send({ type: 'PLAYER_UPDATE', state: statePayload });
             }
         }
 
         // --- RENDER LOOP ---
         function draw() {
-            // Camera tracks midpoint between both players
-            const targetCamX = (player1.x + player2.x) / 2 - canvas.width / 2 + player1.width / 2;
-            const targetCamY = (player1.y + player2.y) / 2 - canvas.height / 2 + player1.height / 2;
-            const camera = { x: targetCamX, y: targetCamY };
+            const camera = {
+                x: localPlayer.x - canvas.width / 2 + localPlayer.width / 2,
+                y: localPlayer.y - canvas.height / 2 + localPlayer.height / 2
+            };
 
-            // Sky Gradient Background
+            // Sky Background
             const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
             grad.addColorStop(0, COLORS.skyTop);
             grad.addColorStop(1, COLORS.skyBottom);
@@ -602,60 +686,53 @@
                 ctx.fillRect(renderCloudX, cloud.y, cloud.width, cloud.height);
             });
 
-            // Render Chunks, Blocks & Background Trees
+            // Render Chunks, Trees, Blocks
             const startChunk = Math.floor(camera.x / (CHUNK_WIDTH * TILE_SIZE)) - 1;
             const endChunk = startChunk + Math.ceil(canvas.width / (CHUNK_WIDTH * TILE_SIZE)) + 2;
 
             for (let cx = startChunk; cx <= endChunk; cx++) {
                 let chunk = loadedChunks.get(cx) || generateChunk(cx);
 
-                // Render non-solid background trees first so players walk in front of/through them
                 chunk.forEach(col => {
                     col.trees.forEach(t => {
-                        const screenX = t.x * TILE_SIZE - camera.x;
-                        const screenY = t.y * TILE_SIZE - camera.y;
-                        if (screenX >= -TILE_SIZE && screenX <= canvas.width + TILE_SIZE &&
-                            screenY >= -TILE_SIZE && screenY <= canvas.height + TILE_SIZE) {
+                        const sx = t.x * TILE_SIZE - camera.x;
+                        const sy = t.y * TILE_SIZE - camera.y;
+                        if (sx >= -TILE_SIZE && sx <= canvas.width + TILE_SIZE && sy >= -TILE_SIZE && sy <= canvas.height + TILE_SIZE) {
                             ctx.fillStyle = COLORS[t.type];
-                            ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
                         }
                     });
                 });
 
-                // Render terrain blocks
                 for (let lx = 0; lx < CHUNK_WIDTH; lx++) {
                     const bx = cx * CHUNK_WIDTH + lx;
                     const col = chunk[lx];
                     for (const [strY, type] of Object.entries(col.blocks)) {
                         const by = parseInt(strY);
-                        const screenX = bx * TILE_SIZE - camera.x;
-                        const screenY = by * TILE_SIZE - camera.y;
+                        const sx = bx * TILE_SIZE - camera.x;
+                        const sy = by * TILE_SIZE - camera.y;
 
-                        if (screenX < -TILE_SIZE || screenX > canvas.width + TILE_SIZE ||
-                            screenY < -TILE_SIZE || screenY > canvas.height + TILE_SIZE) continue;
+                        if (sx < -TILE_SIZE || sx > canvas.width + TILE_SIZE || sy < -TILE_SIZE || sy > canvas.height + TILE_SIZE) continue;
 
                         ctx.fillStyle = COLORS[type] || '#fff';
-                        ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                        ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
 
-                        // Underground darkness starts immediately right below the grass block layer
                         if (by > col.surfaceHeight) {
                             const depth = by - col.surfaceHeight;
-                            const alpha = Math.min(0.88, depth * 0.05 + 0.12);
-                            ctx.fillStyle = `rgba(8, 8, 14, ${alpha})`;
-                            ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = `rgba(8, 8, 14, ${Math.min(0.88, depth * 0.05 + 0.12)})`;
+                            ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
                         }
                     }
                 }
             }
 
-            // Render Particles
             particles.forEach(pt => {
                 ctx.fillStyle = pt.color;
                 ctx.fillRect(pt.x - camera.x, pt.y - camera.y, pt.size, pt.size);
             });
 
-            // Draw Player Helper Function
-            function renderPlayer(p, shirtColor) {
+            // Player Renderer
+            function renderPlayerEntity(p, shirtColor) {
                 const px = p.x - camera.x;
                 const py = p.y - camera.y;
 
@@ -672,19 +749,18 @@
                 ctx.fillStyle = '#d35400';
                 ctx.fillRect(px + 3, py, 14, 4);
 
-                // Name tag overhead
+                // Name Tag
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
                 ctx.font = '11px Courier New';
                 ctx.textAlign = 'center';
                 const nameWidth = ctx.measureText(p.name).width;
-                ctx.fillRect(px + p.width/2 - nameWidth/2 - 4, py - 22, nameWidth + 8, 16);
+                ctx.fillRect(px + 10 - nameWidth/2 - 4, py - 22, nameWidth + 8, 16);
                 ctx.fillStyle = '#ffffff';
-                ctx.fillText(p.name, px + p.width/2, py - 10);
+                ctx.fillText(p.name, px + 10, py - 10);
 
-                // Swing animation
                 if (p.swingTimer > 0) {
                     ctx.save();
-                    ctx.translate(px + p.width / 2, py + p.height / 2);
+                    ctx.translate(px + 10, py + 19);
                     ctx.rotate(p.facing * (1 - p.swingTimer / 12) * Math.PI * 1.2);
                     ctx.fillStyle = '#bdc3c7';
                     ctx.fillRect(10, -4, 20, 6);
@@ -692,23 +768,23 @@
                 }
             }
 
-            renderPlayer(player1, '#2980b9'); // Blue shirt for Player 1
-            renderPlayer(player2, '#8e44ad'); // Purple shirt for Player 2
+            // Render Local Player
+            renderPlayerEntity(localPlayer, '#2980b9');
+
+            // Render All Connected Remote Players
+            Object.values(remotePlayers).forEach(rp => {
+                renderPlayerEntity(rp, '#8e44ad');
+            });
         }
 
         function loop() {
             if (gameStarted) {
-                updatePlayerPhysics(player1);
-                updatePlayerPhysics(player2);
-                handleMouseInteractions();
+                updateLocalPlayer();
 
-                // Update particles
                 for (let i = particles.length - 1; i >= 0; i--) {
                     const pt = particles[i];
-                    pt.x += pt.vx;
-                    pt.y += pt.vy;
-                    pt.vy += 0.3;
-                    pt.life--;
+                    pt.x += pt.vx; pt.y += pt.vy;
+                    pt.vy += 0.3; pt.life--;
                     if (pt.life <= 0) particles.splice(i, 1);
                 }
 
