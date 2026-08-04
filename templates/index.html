@@ -235,7 +235,7 @@
         let isHost = true;
         let peer = null;
         let conn = null;
-        let hostConnections = []; // If host, holds connections to all connected clients
+        let hostConnections = []; 
         let worldSeed = 12345;
 
         const RANDOM_NAMES = [
@@ -257,7 +257,6 @@
             leaves: '#2e7d32'
         };
 
-        // Local Player State
         const localPlayer = {
             id: null,
             name: '',
@@ -277,7 +276,6 @@
             inventory: { copper_broadsword: 1, copper_pickaxe: 1, wood: 15, stone: 0, copper_ore: 0 }
         };
 
-        // Dictionary of remote online players { peerId: { x, y, name, facing, swingTimer, selectedSlot } }
         const remotePlayers = {};
         const hotbarKeys = ['copper_broadsword', 'copper_pickaxe', 'wood', 'stone', 'copper_ore'];
         const particles = [];
@@ -287,7 +285,6 @@
             { x: 1000, y: 60, speed: 0.4, width: 100, height: 35 }
         ];
 
-        // --- LOBBY & PEERJS SETUP ---
         function setMode(mode) {
             isHost = (mode === 'host');
             document.getElementById('btn-host').classList.toggle('active', isHost);
@@ -296,9 +293,8 @@
             document.getElementById('join-section').style.display = isHost ? 'none' : 'block';
         }
 
-        // Initialize PeerJS node once name input is ready
         window.addEventListener('load', () => {
-            peer = new Peer(); // Free public PeerJS signaling server
+            peer = new Peer();
             peer.on('open', (id) => {
                 localPlayer.id = id;
                 if (isHost) {
@@ -307,7 +303,7 @@
             });
 
             peer.on('connection', (incomingConn) => {
-                if (!isHost) return; // Only host accepts incoming client connections
+                if (!isHost) return;
                 hostConnections.push(incomingConn);
 
                 incomingConn.on('data', (data) => {
@@ -334,11 +330,9 @@
             localPlayer.name = name;
 
             if (isHost) {
-                // Host generates world seed and starts immediately
                 worldSeed = Math.random() * 10000;
                 launchGame();
             } else {
-                // Client connects to Host using Room Code
                 const roomCode = document.getElementById('room-code-input').value.trim();
                 if (!roomCode) {
                     document.getElementById('error-msg').innerText = "⚠️ Please enter a valid host room code!";
@@ -349,7 +343,6 @@
                 conn = peer.connect(roomCode);
 
                 conn.on('open', () => {
-                    // Send join request with name
                     conn.send({ type: 'JOIN_REQUEST', name: localPlayer.name });
                 });
 
@@ -369,7 +362,6 @@
             document.getElementById('ui-overlay').style.display = 'block';
             document.getElementById('hotbar').style.display = 'flex';
 
-            // Generate initial chunks around spawn
             generateChunk(0);
             generateChunk(1);
             generateChunk(-1);
@@ -378,10 +370,8 @@
             updateHotbarUI();
         }
 
-        // --- MULTIPLAYER PACKET HANDLERS ---
         function handleHostNetworkData(connection, data) {
             if (data.type === 'JOIN_REQUEST') {
-                // Check if name is taken among host/clients
                 let clientName = data.name;
                 if (clientName.toLowerCase() === localPlayer.name.toLowerCase()) {
                     clientName += '_2';
@@ -394,26 +384,29 @@
                     facing: 1, swingTimer: 0
                 };
 
-                // Send world seed and current chunks back to client
+                // Serialize all loaded chunk data to send to the joining player so they see exact world modifications
+                const serializedChunks = {};
+                loadedChunks.forEach((chunk, cx) => {
+                    serializedChunks[cx] = chunk;
+                });
+
                 connection.send({
                     type: 'INIT_SUCCESS',
                     seed: worldSeed,
                     name: clientName,
-                    players: remotePlayers
+                    players: remotePlayers,
+                    chunks: serializedChunks
                 });
 
-                // Broadcast new player to other clients
                 broadcastToClients({ type: 'PLAYER_JOINED', player: remotePlayers[connection.peer] }, connection.peer);
             } 
             else if (data.type === 'PLAYER_UPDATE') {
                 if (remotePlayers[connection.peer]) {
                     Object.assign(remotePlayers[connection.peer], data.state);
                 }
-                // Relay update to all other connected clients
                 broadcastToClients({ type: 'REMOTE_PLAYER_UPDATE', id: connection.peer, state: data.state }, connection.peer);
             }
             else if (data.type === 'BLOCK_ACTION') {
-                // Host processes block mine/place and broadcasts update to all clients
                 setBlock(data.bx, data.by, data.typeAction);
                 broadcastToClients(data);
             }
@@ -425,6 +418,12 @@
                 localPlayer.name = data.name;
                 if (data.players) {
                     Object.assign(remotePlayers, data.players);
+                }
+                if (data.chunks) {
+                    loadedChunks.clear();
+                    for (const [cxStr, chunkData] of Object.entries(data.chunks)) {
+                        loadedChunks.set(parseInt(cxStr), chunkData);
+                    }
                 }
                 launchGame();
             }
@@ -453,7 +452,6 @@
             });
         }
 
-        // --- INPUTS & UI ---
         const keys = {};
         const mouse = { x: 0, y: 0, down: false };
 
@@ -484,7 +482,6 @@
             }
         }
 
-        // --- PROCEDURAL WORLD GENERATION ---
         function generateChunk(cx) {
             const chunkData = [];
             for (let x = 0; x < CHUNK_WIDTH; x++) {
@@ -508,7 +505,6 @@
                     if (type) column.blocks[y] = type;
                 }
 
-                // Background Trees (non-solid, walk through)
                 if (Math.random() < 0.25 && x > 2 && x < CHUNK_WIDTH - 2) {
                     const sh = surfaceHeight;
                     const treeHeight = 5 + Math.floor(Math.random() * 3);
@@ -554,7 +550,6 @@
             }
         }
 
-        // --- PHYSICS & COLLISION ---
         function checkCollision(nx, ny) {
             const left = Math.floor(nx / TILE_SIZE);
             const right = Math.floor((nx + localPlayer.width - 1) / TILE_SIZE);
@@ -594,10 +589,9 @@
 
             if (localPlayer.swingTimer > 0) localPlayer.swingTimer--;
 
-            // Mouse Action: Mine or Place blocks
             if (mouse.down && localPlayer.swingTimer === 0) {
-                const cameraX = localPlayer.x - canvas.width / 2;
-                const cameraY = localPlayer.y - canvas.height / 2;
+                const cameraX = localPlayer.x - canvas.width / 2 + localPlayer.width / 2;
+                const cameraY = localPlayer.y - canvas.height / 2 + localPlayer.height / 2;
                 const worldMouseX = mouse.x + cameraX;
                 const worldMouseY = mouse.y + cameraY;
 
@@ -628,7 +622,6 @@
                             localPlayer.inventory[dropName] = (localPlayer.inventory[dropName] || 0) + 1;
                             updateHotbarUI();
 
-                            // Send action over network
                             const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: null };
                             if (isHost) broadcastToClients(packet);
                             else if (conn) conn.send(packet);
@@ -648,7 +641,6 @@
                 }
             }
 
-            // Transmit position update to peers
             const statePayload = {
                 x: localPlayer.x,
                 y: localPlayer.y,
@@ -663,21 +655,18 @@
             }
         }
 
-        // --- RENDER LOOP ---
         function draw() {
             const camera = {
                 x: localPlayer.x - canvas.width / 2 + localPlayer.width / 2,
                 y: localPlayer.y - canvas.height / 2 + localPlayer.height / 2
             };
 
-            // Sky Background
             const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
             grad.addColorStop(0, COLORS.skyTop);
             grad.addColorStop(1, COLORS.skyBottom);
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Parallax Clouds
             ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
             clouds.forEach(cloud => {
                 cloud.x -= cloud.speed;
@@ -686,7 +675,6 @@
                 ctx.fillRect(renderCloudX, cloud.y, cloud.width, cloud.height);
             });
 
-            // Render Chunks, Trees, Blocks
             const startChunk = Math.floor(camera.x / (CHUNK_WIDTH * TILE_SIZE)) - 1;
             const endChunk = startChunk + Math.ceil(canvas.width / (CHUNK_WIDTH * TILE_SIZE)) + 2;
 
@@ -717,9 +705,11 @@
                         ctx.fillStyle = COLORS[type] || '#fff';
                         ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
 
+                        // Fixed underground darkness gradient calculation using exact surface height
                         if (by > col.surfaceHeight) {
                             const depth = by - col.surfaceHeight;
-                            ctx.fillStyle = `rgba(8, 8, 14, ${Math.min(0.88, depth * 0.05 + 0.12)})`;
+                            const alpha = Math.min(0.88, depth * 0.08 + 0.05);
+                            ctx.fillStyle = `rgba(10, 10, 18, ${alpha})`;
                             ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
                         }
                     }
@@ -731,25 +721,20 @@
                 ctx.fillRect(pt.x - camera.x, pt.y - camera.y, pt.size, pt.size);
             });
 
-            // Player Renderer
             function renderPlayerEntity(p, shirtColor) {
                 const px = p.x - camera.x;
                 const py = p.y - camera.y;
 
-                // Legs
                 ctx.fillStyle = '#2c3e50';
                 ctx.fillRect(px + 3, py + 26, 5, 12);
                 ctx.fillRect(px + 12, py + 26, 5, 12);
-                // Torso
                 ctx.fillStyle = shirtColor;
                 ctx.fillRect(px + 2, py + 12, 16, 16);
-                // Head
                 ctx.fillStyle = '#f1c40f';
                 ctx.fillRect(px + 3, py + 2, 14, 12);
                 ctx.fillStyle = '#d35400';
                 ctx.fillRect(px + 3, py, 14, 4);
 
-                // Name Tag
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
                 ctx.font = '11px Courier New';
                 ctx.textAlign = 'center';
@@ -768,10 +753,8 @@
                 }
             }
 
-            // Render Local Player
             renderPlayerEntity(localPlayer, '#2980b9');
 
-            // Render All Connected Remote Players
             Object.values(remotePlayers).forEach(rp => {
                 renderPlayerEntity(rp, '#8e44ad');
             });
