@@ -343,7 +343,7 @@
                 conn = peer.connect(roomCode);
 
                 conn.on('open', () => {
-                    conn.send({ type: 'JOIN_REQUEST', name: localPlayer.name });
+                    conn.send({ type: 'JOIN_REQUEST', name: localPlayer.name, x: localPlayer.x, y: localPlayer.y });
                 });
 
                 conn.on('data', (data) => {
@@ -380,11 +380,12 @@
                 remotePlayers[connection.peer] = {
                     id: connection.peer,
                     name: clientName,
-                    x: 0, y: 35 * TILE_SIZE,
-                    facing: 1, swingTimer: 0
+                    x: data.x || 0, 
+                    y: data.y || (35 * TILE_SIZE),
+                    facing: 1, 
+                    swingTimer: 0
                 };
 
-                // Serialize all loaded chunk data to send to the joining player so they see exact world modifications
                 const serializedChunks = {};
                 loadedChunks.forEach((chunk, cx) => {
                     serializedChunks[cx] = chunk;
@@ -402,7 +403,13 @@
             } 
             else if (data.type === 'PLAYER_UPDATE') {
                 if (remotePlayers[connection.peer]) {
-                    Object.assign(remotePlayers[connection.peer], data.state);
+                    const rp = remotePlayers[connection.peer];
+                    // Apply interpolation smoothing for incoming positions
+                    rp.targetX = data.state.x;
+                    rp.targetY = data.state.y;
+                    rp.facing = data.state.facing;
+                    rp.swingTimer = data.state.swingTimer;
+                    rp.name = data.state.name;
                 }
                 broadcastToClients({ type: 'REMOTE_PLAYER_UPDATE', id: connection.peer, state: data.state }, connection.peer);
             }
@@ -417,7 +424,15 @@
                 worldSeed = data.seed;
                 localPlayer.name = data.name;
                 if (data.players) {
-                    Object.assign(remotePlayers, data.players);
+                    for (const [id, pData] of Object.entries(data.players)) {
+                        if (id !== localPlayer.id) {
+                            remotePlayers[id] = {
+                                ...pData,
+                                targetX: pData.x,
+                                targetY: pData.y
+                            };
+                        }
+                    }
                 }
                 if (data.chunks) {
                     loadedChunks.clear();
@@ -428,13 +443,22 @@
                 launchGame();
             }
             else if (data.type === 'PLAYER_JOINED') {
-                remotePlayers[data.player.id] = data.player;
+                remotePlayers[data.player.id] = {
+                    ...data.player,
+                    targetX: data.player.x,
+                    targetY: data.player.y
+                };
             }
             else if (data.type === 'REMOTE_PLAYER_UPDATE') {
                 if (!remotePlayers[data.id]) {
-                    remotePlayers[data.id] = { id: data.id, name: 'Player', x: 0, y: 0 };
+                    remotePlayers[data.id] = { id: data.id, name: 'Player', x: data.state.x, y: data.state.y, targetX: data.state.x, targetY: data.state.y };
                 }
-                Object.assign(remotePlayers[data.id], data.state);
+                const rp = remotePlayers[data.id];
+                rp.targetX = data.state.x;
+                rp.targetY = data.state.y;
+                rp.facing = data.state.facing;
+                rp.swingTimer = data.state.swingTimer;
+                rp.name = data.state.name;
             }
             else if (data.type === 'PLAYER_DISCONNECTED') {
                 delete remotePlayers[data.id];
@@ -656,6 +680,16 @@
         }
 
         function draw() {
+            // Smoothly interpolate remote player positions to avoid teleporting jitter
+            Object.values(remotePlayers).forEach(rp => {
+                if (rp.targetX !== undefined) {
+                    rp.x += (rp.targetX - rp.x) * 0.25;
+                }
+                if (rp.targetY !== undefined) {
+                    rp.y += (rp.targetY - rp.y) * 0.25;
+                }
+            });
+
             const camera = {
                 x: localPlayer.x - canvas.width / 2 + localPlayer.width / 2,
                 y: localPlayer.y - canvas.height / 2 + localPlayer.height / 2
@@ -705,7 +739,6 @@
                         ctx.fillStyle = COLORS[type] || '#fff';
                         ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
 
-                        // Fixed underground darkness gradient calculation using exact surface height
                         if (by > col.surfaceHeight) {
                             const depth = by - col.surfaceHeight;
                             const alpha = Math.min(0.88, depth * 0.08 + 0.05);
