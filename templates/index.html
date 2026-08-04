@@ -330,7 +330,7 @@
             localPlayer.name = name;
 
             if (isHost) {
-                worldSeed = Math.random() * 10000;
+                worldSeed = Math.floor(Math.random() * 100000);
                 launchGame();
             } else {
                 const roomCode = document.getElementById('room-code-input').value.trim();
@@ -370,6 +370,62 @@
             updateHotbarUI();
         }
 
+        // --- PROC GEN SEED-BASED PSEUDO-RANDOM ---
+        function seededRandom(seed) {
+            let x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        }
+
+        function generateChunk(cx) {
+            const chunkData = [];
+            for (let x = 0; x < CHUNK_WIDTH; x++) {
+                const worldX = cx * CHUNK_WIDTH + x;
+                const surfaceHeight = Math.floor(40 + Math.sin(worldX * 0.04 + worldSeed) * 9 + Math.cos(worldX * 0.015 + worldSeed * 0.5) * 14);
+                
+                const column = { surfaceHeight, blocks: {}, trees: [] };
+                for (let y = 0; y < WORLD_HEIGHT; y++) {
+                    let type = null;
+                    if (y === surfaceHeight) {
+                        type = 'grass';
+                    } else if (y > surfaceHeight && y < surfaceHeight + 5) {
+                        type = 'dirt';
+                    } else if (y >= surfaceHeight + 5) {
+                        const oreCheck = seededRandom(worldSeed + worldX * 73 + y * 19);
+                        if (y > surfaceHeight + 15 && oreCheck < 0.06) {
+                            type = oreCheck < 0.03 ? 'copper_ore' : 'iron_ore';
+                        } else {
+                            type = 'stone';
+                        }
+                    }
+                    if (type) column.blocks[y] = type;
+                }
+
+                const treeCheck = seededRandom(worldSeed + worldX * 127);
+                if (treeCheck < 0.25 && x > 2 && x < CHUNK_WIDTH - 2) {
+                    const sh = surfaceHeight;
+                    const treeHeight = 5 + Math.floor(seededRandom(worldSeed + worldX * 31) * 3);
+                    const treeTrunkX = worldX;
+                    const treeTrunkBaseY = sh - 1;
+
+                    const treeBlocks = [];
+                    for (let th = 0; th < treeHeight; th++) {
+                        treeBlocks.push({ x: treeTrunkX, y: treeTrunkBaseY - th, type: 'wood' });
+                    }
+                    for (let lx = -2; lx <= 2; lx++) {
+                        for (let ly = -treeHeight - 3; ly <= -treeHeight; ly++) {
+                            if (Math.abs(lx) === 2 && Math.abs(ly + treeHeight + 1.5) > 1.5 && seededRandom(worldSeed + worldX * 5 + lx * 7 + ly * 11) < 0.3) continue;
+                            treeBlocks.push({ x: treeTrunkX + lx, y: treeTrunkBaseY + ly, type: 'leaves' });
+                        }
+                    }
+                    column.trees = treeBlocks;
+                }
+
+                chunkData[x] = column;
+            }
+            loadedChunks.set(cx, chunkData);
+            return chunkData;
+        }
+
         function handleHostNetworkData(connection, data) {
             if (data.type === 'JOIN_REQUEST') {
                 let clientName = data.name;
@@ -404,7 +460,6 @@
             else if (data.type === 'PLAYER_UPDATE') {
                 if (remotePlayers[connection.peer]) {
                     const rp = remotePlayers[connection.peer];
-                    // Apply interpolation smoothing for incoming positions
                     rp.targetX = data.state.x;
                     rp.targetY = data.state.y;
                     rp.facing = data.state.facing;
@@ -504,54 +559,6 @@
                 slot.querySelector('span').innerText = localPlayer.inventory[itemName] || 0;
                 slot.classList.toggle('active', i === localPlayer.selectedSlot);
             }
-        }
-
-        function generateChunk(cx) {
-            const chunkData = [];
-            for (let x = 0; x < CHUNK_WIDTH; x++) {
-                const worldX = cx * CHUNK_WIDTH + x;
-                const surfaceHeight = Math.floor(40 + Math.sin(worldX * 0.04 + worldSeed) * 9 + Math.cos(worldX * 0.015 + worldSeed * 0.5) * 14);
-                
-                const column = { surfaceHeight, blocks: {}, trees: [] };
-                for (let y = 0; y < WORLD_HEIGHT; y++) {
-                    let type = null;
-                    if (y === surfaceHeight) {
-                        type = 'grass';
-                    } else if (y > surfaceHeight && y < surfaceHeight + 5) {
-                        type = 'dirt';
-                    } else if (y >= surfaceHeight + 5) {
-                        if (y > surfaceHeight + 15 && Math.random() < 0.06) {
-                            type = Math.random() < 0.5 ? 'copper_ore' : 'iron_ore';
-                        } else {
-                            type = 'stone';
-                        }
-                    }
-                    if (type) column.blocks[y] = type;
-                }
-
-                if (Math.random() < 0.25 && x > 2 && x < CHUNK_WIDTH - 2) {
-                    const sh = surfaceHeight;
-                    const treeHeight = 5 + Math.floor(Math.random() * 3);
-                    const treeTrunkX = worldX;
-                    const treeTrunkBaseY = sh - 1;
-
-                    const treeBlocks = [];
-                    for (let th = 0; th < treeHeight; th++) {
-                        treeBlocks.push({ x: treeTrunkX, y: treeTrunkBaseY - th, type: 'wood' });
-                    }
-                    for (let lx = -2; lx <= 2; lx++) {
-                        for (let ly = -treeHeight - 3; ly <= -treeHeight; ly++) {
-                            if (Math.abs(lx) === 2 && Math.abs(ly + treeHeight + 1.5) > 1.5 && Math.random() < 0.3) continue;
-                            treeBlocks.push({ x: treeTrunkX + lx, y: treeTrunkBaseY + ly, type: 'leaves' });
-                        }
-                    }
-                    column.trees = treeBlocks;
-                }
-
-                chunkData[x] = column;
-            }
-            loadedChunks.set(cx, chunkData);
-            return chunkData;
         }
 
         function getBlock(bx, by) {
@@ -680,7 +687,6 @@
         }
 
         function draw() {
-            // Smoothly interpolate remote player positions to avoid teleporting jitter
             Object.values(remotePlayers).forEach(rp => {
                 if (rp.targetX !== undefined) {
                     rp.x += (rp.targetX - rp.x) * 0.25;
@@ -798,7 +804,7 @@
                 updateLocalPlayer();
 
                 for (let i = particles.length - 1; i >= 0; i--) {
-                    const pt = particles[i];
+                    const pt = particles.get ? null : particles[i]; // standard array check
                     pt.x += pt.vx; pt.y += pt.vy;
                     pt.vy += 0.3; pt.life--;
                     if (pt.life <= 0) particles.splice(i, 1);
