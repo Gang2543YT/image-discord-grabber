@@ -132,27 +132,69 @@
             z-index: 5;
         }
 
-        /* Health & Hotbar Container positioned at bottom center */
-        #hud-container {
+        /* Hotbar positioned at bottom center */
+        #hotbar-container {
             position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             display: none;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
             z-index: 5;
             pointer-events: none;
         }
 
-        #health-bar {
+        #hotbar {
             display: flex;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 8px;
+            border-radius: 8px;
+            border: 2px solid #555;
+            pointer-events: auto;
+        }
+
+        .slot {
+            width: 38px;
+            height: 38px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #666;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 9px;
+            position: relative;
+        }
+        .slot.active {
+            border-color: #f39c12;
+            background: rgba(243, 156, 18, 0.2);
+        }
+        .slot span {
+            position: absolute;
+            bottom: 2px;
+            right: 3px;
+            font-size: 8px;
+            color: #f1c40f;
+        }
+
+        /* Health bar positioned left-aligned above hotbar area like Minecraft */
+        #health-bar {
+            position: absolute;
+            bottom: 74px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
             gap: 4px;
             background: rgba(0, 0, 0, 0.6);
             padding: 6px 10px;
             border-radius: 6px;
             border: 2px solid #444;
+            z-index: 5;
+            pointer-events: none;
+            width: 440px;
+            justify-content: flex-start;
         }
 
         .heart {
@@ -183,41 +225,6 @@
 
         .heart.full::before, .heart.full::after {
             background: #e74c3c; /* Full red heart */
-        }
-
-        #hotbar {
-            display: flex;
-            gap: 6px;
-            background: rgba(0, 0, 0, 0.75);
-            padding: 8px;
-            border-radius: 8px;
-            border: 2px solid #555;
-            pointer-events: auto;
-        }
-        .slot {
-            width: 38px;
-            height: 38px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid #666;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 9px;
-            position: relative;
-        }
-        .slot.active {
-            border-color: #f39c12;
-            background: rgba(243, 156, 18, 0.2);
-        }
-        .slot span {
-            position: absolute;
-            bottom: 2px;
-            right: 3px;
-            font-size: 8px;
-            color: #f1c40f;
         }
     </style>
 </head>
@@ -255,31 +262,33 @@
         <strong>Hotbar:</strong> 1-9 & 0 to select items
     </div>
 
-    <!-- HUD Container holding Hearts above the Hotbar -->
-    <div id="hud-container">
-        <div id="health-bar">
-            <div class="heart full" id="heart-0"></div>
-            <div class="heart full" id="heart-1"></div>
-            <div class="heart full" id="heart-2"></div>
-            <div class="heart full" id="heart-3"></div>
-            <div class="heart full" id="heart-4"></div>
-            <div class="heart full" id="heart-5"></div>
-            <div class="heart full" id="heart-6"></div>
-            <div class="heart full" id="heart-7"></div>
-            <div class="heart full" id="heart-8"></div>
-            <div class="heart full" id="heart-9"></div>
-        </div>
+    <!-- Health Bar (Left-aligned above hotbar) -->
+    <div id="health-bar">
+        <div class="heart full" id="heart-0"></div>
+        <div class="heart full" id="heart-1"></div>
+        <div class="heart full" id="heart-2"></div>
+        <div class="heart full" id="heart-3"></div>
+        <div class="heart full" id="heart-4"></div>
+        <div class="heart full" id="heart-5"></div>
+        <div class="heart full" id="heart-6"></div>
+        <div class="heart full" id="heart-7"></div>
+        <div class="heart full" id="heart-8"></div>
+        <div class="heart full" id="heart-9"></div>
+    </div>
+
+    <!-- Hotbar Container -->
+    <div id="hotbar-container">
         <div id="hotbar">
-            <div class="slot active" id="slot-0">Sword<span>1</span></div>
-            <div class="slot" id="slot-1">Pick<span>2</span></div>
-            <div class="slot" id="slot-2">Wood<span>15</span></div>
-            <div class="slot" id="slot-3">Stone<span>0</span></div>
-            <div class="slot" id="slot-4">Ore<span>0</span></div>
-            <div class="slot" id="slot-5">Iron<span>0</span></div>
-            <div class="slot" id="slot-6">Dirt<span>0</span></div>
-            <div class="slot" id="slot-7">Leaf<span>0</span></div>
-            <div class="slot" id="slot-8">Slot9<span>0</span></div>
-            <div class="slot" id="slot-9">Slot0<span>0</span></div>
+            <div class="slot active" id="slot-0"><span>0</span></div>
+            <div class="slot" id="slot-1"><span>0</span></div>
+            <div class="slot" id="slot-2"><span>0</span></div>
+            <div class="slot" id="slot-3"><span>0</span></div>
+            <div class="slot" id="slot-4"><span>0</span></div>
+            <div class="slot" id="slot-5"><span>0</span></div>
+            <div class="slot" id="slot-6"><span>0</span></div>
+            <div class="slot" id="slot-7"><span>0</span></div>
+            <div class="slot" id="slot-8"><span>0</span></div>
+            <div class="slot" id="slot-9"><span>0</span></div>
         </div>
     </div>
 
@@ -348,22 +357,22 @@
             maxHp: 100,
             hp: 100,
             inventory: { 
-                copper_broadsword: 1, 
-                copper_pickaxe: 1, 
-                wood: 15, 
-                stone: 0, 
-                copper_ore: 0, 
-                iron_ore: 0, 
-                dirt: 0, 
-                leaves: 0, 
-                slot9: 0, 
-                slot0: 0 
+                0: { type: null, count: 0 },
+                1: { type: null, count: 0 },
+                2: { type: null, count: 0 },
+                3: { type: null, count: 0 },
+                4: { type: null, count: 0 },
+                5: { type: null, count: 0 },
+                6: { type: null, count: 0 },
+                7: { type: null, count: 0 },
+                8: { type: null, count: 0 },
+                9: { type: null, count: 0 }
             }
         };
 
         const remotePlayers = {};
-        const hotbarKeys = ['copper_broadsword', 'copper_pickaxe', 'wood', 'stone', 'copper_ore', 'iron_ore', 'dirt', 'leaves', 'slot9', 'slot0'];
         const particles = [];
+        const itemDrops = []; // World dropped items when blocks are broken
         const clouds = [
             { x: 100, y: 80, speed: 0.3, width: 120, height: 40 },
             { x: 550, y: 130, speed: 0.2, width: 180, height: 50 },
@@ -459,13 +468,13 @@
             gameStarted = true;
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('ui-overlay').style.display = 'block';
-            document.getElementById('hud-container').style.display = 'flex';
+            document.getElementById('health-bar').style.display = 'flex';
+            document.getElementById('hotbar-container').style.display = 'flex';
             updateHotbarUI();
             updateHealthUI();
         }
 
         function updateHealthUI() {
-            // 10 hearts representing 100 HP total (10 HP per heart)
             const activeHearts = Math.ceil(Math.max(0, Math.min(100, localPlayer.hp)) / 10);
             for (let i = 0; i < 10; i++) {
                 const heart = document.getElementById(`heart-${i}`);
@@ -580,6 +589,9 @@
             }
             else if (data.type === 'BLOCK_ACTION') {
                 setBlock(data.bx, data.by, data.typeAction);
+                if (data.typeAction === null) {
+                    itemDrops.push({ x: (data.bx + 0.5) * TILE_SIZE, y: data.by * TILE_SIZE, vx: (Math.random() - 0.5) * 3, vy: -3, type: data.itemType });
+                }
                 broadcastToClients(data);
             }
         }
@@ -633,6 +645,9 @@
             }
             else if (data.type === 'BLOCK_ACTION') {
                 setBlock(data.bx, data.by, data.typeAction);
+                if (data.typeAction === null) {
+                    itemDrops.push({ x: (data.bx + 0.5) * TILE_SIZE, y: data.by * TILE_SIZE, vx: (Math.random() - 0.5) * 3, vy: -3, type: data.itemType });
+                }
             }
         }
 
@@ -649,13 +664,12 @@
 
         window.addEventListener('keydown', e => {
             if (!gameStarted) return;
-            // Prevent default browser behavior for number keys to stop scrolling/tabs
             if ((e.code >= 'Digit1' && e.code <= 'Digit9') || e.code === 'Digit0') {
                 e.preventDefault();
             }
             keys[e.code] = true;
 
-            // Map keys 1-9 and Digit0 for 10-slot hotbar selection
+            // Proper hotbar slot switching via number keys (1-9 and 0 for slot 10)
             if (e.code >= 'Digit1' && e.code <= 'Digit9') {
                 localPlayer.selectedSlot = parseInt(e.code) - 1;
                 updateHotbarUI();
@@ -674,13 +688,50 @@
         window.addEventListener('mouseup', () => { mouse.down = false; });
         window.addEventListener('contextmenu', e => e.preventDefault());
 
+        function addItemToInventory(itemType) {
+            // First check if same item type exists in hotbar to stack
+            for (let i = 0; i < 10; i++) {
+                if (localPlayer.inventory[i].type === itemType) {
+                    localPlayer.inventory[i].count++;
+                    updateHotbarUI();
+                    return true;
+                }
+            }
+            // Otherwise put in first empty slot
+            for (let i = 0; i < 10; i++) {
+                if (localPlayer.inventory[i].type === null) {
+                    localPlayer.inventory[i].type = itemType;
+                    localPlayer.inventory[i].count = 1;
+                    updateHotbarUI();
+                    return true;
+                }
+            }
+            return false; // Inventory full
+        }
+
         function updateHotbarUI() {
             for (let i = 0; i < 10; i++) {
                 const slot = document.getElementById(`slot-${i}`);
-                const itemName = hotbarKeys[i];
+                const item = localPlayer.inventory[i];
                 if (slot) {
                     const countSpan = slot.querySelector('span');
-                    if (countSpan) countSpan.innerText = localPlayer.inventory[itemName] || 0;
+                    // Display short readable label for items/blocks
+                    let label = '';
+                    if (item.type) {
+                        if (item.type === 'wood') label = 'Wood';
+                        else if (item.type === 'stone') label = 'Stone';
+                        else if (item.type === 'dirt' || item.type === 'grass') label = 'Dirt';
+                        else if (item.type === 'leaves') label = 'Leaf';
+                        else if (item.type === 'copper_ore') label = 'Copper';
+                        else if (item.type === 'iron_ore') label = 'Iron';
+                        else label = item.type;
+                    }
+                    
+                    // Remove old text node if exists and keep count span
+                    slot.childNodes[0].nodeValue = label;
+                    if (countSpan) {
+                        countSpan.innerText = item.count > 0 ? item.count : '';
+                    }
                     slot.classList.toggle('active', i === localPlayer.selectedSlot);
                 }
             }
@@ -743,6 +794,17 @@
                 localPlayer.grounded = false;
             }
 
+            // Check picking up item drops in world
+            for (let i = itemDrops.length - 1; i >= 0; i--) {
+                const drop = itemDrops[i];
+                const dist = Math.hypot((localPlayer.x + localPlayer.width/2) - drop.x, (localPlayer.y + localPlayer.height/2) - drop.y);
+                if (dist < 28) {
+                    if (addItemToInventory(drop.type)) {
+                        itemDrops.splice(i, 1);
+                    }
+                }
+            }
+
             if (localPlayer.swingTimer > 0) localPlayer.swingTimer--;
 
             if (mouse.down && localPlayer.swingTimer === 0) {
@@ -758,49 +820,49 @@
 
                 if (Math.hypot(targetBx - pBx, targetBy - pBy) < 6) {
                     const block = getBlock(targetBx, targetBy);
-                    const selectedItem = hotbarKeys[localPlayer.selectedSlot];
+                    const selectedSlotData = localPlayer.inventory[localPlayer.selectedSlot];
 
-                    if (selectedItem.includes('pickaxe') || selectedItem.includes('broadsword')) {
+                    if (block) {
                         localPlayer.swingTimer = 12;
-                        if (block) {
-                            const blockColor = COLORS[block] || '#fff';
-                            setBlock(targetBx, targetBy, null);
+                        const blockColor = COLORS[block] || '#fff';
+                        const minedType = block;
+                        setBlock(targetBx, targetBy, null);
 
-                            for (let p = 0; p < 5; p++) {
-                                particles.push({
-                                    x: (targetBx + 0.5) * TILE_SIZE, y: (targetBy + 0.5) * TILE_SIZE,
-                                    vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.7) * 5,
-                                    size: Math.random() * 3 + 2, color: blockColor, life: 20
-                                });
-                            }
-
-                            let dropName = 'wood';
-                            if (block.includes('ore')) dropName = block;
-                            else if (block === 'stone') dropName = 'stone';
-                            else if (block === 'dirt' || block === 'grass') dropName = 'dirt';
-                            else if (block === 'leaves') dropName = 'leaves';
-
-                            localPlayer.inventory[dropName] = (localPlayer.inventory[dropName] || 0) + 1;
-                            updateHotbarUI();
-
-                            const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: null };
-                            if (isHost) broadcastToClients(packet);
-                            else if (conn) conn.send(packet);
+                        for (let p = 0; p < 5; p++) {
+                            particles.push({
+                                x: (targetBx + 0.5) * TILE_SIZE, y: (targetBy + 0.5) * TILE_SIZE,
+                                vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.7) * 5,
+                                size: Math.random() * 3 + 2, color: blockColor, life: 20
+                            });
                         }
-                    } else {
-                        // Placing items (wood, stone, dirt, leaves, ores, or custom slots)
-                        if (!block && localPlayer.inventory[selectedItem] > 0) {
-                            let placeType = selectedItem;
-                            if (selectedItem === 'copper_ore' || selectedItem === 'iron_ore') {
-                                // place corresponding ore block
-                            } else if (selectedItem === 'dirt' || selectedItem === 'stone' || selectedItem === 'wood' || selectedItem === 'leaves') {
-                                // place directly
-                            } else {
-                                placeType = 'wood'; // fallback block type if using custom empty slot
-                            }
 
+                        let dropName = 'wood';
+                        if (minedType.includes('ore')) dropName = minedType;
+                        else if (minedType === 'stone') dropName = 'stone';
+                        else if (minedType === 'dirt' || minedType === 'grass') dropName = 'dirt';
+                        else if (minedType === 'leaves') dropName = 'leaves';
+
+                        // Spawn physical block drop in world
+                        itemDrops.push({
+                            x: (targetBx + 0.5) * TILE_SIZE,
+                            y: targetBy * TILE_SIZE,
+                            vx: (Math.random() - 0.5) * 3,
+                            vy: -3,
+                            type: dropName
+                        });
+
+                        const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: null, itemType: dropName };
+                        if (isHost) broadcastToClients(packet);
+                        else if (conn) conn.send(packet);
+                    } else {
+                        // Placing selected block
+                        if (selectedSlotData.type !== null && selectedSlotData.count > 0) {
+                            let placeType = selectedSlotData.type;
                             setBlock(targetBx, targetBy, placeType);
-                            localPlayer.inventory[selectedItem]--;
+                            selectedSlotData.count--;
+                            if (selectedSlotData.count <= 0) {
+                                selectedSlotData.type = null;
+                            }
                             updateHotbarUI();
                             localPlayer.swingTimer = 10;
 
@@ -894,6 +956,26 @@
                     }
                 }
             }
+
+            // Draw item drops in world
+            itemDrops.forEach(drop => {
+                drop.x += drop.vx;
+                drop.y += drop.vy;
+                drop.vy += 0.4; // gravity on drops
+                // check floor collision for drop
+                const bx = Math.floor(drop.x / TILE_SIZE);
+                const by = Math.floor((drop.y + 8) / TILE_SIZE);
+                if (getBlock(bx, by) !== null) {
+                    drop.y = by * TILE_SIZE - 8;
+                    drop.vy = 0;
+                    drop.vx *= 0.8;
+                }
+
+                const sx = drop.x - camera.x;
+                const sy = drop.y - camera.y;
+                ctx.fillStyle = COLORS[drop.type] || '#f1c40f';
+                ctx.fillRect(sx - 5, sy - 5, 10, 10);
+            });
 
             particles.forEach(pt => {
                 ctx.fillStyle = pt.color;
