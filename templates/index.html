@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Terraria Online Multiplayer</title>
+    <title>2D Minecraft Style Online Multiplayer</title>
     <style>
         body {
             margin: 0;
@@ -27,7 +27,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 10;
+            z-index: 20;
             color: white;
         }
         .menu-box {
@@ -145,52 +145,53 @@
 
         #hotbar {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             background: rgba(0, 0, 0, 0.75);
-            padding: 8px;
-            border-radius: 8px;
-            border: 2px solid #555;
+            padding: 6px;
+            border-radius: 6px;
+            border: 2px solid #333;
             pointer-events: auto;
         }
 
         .slot {
-            width: 38px;
-            height: 38px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid #666;
+            width: 42px;
+            height: 42px;
+            background: #8b8b8b;
+            border-top: 2px solid #373737;
+            border-left: 2px solid #373737;
+            border-right: 2px solid #fff;
+            border-bottom: 2px solid #fff;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: bold;
-            font-size: 9px;
+            font-size: 10px;
             position: relative;
+            cursor: pointer;
         }
         .slot.active {
-            border-color: #f39c12;
-            background: rgba(243, 156, 18, 0.2);
+            border: 2px solid #ffffff;
+            background: #9c9c9c;
         }
         .slot span {
             position: absolute;
             bottom: 2px;
-            right: 3px;
-            font-size: 8px;
-            color: #f1c40f;
+            right: 4px;
+            font-size: 9px;
+            color: #fff;
+            text-shadow: 1px 1px #000;
         }
 
         /* Health bar positioned left-aligned above hotbar area like Minecraft */
         #health-bar {
             position: absolute;
-            bottom: 74px;
+            bottom: 78px;
             left: 50%;
             transform: translateX(-50%);
             display: none;
-            gap: 4px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 6px 10px;
-            border-radius: 6px;
-            border: 2px solid #444;
+            gap: 2px;
             z-index: 5;
             pointer-events: none;
             width: 440px;
@@ -198,33 +199,59 @@
         }
 
         .heart {
-            width: 18px;
-            height: 18px;
-            position: relative;
-            display: inline-block;
-        }
-        .heart::before, .heart::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            width: 10px;
+            width: 16px;
             height: 16px;
-            border-radius: 10px 10px 0 0;
-            background: #333; /* Empty heart background */
+            background-color: #555;
+            display: inline-block;
+            clip-path: polygon(0 25%, 25% 0, 50% 25%, 75% 0, 100% 25%, 100% 60%, 50% 100%, 0 60%);
         }
-        .heart::before {
-            left: 10px;
-            transform: rotate(-45deg);
-            transform-origin: 0 100%;
-        }
-        .heart::after {
-            left: 0;
-            transform: rotate(45deg);
-            transform-origin: 100% 100%;
+        .heart.full {
+            background-color: #ff2222;
         }
 
-        .heart.full::before, .heart.full::after {
-            background: #e74c3c; /* Full red heart */
+        /* Minecraft-style Full Inventory Screen (E key) */
+        #inventory-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 15;
+        }
+
+        .inventory-window {
+            background: #c6c6c6;
+            border: 3px solid #373737;
+            border-top-color: #fff;
+            border-left-color: #fff;
+            padding: 16px;
+            width: 340px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .inventory-title {
+            color: #373737;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .inventory-divider {
+            height: 2px;
+            background: #8b8b8b;
+            margin: 10px 0;
         }
     </style>
 </head>
@@ -258,8 +285,8 @@
     </div>
 
     <div id="ui-overlay">
-        <strong>Controls:</strong> A/D to Move | Space to Jump | Mouse to Aim & Mine<br>
-        <strong>Hotbar:</strong> 1-9 & 0 to select items
+        <strong>Controls:</strong> A/D to Move | Space to Jump | E for Inventory<br>
+        <strong>Mouse:</strong> Left-Click to Mine | Right-Click to Place Block
     </div>
 
     <!-- Health Bar (Left-aligned above hotbar) -->
@@ -279,16 +306,30 @@
     <!-- Hotbar Container -->
     <div id="hotbar-container">
         <div id="hotbar">
-            <div class="slot active" id="slot-0"><span>0</span></div>
-            <div class="slot" id="slot-1"><span>0</span></div>
-            <div class="slot" id="slot-2"><span>0</span></div>
-            <div class="slot" id="slot-3"><span>0</span></div>
-            <div class="slot" id="slot-4"><span>0</span></div>
-            <div class="slot" id="slot-5"><span>0</span></div>
-            <div class="slot" id="slot-6"><span>0</span></div>
-            <div class="slot" id="slot-7"><span>0</span></div>
-            <div class="slot" id="slot-8"><span>0</span></div>
-            <div class="slot" id="slot-9"><span>0</span></div>
+            <div class="slot active" id="slot-0" onclick="selectSlot(0)"><span></span></div>
+            <div class="slot" id="slot-1" onclick="selectSlot(1)"><span></span></div>
+            <div class="slot" id="slot-2" onclick="selectSlot(2)"><span></span></div>
+            <div class="slot" id="slot-3" onclick="selectSlot(3)"><span></span></div>
+            <div class="slot" id="slot-4" onclick="selectSlot(4)"><span></span></div>
+            <div class="slot" id="slot-5" onclick="selectSlot(5)"><span></span></div>
+            <div class="slot" id="slot-6" onclick="selectSlot(6)"><span></span></div>
+            <div class="slot" id="slot-7" onclick="selectSlot(7)"><span></span></div>
+            <div class="slot" id="slot-8" onclick="selectSlot(8)"><span></span></div>
+            <div class="slot" id="slot-9" onclick="selectSlot(9)"><span></span></div>
+        </div>
+    </div>
+
+    <!-- Minecraft Full Inventory Screen -->
+    <div id="inventory-screen">
+        <div class="inventory-window">
+            <div class="inventory-title">Inventory</div>
+            <div class="inventory-grid" id="main-inventory-grid">
+                <!-- 27 Main Inventory Slots -->
+            </div>
+            <div class="inventory-divider"></div>
+            <div class="inventory-grid" id="inv-hotbar-grid">
+                <!-- 10 Hotbar Slots inside menu -->
+            </div>
         </div>
     </div>
 
@@ -318,6 +359,7 @@
         let conn = null;
         let hostConnections = []; 
         let worldSeed = 12345;
+        let inventoryOpen = false;
 
         const RANDOM_NAMES = [
             'PixelKnight', 'VoxelVoyager', 'CraftMaster', 'DiggingDwarf', 'BlockBuster', 
@@ -343,8 +385,8 @@
             name: '',
             x: 0,
             y: 0,
-            width: 20,
-            height: 38,
+            width: 22,
+            height: 42,
             vx: 0,
             vy: 0,
             speed: 4.5,
@@ -356,23 +398,17 @@
             selectedSlot: 0,
             maxHp: 100,
             hp: 100,
-            inventory: { 
-                0: { type: null, count: 0 },
-                1: { type: null, count: 0 },
-                2: { type: null, count: 0 },
-                3: { type: null, count: 0 },
-                4: { type: null, count: 0 },
-                5: { type: null, count: 0 },
-                6: { type: null, count: 0 },
-                7: { type: null, count: 0 },
-                8: { type: null, count: 0 },
-                9: { type: null, count: 0 }
-            }
+            inventory: {} // slots 0 to 36 (0-9 hotbar, 10-36 main inventory)
         };
+
+        // Initialize empty inventory (nothing in hotbar or inventory slots initially)
+        for (let i = 0; i < 37; i++) {
+            localPlayer.inventory[i] = { type: null, count: 0 };
+        }
 
         const remotePlayers = {};
         const particles = [];
-        const itemDrops = []; // World dropped items when blocks are broken
+        const itemDrops = []; 
         const clouds = [
             { x: 100, y: 80, speed: 0.3, width: 120, height: 40 },
             { x: 550, y: 130, speed: 0.2, width: 180, height: 50 },
@@ -470,6 +506,7 @@
             document.getElementById('ui-overlay').style.display = 'block';
             document.getElementById('health-bar').style.display = 'flex';
             document.getElementById('hotbar-container').style.display = 'flex';
+            buildInventoryUI();
             updateHotbarUI();
             updateHealthUI();
         }
@@ -660,22 +697,25 @@
         }
 
         const keys = {};
-        const mouse = { x: 0, y: 0, down: false };
+        const mouse = { x: 0, y: 0, leftDown: false, rightDown: false, leftClicked: false, rightClicked: false };
 
         window.addEventListener('keydown', e => {
             if (!gameStarted) return;
             if ((e.code >= 'Digit1' && e.code <= 'Digit9') || e.code === 'Digit0') {
                 e.preventDefault();
             }
+            if (e.code === 'KeyE') {
+                e.preventDefault();
+                toggleInventory();
+            }
             keys[e.code] = true;
 
-            // Proper hotbar slot switching via number keys (1-9 and 0 for slot 10)
-            if (e.code >= 'Digit1' && e.code <= 'Digit9') {
-                localPlayer.selectedSlot = parseInt(e.code) - 1;
-                updateHotbarUI();
-            } else if (e.code === 'Digit0') {
-                localPlayer.selectedSlot = 9;
-                updateHotbarUI();
+            if (!inventoryOpen) {
+                if (e.code >= 'Digit1' && e.code <= 'Digit9') {
+                    selectSlot(parseInt(e.code) - 1);
+                } else if (e.code === 'Digit0') {
+                    selectSlot(9);
+                }
             }
         });
         window.addEventListener('keyup', e => { if (gameStarted) keys[e.code] = false; });
@@ -684,29 +724,132 @@
             mouse.x = e.clientX - rect.left;
             mouse.y = e.clientY - rect.top;
         });
-        window.addEventListener('mousedown', () => { if (gameStarted) mouse.down = true; });
-        window.addEventListener('mouseup', () => { mouse.down = false; });
+        window.addEventListener('mousedown', e => {
+            if (!gameStarted || inventoryOpen) return;
+            if (e.button === 0) {
+                mouse.leftDown = true;
+                mouse.leftClicked = true;
+            } else if (e.button === 2) {
+                mouse.rightDown = true;
+                mouse.rightClicked = true;
+            }
+        });
+        window.addEventListener('mouseup', e => {
+            if (e.button === 0) mouse.leftDown = false;
+            if (e.button === 2) mouse.rightDown = false;
+        });
         window.addEventListener('contextmenu', e => e.preventDefault());
 
-        function addItemToInventory(itemType) {
-            // First check if same item type exists in hotbar to stack
+        function toggleInventory() {
+            inventoryOpen = !inventoryOpen;
+            document.getElementById('inventory-screen').style.display = inventoryOpen ? 'flex' : 'none';
+        }
+
+        function selectSlot(idx) {
+            localPlayer.selectedSlot = idx;
+            updateHotbarUI();
+        }
+
+        function buildInventoryUI() {
+            const mainGrid = document.getElementById('main-inventory-grid');
+            const hotbarGrid = document.getElementById('inv-hotbar-grid');
+            mainGrid.innerHTML = '';
+            hotbarGrid.innerHTML = '';
+
+            // Main inventory (slots 10 to 36)
+            for (let i = 10; i < 37; i++) {
+                const slotDiv = document.createElement('div');
+                slotDiv.className = 'slot';
+                slotDiv.id = `inv-slot-${i}`;
+                slotDiv.innerHTML = `<span></span>`;
+                slotDiv.onclick = () => handleInventoryClick(i);
+                mainGrid.appendChild(slotDiv);
+            }
+
+            // Hotbar inside inventory menu (slots 0 to 9)
             for (let i = 0; i < 10; i++) {
+                const slotDiv = document.createElement('div');
+                slotDiv.className = 'slot';
+                slotDiv.id = `inv-slot-${i}`;
+                slotDiv.innerHTML = `<span></span>`;
+                slotDiv.onclick = () => handleInventoryClick(i);
+                hotbarGrid.appendChild(slotDiv);
+            }
+            updateInventoryUI();
+        }
+
+        let carriedItem = { type: null, count: 0 };
+
+        function handleInventoryClick(slotIdx) {
+            const slotItem = localPlayer.inventory[slotIdx];
+            if (carriedItem.type === null) {
+                if (slotItem.type !== null) {
+                    carriedItem = { ...slotItem };
+                    slotItem.type = null;
+                    slotItem.count = 0;
+                }
+            } else {
+                if (slotItem.type === null) {
+                    slotItem.type = carriedItem.type;
+                    slotItem.count = carriedItem.count;
+                    carriedItem = { type: null, count: 0 };
+                } else if (slotItem.type === carriedItem.type) {
+                    slotItem.count += carriedItem.count;
+                    carriedItem = { type: null, count: 0 };
+                } else {
+                    const temp = { ...slotItem };
+                    slotItem.type = carriedItem.type;
+                    slotItem.count = carriedItem.count;
+                    carriedItem = temp;
+                }
+            }
+            updateInventoryUI();
+            updateHotbarUI();
+        }
+
+        function updateInventoryUI() {
+            for (let i = 0; i < 37; i++) {
+                const slotEl = document.getElementById(`inv-slot-${i}`);
+                if (slotEl) {
+                    const item = localPlayer.inventory[i];
+                    let label = '';
+                    if (item.type) {
+                        if (item.type === 'wood') label = 'W';
+                        else if (item.type === 'stone') label = 'St';
+                        else if (item.type === 'dirt' || item.type === 'grass') label = 'D';
+                        else if (item.type === 'leaves') label = 'L';
+                        else if (item.type === 'copper_ore') label = 'Cu';
+                        else if (item.type === 'iron_ore') label = 'Fe';
+                        else label = item.type.substring(0, 2).toUpperCase();
+                    }
+                    slotEl.childNodes[0].nodeValue = label;
+                    const countSpan = slotEl.querySelector('span');
+                    if (countSpan) countSpan.innerText = item.count > 0 ? item.count : '';
+                }
+            }
+        }
+
+        function addItemToInventory(itemType) {
+            // First stack in hotbar & main inventory
+            for (let i = 0; i < 37; i++) {
                 if (localPlayer.inventory[i].type === itemType) {
                     localPlayer.inventory[i].count++;
                     updateHotbarUI();
+                    updateInventoryUI();
                     return true;
                 }
             }
-            // Otherwise put in first empty slot
-            for (let i = 0; i < 10; i++) {
+            // Otherwise find empty slot
+            for (let i = 0; i < 37; i++) {
                 if (localPlayer.inventory[i].type === null) {
                     localPlayer.inventory[i].type = itemType;
                     localPlayer.inventory[i].count = 1;
                     updateHotbarUI();
+                    updateInventoryUI();
                     return true;
                 }
             }
-            return false; // Inventory full
+            return false; 
         }
 
         function updateHotbarUI() {
@@ -715,7 +858,6 @@
                 const item = localPlayer.inventory[i];
                 if (slot) {
                     const countSpan = slot.querySelector('span');
-                    // Display short readable label for items/blocks
                     let label = '';
                     if (item.type) {
                         if (item.type === 'wood') label = 'Wood';
@@ -726,8 +868,6 @@
                         else if (item.type === 'iron_ore') label = 'Iron';
                         else label = item.type;
                     }
-                    
-                    // Remove old text node if exists and keep count span
                     slot.childNodes[0].nodeValue = label;
                     if (countSpan) {
                         countSpan.innerText = item.count > 0 ? item.count : '';
@@ -757,6 +897,32 @@
             }
         }
 
+        function getTreeBlock(bx, by) {
+            const cx = Math.floor(bx / CHUNK_WIDTH);
+            const lx = ((bx % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
+            let chunk = loadedChunks.get(cx);
+            if (!chunk) return null;
+            const col = chunk[lx];
+            if (!col || !col.trees) return null;
+            return col.trees.find(t => t.x === bx && t.y === by) || null;
+        }
+
+        function removeTreeBlock(bx, by) {
+            const cx = Math.floor(bx / CHUNK_WIDTH);
+            const lx = ((bx % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
+            let chunk = loadedChunks.get(cx);
+            if (!chunk) return;
+            const col = chunk[lx];
+            if (!col || !col.trees) return;
+            const idx = col.trees.findIndex(t => t.x === bx && t.y === by);
+            if (idx !== -1) {
+                const type = col.trees[idx].type;
+                col.trees.splice(idx, 1);
+                return type;
+            }
+            return null;
+        }
+
         function checkCollision(nx, ny) {
             const left = Math.floor(nx / TILE_SIZE);
             const right = Math.floor((nx + localPlayer.width - 1) / TILE_SIZE);
@@ -772,33 +938,35 @@
         }
 
         function updateLocalPlayer() {
-            localPlayer.vx = 0;
-            if (keys['KeyA'] || keys['ArrowLeft']) { localPlayer.vx = -localPlayer.speed; localPlayer.facing = -1; }
-            if (keys['KeyD'] || keys['ArrowRight']) { localPlayer.vx = localPlayer.speed; localPlayer.facing = 1; }
+            if (!inventoryOpen) {
+                localPlayer.vx = 0;
+                if (keys['KeyA'] || keys['ArrowLeft']) { localPlayer.vx = -localPlayer.speed; localPlayer.facing = -1; }
+                if (keys['KeyD'] || keys['ArrowRight']) { localPlayer.vx = localPlayer.speed; localPlayer.facing = 1; }
 
-            localPlayer.x += localPlayer.vx;
-            if (checkCollision(localPlayer.x, localPlayer.y)) localPlayer.x -= localPlayer.vx;
+                localPlayer.x += localPlayer.vx;
+                if (checkCollision(localPlayer.x, localPlayer.y)) localPlayer.x -= localPlayer.vx;
 
-            localPlayer.vy += localPlayer.gravity;
-            localPlayer.y += localPlayer.vy;
-            localPlayer.grounded = false;
-
-            if (checkCollision(localPlayer.x, localPlayer.y)) {
-                localPlayer.y -= localPlayer.vy;
-                if (localPlayer.vy > 0) localPlayer.grounded = true;
-                localPlayer.vy = 0;
-            }
-
-            if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && localPlayer.grounded) {
-                localPlayer.vy = localPlayer.jumpForce;
+                localPlayer.vy += localPlayer.gravity;
+                localPlayer.y += localPlayer.vy;
                 localPlayer.grounded = false;
+
+                if (checkCollision(localPlayer.x, localPlayer.y)) {
+                    localPlayer.y -= localPlayer.vy;
+                    if (localPlayer.vy > 0) localPlayer.grounded = true;
+                    localPlayer.vy = 0;
+                }
+
+                if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && localPlayer.grounded) {
+                    localPlayer.vy = localPlayer.jumpForce;
+                    localPlayer.grounded = false;
+                }
             }
 
             // Check picking up item drops in world
             for (let i = itemDrops.length - 1; i >= 0; i--) {
                 const drop = itemDrops[i];
                 const dist = Math.hypot((localPlayer.x + localPlayer.width/2) - drop.x, (localPlayer.y + localPlayer.height/2) - drop.y);
-                if (dist < 28) {
+                if (dist < 30) {
                     if (addItemToInventory(drop.type)) {
                         itemDrops.splice(i, 1);
                     }
@@ -807,7 +975,7 @@
 
             if (localPlayer.swingTimer > 0) localPlayer.swingTimer--;
 
-            if (mouse.down && localPlayer.swingTimer === 0) {
+            if (!inventoryOpen && localPlayer.swingTimer === 0) {
                 const cameraX = localPlayer.x - canvas.width / 2 + localPlayer.width / 2;
                 const cameraY = localPlayer.y - canvas.height / 2 + localPlayer.height / 2;
                 const worldMouseX = mouse.x + cameraX;
@@ -819,60 +987,80 @@
                 const pBy = Math.floor((localPlayer.y + localPlayer.height / 2) / TILE_SIZE);
 
                 if (Math.hypot(targetBx - pBx, targetBy - pBy) < 6) {
-                    const block = getBlock(targetBx, targetBy);
-                    const selectedSlotData = localPlayer.inventory[localPlayer.selectedSlot];
+                    // LEFT CLICK: MINE BLOCKS OR TREES
+                    if (mouse.leftClicked) {
+                        mouse.leftClicked = false;
+                        const block = getBlock(targetBx, targetBy);
+                        const treeBlock = getTreeBlock(targetBx, targetBy);
 
-                    if (block) {
-                        localPlayer.swingTimer = 12;
-                        const blockColor = COLORS[block] || '#fff';
-                        const minedType = block;
-                        setBlock(targetBx, targetBy, null);
-
-                        for (let p = 0; p < 5; p++) {
-                            particles.push({
-                                x: (targetBx + 0.5) * TILE_SIZE, y: (targetBy + 0.5) * TILE_SIZE,
-                                vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.7) * 5,
-                                size: Math.random() * 3 + 2, color: blockColor, life: 20
-                            });
-                        }
-
-                        let dropName = 'wood';
-                        if (minedType.includes('ore')) dropName = minedType;
-                        else if (minedType === 'stone') dropName = 'stone';
-                        else if (minedType === 'dirt' || minedType === 'grass') dropName = 'dirt';
-                        else if (minedType === 'leaves') dropName = 'leaves';
-
-                        // Spawn physical block drop in world
-                        itemDrops.push({
-                            x: (targetBx + 0.5) * TILE_SIZE,
-                            y: targetBy * TILE_SIZE,
-                            vx: (Math.random() - 0.5) * 3,
-                            vy: -3,
-                            type: dropName
-                        });
-
-                        const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: null, itemType: dropName };
-                        if (isHost) broadcastToClients(packet);
-                        else if (conn) conn.send(packet);
-                    } else {
-                        // Placing selected block
-                        if (selectedSlotData.type !== null && selectedSlotData.count > 0) {
-                            let placeType = selectedSlotData.type;
-                            setBlock(targetBx, targetBy, placeType);
-                            selectedSlotData.count--;
-                            if (selectedSlotData.count <= 0) {
-                                selectedSlotData.type = null;
+                        if (treeBlock) {
+                            localPlayer.swingTimer = 12;
+                            const minedType = removeTreeBlock(targetBx, targetBy);
+                            if (minedType) {
+                                itemDrops.push({
+                                    x: (targetBx + 0.5) * TILE_SIZE,
+                                    y: targetBy * TILE_SIZE,
+                                    vx: (Math.random() - 0.5) * 3,
+                                    vy: -3,
+                                    type: minedType
+                                });
+                                const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: null, itemType: minedType };
+                                if (isHost) broadcastToClients(packet);
+                                else if (conn) conn.send(packet);
                             }
-                            updateHotbarUI();
-                            localPlayer.swingTimer = 10;
+                        } else if (block) {
+                            localPlayer.swingTimer = 12;
+                            const minedType = block;
+                            setBlock(targetBx, targetBy, null);
 
-                            const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: placeType };
+                            let dropName = 'stone';
+                            if (minedType.includes('ore')) dropName = minedType;
+                            else if (minedType === 'stone') dropName = 'stone';
+                            else if (minedType === 'dirt' || minedType === 'grass') dropName = 'dirt';
+
+                            itemDrops.push({
+                                x: (targetBx + 0.5) * TILE_SIZE,
+                                y: targetBy * TILE_SIZE,
+                                vx: (Math.random() - 0.5) * 3,
+                                vy: -3,
+                                type: dropName
+                            });
+
+                            const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: null, itemType: dropName };
                             if (isHost) broadcastToClients(packet);
                             else if (conn) conn.send(packet);
                         }
                     }
+
+                    // RIGHT CLICK: PLACE BLOCKS ONLY
+                    if (mouse.rightClicked) {
+                        mouse.rightClicked = false;
+                        const block = getBlock(targetBx, targetBy);
+                        const treeBlock = getTreeBlock(targetBx, targetBy);
+                        const selectedSlotData = localPlayer.inventory[localPlayer.selectedSlot];
+
+                        if (!block && !treeBlock) {
+                            if (selectedSlotData.type !== null && selectedSlotData.count > 0) {
+                                let placeType = selectedSlotData.type;
+                                setBlock(targetBx, targetBy, placeType);
+                                selectedSlotData.count--;
+                                if (selectedSlotData.count <= 0) {
+                                    selectedSlotData.type = null;
+                                }
+                                updateHotbarUI();
+                                updateInventoryUI();
+                                localPlayer.swingTimer = 10;
+
+                                const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: placeType };
+                                if (isHost) broadcastToClients(packet);
+                                else if (conn) conn.send(packet);
+                            }
+                        }
+                    }
                 }
             }
+            mouse.leftClicked = false;
+            mouse.rightClicked = false;
 
             const statePayload = {
                 x: localPlayer.x,
@@ -890,12 +1078,8 @@
 
         function draw() {
             Object.values(remotePlayers).forEach(rp => {
-                if (rp.targetX !== undefined) {
-                    rp.x += (rp.targetX - rp.x) * 0.25;
-                }
-                if (rp.targetY !== undefined) {
-                    rp.y += (rp.targetY - rp.y) * 0.25;
-                }
+                if (rp.targetX !== undefined) rp.x += (rp.targetX - rp.x) * 0.25;
+                if (rp.targetY !== undefined) rp.y += (rp.targetY - rp.y) * 0.25;
             });
 
             const camera = {
@@ -961,8 +1145,7 @@
             itemDrops.forEach(drop => {
                 drop.x += drop.vx;
                 drop.y += drop.vy;
-                drop.vy += 0.4; // gravity on drops
-                // check floor collision for drop
+                drop.vy += 0.4; 
                 const bx = Math.floor(drop.x / TILE_SIZE);
                 const by = Math.floor((drop.y + 8) / TILE_SIZE);
                 if (getBlock(bx, by) !== null) {
@@ -977,47 +1160,49 @@
                 ctx.fillRect(sx - 5, sy - 5, 10, 10);
             });
 
-            particles.forEach(pt => {
-                ctx.fillStyle = pt.color;
-                ctx.fillRect(pt.x - camera.x, pt.y - camera.y, pt.size, pt.size);
-            });
-
-            function renderPlayerEntity(p, shirtColor) {
+            // Minecraft-style Blocky Character Rendering (Steve / Classic Style)
+            function renderPlayerEntity(p, shirtColor, pantsColor) {
                 const px = p.x - camera.x;
                 const py = p.y - camera.y;
 
-                ctx.fillStyle = '#2c3e50';
-                ctx.fillRect(px + 3, py + 26, 5, 12);
-                ctx.fillRect(px + 12, py + 26, 5, 12);
-                ctx.fillStyle = shirtColor;
-                ctx.fillRect(px + 2, py + 12, 16, 16);
-                ctx.fillStyle = '#f1c40f';
-                ctx.fillRect(px + 3, py + 2, 14, 12);
-                ctx.fillStyle = '#d35400';
-                ctx.fillRect(px + 3, py, 14, 4);
+                // Legs
+                ctx.fillStyle = pantsColor;
+                ctx.fillRect(px + 4, py + 26, 6, 16);
+                ctx.fillRect(px + 12, py + 26, 6, 16);
 
+                // Torso / Shirt
+                ctx.fillStyle = shirtColor;
+                ctx.fillRect(px + 3, py + 12, 16, 14);
+
+                // Head
+                ctx.fillStyle = '#f3c5a4'; // Skin
+                ctx.fillRect(px + 3, py + 2, 16, 12);
+                ctx.fillStyle = '#5c3a21'; // Hair / Hat
+                ctx.fillRect(px + 3, py + 2, 16, 4);
+
+                // Name tag
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
                 ctx.font = '11px Courier New';
                 ctx.textAlign = 'center';
                 const nameWidth = ctx.measureText(p.name).width;
-                ctx.fillRect(px + 10 - nameWidth/2 - 4, py - 22, nameWidth + 8, 16);
+                ctx.fillRect(px + 11 - nameWidth/2 - 4, py - 22, nameWidth + 8, 16);
                 ctx.fillStyle = '#ffffff';
-                ctx.fillText(p.name, px + 10, py - 10);
+                ctx.fillText(p.name, px + 11, py - 10);
 
                 if (p.swingTimer > 0) {
                     ctx.save();
-                    ctx.translate(px + 10, py + 19);
+                    ctx.translate(px + 11, py + 18);
                     ctx.rotate(p.facing * (1 - p.swingTimer / 12) * Math.PI * 1.2);
                     ctx.fillStyle = '#bdc3c7';
-                    ctx.fillRect(10, -4, 20, 6);
+                    ctx.fillRect(8, -3, 18, 5);
                     ctx.restore();
                 }
             }
 
-            renderPlayerEntity(localPlayer, '#2980b9');
+            renderPlayerEntity(localPlayer, '#008080', '#0000aa'); // Classic Steve cyan shirt & blue pants
 
             Object.values(remotePlayers).forEach(rp => {
-                renderPlayerEntity(rp, '#8e44ad');
+                renderPlayerEntity(rp, '#8e44ad', '#2c3e50');
             });
         }
 
