@@ -131,47 +131,68 @@
             line-height: 1.5;
             z-index: 5;
         }
-        #health-container {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            display: flex; /* Ensured block/flex state is explicitly controlled via script */
-            flex-direction: column;
-            align-items: flex-end;
-            pointer-events: none;
-            font-size: 12px;
-            color: white;
-            font-weight: bold;
-            text-shadow: 1px 1px #000;
-            z-index: 5;
-        }
-        #health-bar-bg {
-            width: 180px;
-            height: 18px;
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid #7f8c8d;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 4px;
-        }
-        #health-bar-fill {
-            width: 100%;
-            height: 100%;
-            background: #e74c3c;
-            transition: width 0.1s ease-out;
-        }
-        #hotbar {
+
+        /* Health & Hotbar Container positioned at bottom center */
+        #hud-container {
             position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        #health-bar {
+            display: flex;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 2px solid #444;
+        }
+
+        .heart {
+            width: 18px;
+            height: 18px;
+            position: relative;
+            display: inline-block;
+        }
+        .heart::before, .heart::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            width: 10px;
+            height: 16px;
+            border-radius: 10px 10px 0 0;
+            background: #333; /* Empty heart background */
+        }
+        .heart::before {
+            left: 10px;
+            transform: rotate(-45deg);
+            transform-origin: 0 100%;
+        }
+        .heart::after {
+            left: 0;
+            transform: rotate(45deg);
+            transform-origin: 100% 100%;
+        }
+
+        .heart.full::before, .heart.full::after {
+            background: #e74c3c; /* Full red heart */
+        }
+
+        #hotbar {
+            display: flex;
             gap: 6px;
             background: rgba(0, 0, 0, 0.75);
             padding: 8px;
             border-radius: 8px;
             border: 2px solid #555;
-            z-index: 5;
+            pointer-events: auto;
         }
         .slot {
             width: 38px;
@@ -231,25 +252,35 @@
 
     <div id="ui-overlay">
         <strong>Controls:</strong> A/D to Move | Space to Jump | Mouse to Aim & Mine<br>
-        <strong>Hotbar:</strong> 0-9 to select items
+        <strong>Hotbar:</strong> 1-9 & 0 to select items
     </div>
 
-    <div id="health-container">
-        <div>HP: <span id="hp-text">100</span> / 100</div>
-        <div id="health-bar-bg"><div id="health-bar-fill"></div></div>
-    </div>
-
-    <div id="hotbar">
-        <div class="slot active" id="slot-0">Sword<span>1</span></div>
-        <div class="slot" id="slot-1">Pick<span>2</span></div>
-        <div class="slot" id="slot-2">Wood<span>15</span></div>
-        <div class="slot" id="slot-3">Stone<span>0</span></div>
-        <div class="slot" id="slot-4">Ore<span>0</span></div>
-        <div class="slot" id="slot-5">Iron<span>0</span></div>
-        <div class="slot" id="slot-6">Dirt<span>0</span></div>
-        <div class="slot" id="slot-7">Leaf<span>0</span></div>
-        <div class="slot" id="slot-8">Slot9<span>0</span></div>
-        <div class="slot" id="slot-9">Slot0<span>0</span></div>
+    <!-- HUD Container holding Hearts above the Hotbar -->
+    <div id="hud-container">
+        <div id="health-bar">
+            <div class="heart full" id="heart-0"></div>
+            <div class="heart full" id="heart-1"></div>
+            <div class="heart full" id="heart-2"></div>
+            <div class="heart full" id="heart-3"></div>
+            <div class="heart full" id="heart-4"></div>
+            <div class="heart full" id="heart-5"></div>
+            <div class="heart full" id="heart-6"></div>
+            <div class="heart full" id="heart-7"></div>
+            <div class="heart full" id="heart-8"></div>
+            <div class="heart full" id="heart-9"></div>
+        </div>
+        <div id="hotbar">
+            <div class="slot active" id="slot-0">Sword<span>1</span></div>
+            <div class="slot" id="slot-1">Pick<span>2</span></div>
+            <div class="slot" id="slot-2">Wood<span>15</span></div>
+            <div class="slot" id="slot-3">Stone<span>0</span></div>
+            <div class="slot" id="slot-4">Ore<span>0</span></div>
+            <div class="slot" id="slot-5">Iron<span>0</span></div>
+            <div class="slot" id="slot-6">Dirt<span>0</span></div>
+            <div class="slot" id="slot-7">Leaf<span>0</span></div>
+            <div class="slot" id="slot-8">Slot9<span>0</span></div>
+            <div class="slot" id="slot-9">Slot0<span>0</span></div>
+        </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -428,16 +459,24 @@
             gameStarted = true;
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('ui-overlay').style.display = 'block';
-            document.getElementById('health-container').style.display = 'flex';
-            document.getElementById('hotbar').style.display = 'flex';
+            document.getElementById('hud-container').style.display = 'flex';
             updateHotbarUI();
             updateHealthUI();
         }
 
         function updateHealthUI() {
-            document.getElementById('hp-text').innerText = localPlayer.hp;
-            const pct = Math.max(0, Math.min(100, (localPlayer.hp / localPlayer.maxHp) * 100));
-            document.getElementById('health-bar-fill').style.width = pct + '%';
+            // 10 hearts representing 100 HP total (10 HP per heart)
+            const activeHearts = Math.ceil(Math.max(0, Math.min(100, localPlayer.hp)) / 10);
+            for (let i = 0; i < 10; i++) {
+                const heart = document.getElementById(`heart-${i}`);
+                if (heart) {
+                    if (i < activeHearts) {
+                        heart.classList.add('full');
+                    } else {
+                        heart.classList.remove('full');
+                    }
+                }
+            }
         }
 
         function seededRandom(seed) {
@@ -610,6 +649,10 @@
 
         window.addEventListener('keydown', e => {
             if (!gameStarted) return;
+            // Prevent default browser behavior for number keys to stop scrolling/tabs
+            if ((e.code >= 'Digit1' && e.code <= 'Digit9') || e.code === 'Digit0') {
+                e.preventDefault();
+            }
             keys[e.code] = true;
 
             // Map keys 1-9 and Digit0 for 10-slot hotbar selection
