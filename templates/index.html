@@ -1,1465 +1,671 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Minecraft Style Online Multiplayer</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #1a1a24;
-            font-family: 'Courier New', Courier, monospace;
-            user-select: none;
-        }
-        canvas {
-            display: block;
-        }
-        /* Connection & Lobby Screen */
-        #start-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(135deg, #151d28, #2c3e50);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
-            color: white;
-        }
-        .menu-box {
-            background: rgba(0, 0, 0, 0.85);
-            padding: 30px 40px;
-            border-radius: 10px;
-            border: 3px solid #f39c12;
-            text-align: center;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
-            width: 380px;
-        }
-        .menu-box h1 {
-            margin-top: 0;
-            color: #f39c12;
-            font-size: 22px;
-            text-shadow: 2px 2px #000;
-        }
-        .menu-box label {
-            display: block;
-            margin-top: 12px;
-            font-size: 13px;
-            color: #ccc;
-            text-align: left;
-        }
-        .menu-box input {
-            width: 100%;
-            padding: 8px;
-            font-size: 14px;
-            font-family: 'Courier New', Courier, monospace;
-            background: #222;
-            border: 2px solid #555;
-            color: white;
-            border-radius: 5px;
-            margin-top: 4px;
-            outline: none;
-            box-sizing: border-box;
-            text-align: center;
-        }
-        .menu-box input:focus {
-            border-color: #f39c12;
-        }
-        .menu-box button {
-            background: #f39c12;
-            color: #111;
-            font-weight: bold;
-            padding: 10px 20px;
-            font-size: 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-family: 'Courier New', Courier, monospace;
-            margin-top: 18px;
-            width: 100%;
-            transition: background 0.2s;
-        }
-        .menu-box button:hover {
-            background: #e67e22;
-        }
-        #error-msg {
-            color: #ff4d4d;
-            font-size: 12px;
-            margin-top: 12px;
-            min-height: 15px;
-            font-weight: bold;
-        }
-        .mode-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .mode-btn {
-            flex: 1;
-            padding: 8px;
-            background: #333;
-            border: 2px solid #555;
-            color: #fff;
-            cursor: pointer;
-            border-radius: 5px;
-            font-family: 'Courier New', Courier, monospace;
-        }
-        .mode-btn.active {
-            background: #f39c12;
-            color: #111;
-            border-color: #f39c12;
-            font-weight: bold;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft Web Engine & Crafting Guide</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background-color: #111;
+      color: #fff;
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
 
-        /* In-Game HUD */
-        #ui-overlay {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            color: white;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 15px;
-            border-radius: 6px;
-            border: 2px solid #444;
-            pointer-events: none;
-            font-size: 12px;
-            display: none;
-            line-height: 1.5;
-            z-index: 5;
-        }
+    #game-container {
+      position: relative;
+      width: 800px;
+      height: 500px;
+      border: 4px solid #333;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      background-color: #70b3ff;
+    }
 
-        /* Hotbar positioned at bottom center */
-        #hotbar-container {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: none;
-            z-index: 5;
-            pointer-events: none;
-        }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
 
-        #hotbar {
-            display: flex;
-            gap: 4px;
-            background: rgba(0, 0, 0, 0.75);
-            padding: 6px;
-            border-radius: 6px;
-            border: 2px solid #333;
-            pointer-events: auto;
-        }
+    /* HUD Elements */
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+      font-weight: bold;
+      text-shadow: 2px 2px #000;
+    }
 
-        .slot {
-            width: 42px;
-            height: 42px;
-            background: #8b8b8b;
-            border-top: 2px solid #373737;
-            border-left: 2px solid #373737;
-            border-right: 2px solid #fff;
-            border-bottom: 2px solid #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 10px;
-            position: relative;
-            cursor: pointer;
-        }
-        .slot.active {
-            border: 2px solid #ffffff;
-            background: #9c9c9c;
-        }
-        .item-icon {
-            font-size: 11px;
-            text-align: center;
-            width: 100%;
-            line-height: 1.2;
-            pointer-events: none;
-        }
-        .slot span, #cursor-item span {
-            position: absolute;
-            bottom: 2px;
-            right: 4px;
-            font-size: 10px;
-            color: #fff;
-            text-shadow: 1px 1px #000;
-            pointer-events: none;
-        }
+    .status-bar {
+      display: flex;
+      gap: 15px;
+      font-size: 16px;
+    }
 
-        /* Health bar positioned left-aligned above hotbar area like Minecraft */
-        #health-bar {
-            position: absolute;
-            bottom: 78px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: none;
-            gap: 2px;
-            z-index: 5;
-            pointer-events: none;
-            width: 440px;
-            justify-content: flex-start;
-        }
+    .heart { color: #ff3333; }
+    .score { color: #ffcc00; }
 
-        .heart {
-            width: 16px;
-            height: 16px;
-            background-color: #555;
-            display: inline-block;
-            clip-path: polygon(0 25%, 25% 0, 50% 25%, 75% 0, 100% 25%, 100% 60%, 50% 100%, 0 60%);
-        }
-        .heart.full {
-            background-color: #ff2222;
-        }
+    /* UI Controls & Recipe Book Button */
+    #ui-buttons {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+    }
 
-        /* Minecraft-style Full Inventory Screen (E key) */
-        #inventory-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 15;
-        }
+    .btn {
+      background: #4a4a4a;
+      border: 2px solid #8b8b8b;
+      color: #fff;
+      padding: 8px 14px;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: inset -2px -2px 0px #222, inset 2px 2px 0px #aaa;
+    }
+    .btn:hover { background: #5a5a5a; }
+    .btn:active { box-shadow: inset 2px 2px 0px #222; }
 
-        .inventory-window {
-            background: #c6c6c6;
-            border: 3px solid #373737;
-            border-top-color: #fff;
-            border-left-color: #fff;
-            padding: 16px;
-            width: 380px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            font-family: 'Courier New', Courier, monospace;
-        }
+    /* Recipe & Crafting Modal */
+    #crafting-modal {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      height: 400px;
+      background: #c6c6c6;
+      border: 4px solid #373737;
+      color: #000;
+      box-shadow: inset -3px -3px 0 #555, inset 3px 3px 0 #fff, 0 0 20px rgba(0,0,0,0.8);
+      padding: 16px;
+      flex-direction: column;
+      z-index: 10;
+    }
 
-        .inventory-title {
-            color: #373737;
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 12px;
-        }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #555;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
 
-        .crafting-section {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-            background: #b5b5b5;
-            padding: 8px;
-            border-radius: 4px;
-            border: 2px solid #8b8b8b;
-        }
+    .modal-title { font-size: 18px; font-weight: bold; }
 
-        .crafting-grid-2x2 {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 4px;
-        }
+    .recipe-container {
+      display: flex;
+      flex: 1;
+      gap: 12px;
+      overflow: hidden;
+    }
 
-        .crafting-arrow {
-            font-size: 18px;
-            color: #373737;
-            font-weight: bold;
-        }
+    .recipe-list {
+      width: 50%;
+      background: #8b8b8b;
+      border: 2px solid #373737;
+      overflow-y: auto;
+      padding: 6px;
+    }
 
-        .inventory-grid {
-            display: grid;
-            grid-template-columns: repeat(9, 1fr);
-            gap: 4px;
-            margin-bottom: 12px;
-        }
+    .recipe-item {
+      background: #8b8b8b;
+      padding: 6px 10px;
+      margin-bottom: 4px;
+      border: 2px solid #555;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+    .recipe-item:hover { background: #9b9b9b; }
+    .recipe-item.selected { background: #3b5998; color: white; border-color: #fff; }
 
-        .inventory-divider {
-            height: 2px;
-            background: #8b8b8b;
-            margin: 10px 0;
-        }
+    .recipe-detail {
+      width: 50%;
+      background: #a0a0a0;
+      border: 2px solid #373737;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
 
-        /* Carried Item visually following the mouse */
-        #cursor-item {
-            position: absolute;
-            pointer-events: none;
-            z-index: 100;
-            display: none;
-            width: 42px;
-            height: 42px;
-            color: white;
-            font-weight: bold;
-            font-size: 10px;
-            text-shadow: 1px 1px #000;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-        }
-    </style>
+    .ingredients-list { margin-top: 10px; font-size: 14px; }
+    .ingredient { margin-bottom: 4px; }
+    .ingredient.has { color: #006600; }
+    .ingredient.missing { color: #990000; }
+
+    /* Death Scene Screen Overlay */
+    #death-screen {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(180, 0, 0, 0.65);
+      backdrop-filter: blur(2px);
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 20;
+      animation: fadeIn 0.8s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    #death-screen h1 {
+      font-size: 56px;
+      color: #ff3333;
+      text-shadow: 4px 4px 0px #000;
+      margin-bottom: 10px;
+    }
+
+    #death-screen p {
+      font-size: 18px;
+      text-shadow: 2px 2px 0px #000;
+      margin-bottom: 25px;
+    }
+
+    .respawn-btn {
+      font-size: 20px;
+      padding: 12px 24px;
+      background: #4a4a4a;
+      color: #fff;
+      border: 3px solid #fff;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #222;
+    }
+    .respawn-btn:hover { background: #666; }
+
+    /* Hotbar */
+    #hotbar {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      background: rgba(0,0,0,0.6);
+      border: 2px solid #555;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .slot {
+      width: 36px;
+      height: 36px;
+      background: #8b8b8b;
+      border: 2px solid #373737;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+      position: relative;
+    }
+    .slot-count {
+      position: absolute;
+      bottom: 1px;
+      right: 2px;
+      font-size: 10px;
+      color: #fff;
+      text-shadow: 1px 1px #000;
+    }
+  </style>
 </head>
 <body>
 
-    <!-- Connection / Lobby Start Screen -->
-    <div id="start-screen">
-        <div class="menu-box">
-            <h1>ONLINE MULTIPLAYER</h1>
-            <div class="mode-buttons">
-                <button class="mode-btn active" id="btn-host" onclick="setMode('host')">Host Room</button>
-                <button class="mode-btn" id="btn-join" onclick="setMode('join')">Join Room</button>
-            </div>
+  <div id="game-container">
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
 
-            <label for="player-name">Your Player Name:</label>
-            <input type="text" id="player-name" placeholder="Leave blank for random" maxlength="16">
+    <!-- HUD -->
+    <div id="hud">
+      <div class="status-bar">
+        <div>Health: <span id="hp-display" class="heart">❤❤❤❤❤❤❤❤❤❤</span></div>
+        <div>Score: <span id="score-display" class="score">0</span></div>
+      </div>
+      <div>Press <b style="color:#ffcc00">[E]</b> for Recipe Book</div>
+    </div>
 
-            <div id="join-section" style="display: none;">
-                <label for="room-code-input">Room Code / ID:</label>
-                <input type="text" id="room-code-input" placeholder="Paste host room code">
-            </div>
+    <!-- Hotbar -->
+    <div id="hotbar"></div>
 
-            <div id="host-section">
-                <label for="room-code-display">Your Room Code (Share with friends):</label>
-                <input type="text" id="room-code-display" readonly style="background: #111; color: #f39c12; font-weight: bold;">
-            </div>
+    <!-- UI Buttons -->
+    <div id="ui-buttons">
+      <button class="btn" id="open-craft-btn">Recipe Book (E)</button>
+    </div>
 
-            <div id="error-msg"></div>
-            <button id="connect-btn" onclick="startConnection()">CONNECT & PLAY</button>
+    <!-- Crafting Modal / Recipe Guide -->
+    <div id="crafting-modal">
+      <div class="modal-header">
+        <span class="modal-title">Crafting Guide & Recipes</span>
+        <button class="btn" id="close-craft-btn" style="padding:2px 8px;">X</button>
+      </div>
+      <div class="recipe-container">
+        <div class="recipe-list" id="recipe-list-ui"></div>
+        <div class="recipe-detail" id="recipe-detail-ui">
+          <div>
+            <h3 id="recipe-name">Select a Recipe</h3>
+            <p id="recipe-desc" style="font-size: 12px; margin: 6px 0; color: #333;"></p>
+            <div class="ingredients-list" id="ingredients-ui"></div>
+          </div>
+          <button class="btn" id="craft-action-btn" style="width: 100%;" disabled>Craft Item</button>
         </div>
+      </div>
     </div>
 
-    <div id="ui-overlay">
-        <strong>Controls:</strong> A/D to Move | Space to Jump | E for Inventory<br>
-        <strong>Mouse:</strong> Left-Click to Mine | Right-Click to Place Block
+    <!-- Death Screen -->
+    <div id="death-screen">
+      <h1>You Died!</h1>
+      <p id="death-cause">Slain by Zombie</p>
+      <p>Score: <span id="final-score">0</span></p>
+      <button class="respawn-btn" id="respawn-btn">Respawn</button>
     </div>
+  </div>
 
-    <!-- Health Bar -->
-    <div id="health-bar">
-        <div class="heart full" id="heart-0"></div>
-        <div class="heart full" id="heart-1"></div>
-        <div class="heart full" id="heart-2"></div>
-        <div class="heart full" id="heart-3"></div>
-        <div class="heart full" id="heart-4"></div>
-        <div class="heart full" id="heart-5"></div>
-        <div class="heart full" id="heart-6"></div>
-        <div class="heart full" id="heart-7"></div>
-        <div class="heart full" id="heart-8"></div>
-        <div class="heart full" id="heart-9"></div>
-    </div>
+<script>
+// ==========================================
+// 1. MINECRAFT DATA REGISTRIES (Mobs & Recipes)
+// ==========================================
 
-    <!-- Hotbar Container -->
-    <div id="hotbar-container">
-        <div id="hotbar">
-            <div class="slot active" id="slot-0" onclick="selectHotbarSlot(0)"><div class="item-icon"></div><span></span></div>
-            <div class="slot" id="slot-1" onclick="selectHotbarSlot(1)"><div class="item-icon"></div><span></span></div>
-            <div class="slot" id="slot-2" onclick="selectHotbarSlot(2)"><div class="item-icon"></div><span></span></div>
-            <div class="slot" id="slot-3" onclick="selectHotbarSlot(3)"><div class="item-icon"></div><span></span></div>
-            <div class="slot" id="slot-4" onclick="selectHotbarSlot(4)"><div class="item-icon"></div><span></span></div>
-            <div class="slot" id="slot-5" onclick="selectHotbarSlot(5)"><div class="item-icon"></div><span></span></div>
-            <div class="slot" id="slot-6" onclick="selectHotbarSlot(6)"><div class="item-icon"></div><span></span></div>
-            <div class="slot" id="slot-7" onclick="selectHotbarSlot(7)"><div class="item-icon"></div><span></span></div>
-            <div class="slot" id="slot-8" onclick="selectHotbarSlot(8)"><div class="item-icon"></div><span></span></div>
-            <div class="slot" id="slot-9" onclick="selectHotbarSlot(9)"><div class="item-icon"></div><span></span></div>
-        </div>
-    </div>
+const MOBS_DATABASE = {
+  cow: { name: "Cow", hp: 10, hostile: false, color: "#5c4033", size: 28, speed: 0.8, drop: { item: "Raw Beef", count: 2 } },
+  pig: { name: "Pig", hp: 10, hostile: false, color: "#f8a4a4", size: 24, speed: 1.0, drop: { item: "Raw Porkchop", count: 2 } },
+  zombie: { name: "Zombie", hp: 20, hostile: true, damage: 2, color: "#2d6a4f", size: 28, speed: 1.2, drop: { item: "Rotten Flesh", count: 1 } },
+  skeleton: { name: "Skeleton", hp: 20, hostile: true, damage: 3, color: "#d3d3d3", size: 26, speed: 1.1, drop: { item: "Bone", count: 2 } },
+  creeper: { name: "Creeper", hp: 20, hostile: true, damage: 8, color: "#38b000", size: 26, speed: 1.4, drop: { item: "Gunpowder", count: 1 } }
+};
 
-    <!-- Minecraft Full Inventory Screen -->
-    <div id="inventory-screen">
-        <div class="inventory-window">
-            <div class="inventory-title">Inventory & Crafting</div>
-            
-            <!-- Crafting 2x2 Area -->
-            <div class="crafting-section">
-                <div class="crafting-grid-2x2" id="crafting-input-grid">
-                    <div class="slot" id="craft-in-0" onclick="handleCraftInputClick(0)"><div class="item-icon"></div><span></span></div>
-                    <div class="slot" id="craft-in-1" onclick="handleCraftInputClick(1)"><div class="item-icon"></div><span></span></div>
-                    <div class="slot" id="craft-in-2" onclick="handleCraftInputClick(2)"><div class="item-icon"></div><span></span></div>
-                    <div class="slot" id="craft-in-3" onclick="handleCraftInputClick(3)"><div class="item-icon"></div><span></span></div>
-                </div>
-                <div class="crafting-arrow">➜</div>
-                <div class="slot" id="craft-out" onclick="handleCraftOutputClick()"><div class="item-icon"></div><span></span></div>
-            </div>
+const RECIPES_DATABASE = [
+  {
+    id: "planks",
+    name: "Oak Planks",
+    output: { item: "Oak Planks", count: 4 },
+    inputs: [{ item: "Oak Log", count: 1 }],
+    desc: "Basic building material processed from logs."
+  },
+  {
+    id: "stick",
+    name: "Sticks",
+    output: { item: "Stick", count: 4 },
+    inputs: [{ item: "Oak Planks", count: 2 }],
+    desc: "Used to craft tools, torches, and weapons."
+  },
+  {
+    id: "crafting_table",
+    name: "Crafting Table",
+    output: { item: "Crafting Table", count: 1 },
+    inputs: [{ item: "Oak Planks", count: 4 }],
+    desc: "Allows crafting complex 3x3 items."
+  },
+  {
+    id: "wooden_sword",
+    name: "Wooden Sword",
+    output: { item: "Wooden Sword", count: 1 },
+    inputs: [{ item: "Oak Planks", count: 2 }, { item: "Stick", count: 1 }],
+    desc: "Deals basic melee attack damage (+4 Damage)."
+  },
+  {
+    id: "stone_sword",
+    name: "Stone Sword",
+    output: { item: "Stone Sword", count: 1 },
+    inputs: [{ item: "Cobblestone", count: 2 }, { item: "Stick", count: 1 }],
+    desc: "Durable early game weapon (+5 Damage)."
+  },
+  {
+    id: "iron_sword",
+    name: "Iron Sword",
+    output: { item: "Iron Sword", count: 1 },
+    inputs: [{ item: "Iron Ingot", count: 2 }, { item: "Stick", count: 1 }],
+    desc: "High damage combat sword (+6 Damage)."
+  },
+  {
+    id: "torch",
+    name: "Torch",
+    output: { item: "Torch", count: 4 },
+    inputs: [{ item: "Coal", count: 1 }, { item: "Stick", count: 1 }],
+    desc: "Provides light and repels darkness."
+  },
+  {
+    id: "furnace",
+    name: "Furnace",
+    output: { item: "Furnace", count: 1 },
+    inputs: [{ item: "Cobblestone", count: 8 }],
+    desc: "Used for smelting ores and cooking food."
+  }
+];
 
-            <div class="inventory-divider"></div>
-            <div class="inventory-grid" id="main-inventory-grid">
-                <!-- 27 Main Inventory Slots -->
-            </div>
-            <div class="inventory-divider"></div>
-            <div class="inventory-grid" id="inv-hotbar-grid">
-                <!-- 10 Hotbar Slots -->
-            </div>
-        </div>
-    </div>
+// ==========================================
+// 2. GAME STATE & VARIABLES
+// ==========================================
 
-    <!-- Carried Item Element -->
-    <div id="cursor-item"></div>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-    <canvas id="gameCanvas"></canvas>
+let player = {
+  x: 400,
+  y: 250,
+  size: 24,
+  hp: 20,
+  maxHp: 20,
+  speed: 3,
+  score: 0,
+  inventory: {
+    "Oak Log": 5,
+    "Cobblestone": 8,
+    "Coal": 2,
+    "Iron Ingot": 2
+  }
+};
 
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+let activeMobs = [];
+let keys = {};
+let selectedRecipe = null;
+let gameActive = true;
+let lastDamageTime = 0;
 
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+// ==========================================
+// 3. ENGINE & CANVAS GRAPHICS
+// ==========================================
+
+function spawnMob(typeKey) {
+  const template = MOBS_DATABASE[typeKey];
+  const side = Math.floor(Math.random() * 4);
+  let x, y;
+  if (side === 0) { x = Math.random() * canvas.width; y = -30; }
+  else if (side === 1) { x = canvas.width + 30; y = Math.random() * canvas.height; }
+  else if (side === 2) { x = Math.random() * canvas.width; y = canvas.height + 30; }
+  else { x = -30; y = Math.random() * canvas.height; }
+
+  activeMobs.push({
+    ...template,
+    typeKey: typeKey,
+    x: x,
+    y: y,
+    currentHp: template.hp
+  });
+}
+
+// Initial Mob Population
+for (let i = 0; i < 3; i++) spawnMob("cow");
+for (let i = 0; i < 2; i++) spawnMob("zombie");
+for (let i = 0; i < 1; i++) spawnMob("creeper");
+
+function updateGame() {
+  if (!gameActive) return;
+
+  // Player Movement
+  if (keys['w'] || keys['W'] || keys['ArrowUp']) player.y = Math.max(player.size, player.y - player.speed);
+  if (keys['s'] || keys['S'] || keys['ArrowDown']) player.y = Math.min(canvas.height - player.size, player.y + player.speed);
+  if (keys['a'] || keys['A'] || keys['ArrowLeft']) player.x = Math.max(player.size, player.x - player.speed);
+  if (keys['d'] || keys['D'] || keys['ArrowRight']) player.x = Math.min(canvas.width - player.size, player.x + player.speed);
+
+  // Update Mobs
+  activeMobs.forEach((mob, index) => {
+    const dx = player.x - mob.x;
+    const dy = player.y - mob.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (mob.hostile && dist > 0) {
+      mob.x += (dx / dist) * mob.speed;
+      mob.y += (dy / dist) * mob.speed;
+
+      // Combat Collision
+      if (dist < (player.size + mob.size) / 2) {
+        const now = Date.now();
+        if (now - lastDamageTime > 800) { // Invulnerability window
+          takeDamage(mob.damage, `Slain by ${mob.name}`);
+          lastDamageTime = now;
         }
-        window.addEventListener('resize', resize);
-        resize();
-
-        // --- CONSTANTS & CONFIG ---
-        const TILE_SIZE = 24;
-        const CHUNK_WIDTH = 32;
-        const WORLD_HEIGHT = 80;
-        const loadedChunks = new Map();
-        let gameStats = { timeOfDay: 0 };
-        let gameStarted = false;
-        let isHost = true;
-        let peer = null;
-        let conn = null;
-        let hostConnections = []; 
-        let worldSeed = 12345;
-        let inventoryOpen = false;
-
-        const RANDOM_NAMES = [
-            'PixelKnight', 'VoxelVoyager', 'CraftMaster', 'DiggingDwarf', 'BlockBuster', 
-            'CaveCrawler', 'ShadowMiner', 'BedrockBoss', 'ObsidianOgre', 'GoldGoblin',
-            'CopperCommander', 'IronIcon', 'StoneStalker', 'DirtDefender', 'TreeTrapper'
-        ];
-        const TAKEN_NAMES = ['steve', 'terrarian', 'builderx', 'minerbro', 'notch'];
-
-        const COLORS = {
-            grass: '#558b2f',
-            dirt: '#795548',
-            stone: '#616161',
-            copper_ore: '#d84315',
-            iron_ore: '#b0bec5',
-            wood: '#8d6e63',
-            leaves: '#2e7d32',
-            planks: '#bcaaa4'
-        };
-
-        const localPlayer = {
-            id: null,
-            name: '',
-            x: 0,
-            y: 0,
-            width: 22,
-            height: 42,
-            vx: 0,
-            vy: 0,
-            speed: 4.5,
-            jumpForce: -10.5,
-            gravity: 0.45,
-            grounded: false,
-            facing: 1,
-            swingTimer: 0,
-            selectedSlot: 0,
-            maxHp: 100,
-            hp: 100,
-            inventory: {}, 
-            crafting: { 0: {type:null, count:0}, 1: {type:null, count:0}, 2: {type:null, count:0}, 3: {type:null, count:0} }
-        };
-
-        for (let i = 0; i < 37; i++) {
-            localPlayer.inventory[i] = { type: null, count: 0 };
-        }
-
-        let carriedItem = { type: null, count: 0 };
-        let currentCraftOutput = { type: null, count: 0 };
-
-        const remotePlayers = {};
-        const mobs = [];
-        const itemDrops = []; 
-        const clouds = [
-            { x: 100, y: 80, speed: 0.3, width: 120, height: 40 },
-            { x: 550, y: 130, speed: 0.2, width: 180, height: 50 },
-            { x: 1000, y: 60, speed: 0.4, width: 100, height: 35 }
-        ];
-
-        function setMode(mode) {
-            isHost = (mode === 'host');
-            document.getElementById('btn-host').classList.toggle('active', isHost);
-            document.getElementById('btn-join').classList.toggle('active', !isHost);
-            document.getElementById('host-section').style.display = isHost ? 'block' : 'none';
-            document.getElementById('join-section').style.display = isHost ? 'none' : 'block';
-        }
-
-        window.addEventListener('load', () => {
-            peer = new Peer();
-            peer.on('open', (id) => {
-                localPlayer.id = id;
-                if (isHost) {
-                    document.getElementById('room-code-display').value = id;
-                }
-            });
-
-            peer.on('connection', (incomingConn) => {
-                if (!isHost) return;
-                hostConnections.push(incomingConn);
-
-                incomingConn.on('data', (data) => {
-                    handleHostNetworkData(incomingConn, data);
-                });
-
-                incomingConn.on('close', () => {
-                    delete remotePlayers[incomingConn.peer];
-                    hostConnections = hostConnections.filter(c => c !== incomingConn);
-                    broadcastToClients({ type: 'PLAYER_DISCONNECTED', id: incomingConn.peer });
-                });
-            });
-        });
-
-        function startConnection() {
-            let name = document.getElementById('player-name').value.trim();
-            if (name === '') {
-                name = RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
-            }
-            if (TAKEN_NAMES.includes(name.toLowerCase())) {
-                document.getElementById('error-msg').innerText = `⚠️ The name "${name}" is reserved or taken! Choose another.`;
-                return;
-            }
-            localPlayer.name = name;
-
-            if (isHost) {
-                worldSeed = Math.floor(Math.random() * 100000);
-                initializeWorldAndSpawn();
-                launchGame();
-            } else {
-                const roomCode = document.getElementById('room-code-input').value.trim();
-                if (!roomCode) {
-                    document.getElementById('error-msg').innerText = "⚠️ Please enter a valid host room code!";
-                    return;
-                }
-
-                document.getElementById('error-msg').innerText = "Connecting to room...";
-                conn = peer.connect(roomCode);
-
-                conn.on('open', () => {
-                    conn.send({ type: 'JOIN_REQUEST', name: localPlayer.name, x: localPlayer.x, y: localPlayer.y });
-                });
-
-                conn.on('data', (data) => {
-                    handleClientNetworkData(data);
-                });
-
-                conn.on('error', (err) => {
-                    document.getElementById('error-msg').innerText = "Connection failed! Check the room code.";
-                });
-            }
-        }
-
-        function initializeWorldAndSpawn() {
-            generateChunk(0);
-            generateChunk(1);
-            generateChunk(-1);
-            generateChunk(2);
-            generateChunk(-2);
-
-            const chunk0 = loadedChunks.get(0);
-            const surfaceY = chunk0[0].surfaceHeight;
-            localPlayer.x = 0;
-            localPlayer.y = (surfaceY - 3) * TILE_SIZE;
-        }
-
-        function launchGame() {
-            gameStarted = true;
-            document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('ui-overlay').style.display = 'block';
-            document.getElementById('health-bar').style.display = 'flex';
-            document.getElementById('hotbar-container').style.display = 'flex';
-            buildInventoryUI();
-            updateHotbarUI();
-            updateHealthUI();
-        }
-
-        function updateHealthUI() {
-            const activeHearts = Math.ceil(Math.max(0, Math.min(100, localPlayer.hp)) / 10);
-            for (let i = 0; i < 10; i++) {
-                const heart = document.getElementById(`heart-${i}`);
-                if (heart) {
-                    if (i < activeHearts) heart.classList.add('full');
-                    else heart.classList.remove('full');
-                }
-            }
-        }
-
-        function seededRandom(seed) {
-            let x = Math.sin(seed++) * 10000;
-            return x - Math.floor(x);
-        }
-
-        function generateChunk(cx) {
-            const chunkData = [];
-            for (let x = 0; x < CHUNK_WIDTH; x++) {
-                const worldX = cx * CHUNK_WIDTH + x;
-                const surfaceHeight = Math.floor(40 + Math.sin(worldX * 0.04 + worldSeed) * 9 + Math.cos(worldX * 0.015 + worldSeed * 0.5) * 14);
-                
-                const column = { surfaceHeight, blocks: {}, trees: [] };
-                for (let y = 0; y < WORLD_HEIGHT; y++) {
-                    let type = null;
-                    if (y === surfaceHeight) type = 'grass';
-                    else if (y > surfaceHeight && y < surfaceHeight + 5) type = 'dirt';
-                    else if (y >= surfaceHeight + 5) {
-                        const oreCheck = seededRandom(worldSeed + worldX * 73 + y * 19);
-                        if (y > surfaceHeight + 15 && oreCheck < 0.06) {
-                            type = oreCheck < 0.03 ? 'copper_ore' : 'iron_ore';
-                        } else {
-                            type = 'stone';
-                        }
-                    }
-                    if (type) column.blocks[y] = type;
-                }
-
-                const treeCheck = seededRandom(worldSeed + worldX * 127);
-                if (treeCheck < 0.25 && x > 2 && x < CHUNK_WIDTH - 2) {
-                    const sh = surfaceHeight;
-                    const treeHeight = 5 + Math.floor(seededRandom(worldSeed + worldX * 31) * 3);
-                    const treeTrunkX = worldX;
-                    const treeTrunkBaseY = sh - 1;
-
-                    const treeBlocks = [];
-                    for (let th = 0; th < treeHeight; th++) {
-                        treeBlocks.push({ x: treeTrunkX, y: treeTrunkBaseY - th, type: 'wood' });
-                    }
-                    for (let lx = -2; lx <= 2; lx++) {
-                        for (let ly = -treeHeight - 3; ly <= -treeHeight; ly++) {
-                            if (Math.abs(lx) === 2 && Math.abs(ly + treeHeight + 1.5) > 1.5 && seededRandom(worldSeed + worldX * 5 + lx * 7 + ly * 11) < 0.3) continue;
-                            treeBlocks.push({ x: treeTrunkX + lx, y: treeTrunkBaseY + ly, type: 'leaves' });
-                        }
-                    }
-                    column.trees = treeBlocks;
-                }
-
-                chunkData[x] = column;
-            }
-            loadedChunks.set(cx, chunkData);
-            return chunkData;
-        }
-
-        function handleHostNetworkData(connection, data) {
-            if (data.type === 'JOIN_REQUEST') {
-                let clientName = data.name;
-                if (clientName.toLowerCase() === localPlayer.name.toLowerCase()) clientName += '_2';
-
-                remotePlayers[connection.peer] = {
-                    id: connection.peer,
-                    name: clientName,
-                    x: data.x || 0, 
-                    y: data.y || 0,
-                    facing: 1, 
-                    swingTimer: 0
-                };
-
-                const serializedChunks = {};
-                loadedChunks.forEach((chunk, cx) => { serializedChunks[cx] = chunk; });
-
-                connection.send({
-                    type: 'INIT_SUCCESS',
-                    seed: worldSeed,
-                    name: clientName,
-                    spawnX: localPlayer.x,
-                    spawnY: localPlayer.y,
-                    players: remotePlayers,
-                    chunks: serializedChunks
-                });
-
-                broadcastToClients({ type: 'PLAYER_JOINED', player: remotePlayers[connection.peer] }, connection.peer);
-            } 
-            else if (data.type === 'PLAYER_UPDATE') {
-                if (remotePlayers[connection.peer]) {
-                    const rp = remotePlayers[connection.peer];
-                    rp.targetX = data.state.x;
-                    rp.targetY = data.state.y;
-                    rp.facing = data.state.facing;
-                    rp.swingTimer = data.state.swingTimer;
-                    rp.name = data.state.name;
-                }
-                broadcastToClients({ type: 'REMOTE_PLAYER_UPDATE', id: connection.peer, state: data.state }, connection.peer);
-            }
-            else if (data.type === 'BLOCK_ACTION') {
-                setBlock(data.bx, data.by, data.typeAction);
-                if (data.typeAction === null) {
-                    itemDrops.push({ x: (data.bx + 0.5) * TILE_SIZE, y: data.by * TILE_SIZE, vx: (Math.random() - 0.5) * 3, vy: -3, type: data.itemType });
-                }
-                broadcastToClients(data);
-            }
-        }
-
-        function handleClientNetworkData(data) {
-            if (data.type === 'INIT_SUCCESS') {
-                worldSeed = data.seed;
-                localPlayer.name = data.name;
-                localPlayer.x = data.spawnX;
-                localPlayer.y = data.spawnY;
-
-                if (data.players) {
-                    for (const [id, pData] of Object.entries(data.players)) {
-                        if (id !== localPlayer.id) {
-                            remotePlayers[id] = { ...pData, targetX: pData.x, targetY: pData.y };
-                        }
-                    }
-                }
-                if (data.chunks) {
-                    loadedChunks.clear();
-                    for (const [cxStr, chunkData] of Object.entries(data.chunks)) {
-                        loadedChunks.set(parseInt(cxStr), chunkData);
-                    }
-                }
-                launchGame();
-            }
-            else if (data.type === 'PLAYER_JOINED') {
-                remotePlayers[data.player.id] = { ...data.player, targetX: data.player.x, targetY: data.player.y };
-            }
-            else if (data.type === 'REMOTE_PLAYER_UPDATE') {
-                if (!remotePlayers[data.id]) {
-                    remotePlayers[data.id] = { id: data.id, name: 'Player', x: data.state.x, y: data.state.y, targetX: data.state.x, targetY: data.state.y };
-                }
-                const rp = remotePlayers[data.id];
-                rp.targetX = data.state.x;
-                rp.targetY = data.state.y;
-                rp.facing = data.state.facing;
-                rp.swingTimer = data.state.swingTimer;
-                rp.name = data.state.name;
-            }
-            else if (data.type === 'PLAYER_DISCONNECTED') {
-                delete remotePlayers[data.id];
-            }
-            else if (data.type === 'BLOCK_ACTION') {
-                setBlock(data.bx, data.by, data.typeAction);
-                if (data.typeAction === null) {
-                    itemDrops.push({ x: (data.bx + 0.5) * TILE_SIZE, y: data.by * TILE_SIZE, vx: (Math.random() - 0.5) * 3, vy: -3, type: data.itemType });
-                }
-            }
-        }
-
-        function broadcastToClients(packet, excludePeerId = null) {
-            hostConnections.forEach(c => {
-                if (c.peer !== excludePeerId) c.send(packet);
-            });
-        }
-
-        const keys = {};
-        const mouse = { x: 0, y: 0, leftDown: false, rightDown: false, leftClicked: false, rightClicked: false };
-
-        window.addEventListener('keydown', e => {
-            if (!gameStarted) return;
-            if ((e.code >= 'Digit1' && e.code <= 'Digit9') || e.code === 'Digit0') e.preventDefault();
-            if (e.code === 'KeyE') {
-                e.preventDefault();
-                toggleInventory();
-            }
-            keys[e.code] = true;
-
-            if (!inventoryOpen) {
-                if (e.code >= 'Digit1' && e.code <= 'Digit9') selectHotbarSlot(parseInt(e.code) - 1);
-                else if (e.code === 'Digit0') selectHotbarSlot(9);
-            }
-        });
-        window.addEventListener('keyup', e => { if (gameStarted) keys[e.code] = false; });
-        
-        window.addEventListener('mousemove', e => {
-            const rect = canvas.getBoundingClientRect();
-            mouse.x = e.clientX - rect.left;
-            mouse.y = e.clientY - rect.top;
-
-            if (inventoryOpen) {
-                const cursorEl = document.getElementById('cursor-item');
-                cursorEl.style.left = (e.clientX - 21) + 'px';
-                cursorEl.style.top = (e.clientY - 21) + 'px';
-            }
-        });
-
-        window.addEventListener('mousedown', e => {
-            if (!gameStarted || inventoryOpen) return;
-            if (e.button === 0) { mouse.leftDown = true; mouse.leftClicked = true; }
-            else if (e.button === 2) { mouse.rightDown = true; mouse.rightClicked = true; }
-        });
-        window.addEventListener('mouseup', e => {
-            if (e.button === 0) mouse.leftDown = false;
-            if (e.button === 2) mouse.rightDown = false;
-        });
-        window.addEventListener('contextmenu', e => e.preventDefault());
-
-        function toggleInventory() {
-            inventoryOpen = !inventoryOpen;
-            document.getElementById('inventory-screen').style.display = inventoryOpen ? 'flex' : 'none';
-            if (!inventoryOpen) {
-                // Return items from crafting grid back to inventory/carried
-                for (let i = 0; i < 4; i++) {
-                    const cItem = localPlayer.crafting[i];
-                    if (cItem.type !== null && cItem.count > 0) {
-                        addItemToInventory(cItem.type, cItem.count);
-                        cItem.type = null;
-                        cItem.count = 0;
-                    }
-                }
-                if (carriedItem.type !== null) {
-                    addItemToInventory(carriedItem.type, carriedItem.count);
-                    carriedItem = { type: null, count: 0 };
-                }
-                updateInventoryUI();
-            }
-            updateCursorItem();
-        }
-
-        function selectHotbarSlot(idx) {
-            localPlayer.selectedSlot = idx;
-            updateHotbarUI();
-        }
-
-        function buildInventoryUI() {
-            const mainGrid = document.getElementById('main-inventory-grid');
-            const hotbarGrid = document.getElementById('inv-hotbar-grid');
-            mainGrid.innerHTML = '';
-            hotbarGrid.innerHTML = '';
-
-            for (let i = 10; i < 37; i++) {
-                const slotDiv = document.createElement('div');
-                slotDiv.className = 'slot';
-                slotDiv.id = `inv-slot-${i}`;
-                slotDiv.innerHTML = `<div class="item-icon"></div><span></span>`;
-                slotDiv.onclick = () => handleInventoryClick(i);
-                mainGrid.appendChild(slotDiv);
-            }
-
-            for (let i = 0; i < 10; i++) {
-                const slotDiv = document.createElement('div');
-                slotDiv.className = 'slot';
-                slotDiv.id = `inv-slot-${i}`;
-                slotDiv.innerHTML = `<div class="item-icon"></div><span></span>`;
-                slotDiv.onclick = () => handleInventoryClick(i);
-                hotbarGrid.appendChild(slotDiv);
-            }
-            updateInventoryUI();
-        }
-
-        function handleInventoryClick(slotIdx) {
-            const slotItem = localPlayer.inventory[slotIdx];
-            if (carriedItem.type === null) {
-                if (slotItem.type !== null) {
-                    carriedItem = { ...slotItem };
-                    slotItem.type = null;
-                    slotItem.count = 0;
-                }
-            } else {
-                if (slotItem.type === null) {
-                    slotItem.type = carriedItem.type;
-                    slotItem.count = carriedItem.count;
-                    carriedItem = { type: null, count: 0 };
-                } else if (slotItem.type === carriedItem.type) {
-                    slotItem.count += carriedItem.count;
-                    carriedItem = { type: null, count: 0 };
-                } else {
-                    const temp = { ...slotItem };
-                    slotItem.type = carriedItem.type;
-                    slotItem.count = carriedItem.count;
-                    carriedItem = temp;
-                }
-            }
-            updateInventoryUI();
-            updateHotbarUI();
-        }
-
-        function handleCraftInputClick(idx) {
-            const cItem = localPlayer.crafting[idx];
-            if (carriedItem.type === null) {
-                if (cItem.type !== null) {
-                    carriedItem = { ...cItem };
-                    cItem.type = null;
-                    cItem.count = 0;
-                }
-            } else {
-                if (cItem.type === null) {
-                    cItem.type = carriedItem.type;
-                    cItem.count = 1;
-                    carriedItem.count--;
-                    if (carriedItem.count <= 0) carriedItem = { type: null, count: 0 };
-                } else if (cItem.type === carriedItem.type) {
-                    cItem.count++;
-                    carriedItem.count--;
-                    if (carriedItem.count <= 0) carriedItem = { type: null, count: 0 };
-                } else {
-                    const temp = { ...cItem };
-                    cItem.type = carriedItem.type;
-                    cItem.count = 1;
-                    carriedItem = temp;
-                }
-            }
-            checkCraftingRecipe();
-            updateInventoryUI();
-        }
-
-        function handleCraftOutputClick() {
-            if (currentCraftOutput.type !== null && currentCraftOutput.count > 0) {
-                if (carriedItem.type === null) {
-                    carriedItem = { ...currentCraftOutput };
-                } else if (carriedItem.type === currentCraftOutput.type) {
-                    carriedItem.count += currentCraftOutput.count;
-                } else {
-                    return; // Cannot pick up output if held item conflicts
-                }
-
-                // Consume 1 from each crafting grid input
-                for (let i = 0; i < 4; i++) {
-                    if (localPlayer.crafting[i].type !== null) {
-                        localPlayer.crafting[i].count--;
-                        if (localPlayer.crafting[i].count <= 0) {
-                            localPlayer.crafting[i].type = null;
-                        }
-                    }
-                }
-                checkCraftingRecipe();
-                updateInventoryUI();
-                updateHotbarUI();
-            }
-        }
-
-        function checkCraftingRecipe() {
-            let woodCount = 0;
-            let hasOther = false;
-            let totalItems = 0;
-
-            for (let i = 0; i < 4; i++) {
-                const item = localPlayer.crafting[i];
-                if (item.type !== null && item.count > 0) {
-                    totalItems += item.count;
-                    if (item.type === 'wood') woodCount += item.count;
-                    else hasOther = true;
-                }
-            }
-
-            // Recipe: 1 Wood = 4 Planks
-            if (totalItems === 1 && woodCount === 1) {
-                currentCraftOutput = { type: 'planks', count: 4 };
-            } else {
-                currentCraftOutput = { type: null, count: 0 };
-            }
-        }
-
-        function updateCursorItem() {
-            const cursorEl = document.getElementById('cursor-item');
-            if (inventoryOpen && carriedItem.type !== null && carriedItem.count > 0) {
-                cursorEl.style.display = 'flex';
-                cursorEl.innerHTML = `<div class="item-icon">${getItemShortLabel(carriedItem.type, false)}</div><span>${carriedItem.count}</span>`;
-            } else {
-                cursorEl.style.display = 'none';
-            }
-        }
-
-        function updateInventoryUI() {
-            for (let i = 0; i < 37; i++) {
-                const slotEl = document.getElementById(`inv-slot-${i}`);
-                if (slotEl) {
-                    const item = localPlayer.inventory[i];
-                    slotEl.querySelector('.item-icon').innerText = getItemShortLabel(item.type, false);
-                    slotEl.querySelector('span').innerText = item.count > 0 ? item.count : '';
-                }
-            }
-            for (let i = 0; i < 4; i++) {
-                const slotEl = document.getElementById(`craft-in-${i}`);
-                if (slotEl) {
-                    const item = localPlayer.crafting[i];
-                    slotEl.querySelector('.item-icon').innerText = getItemShortLabel(item.type, false);
-                    slotEl.querySelector('span').innerText = item.count > 0 ? item.count : '';
-                }
-            }
-
-            const outEl = document.getElementById('craft-out');
-            if (outEl) {
-                outEl.querySelector('.item-icon').innerText = getItemShortLabel(currentCraftOutput.type, false);
-                outEl.querySelector('span').innerText = currentCraftOutput.count > 0 ? currentCraftOutput.count : '';
-            }
-
-            updateCursorItem();
-        }
-
-        function getItemShortLabel(type, fullWord = false) {
-            if (!type) return '';
-            
-            if (fullWord) {
-                if (type === 'wood') return 'Wood';
-                if (type === 'stone') return 'Stone';
-                if (type === 'dirt' || type === 'grass') return 'Dirt';
-                if (type === 'leaves') return 'Leaf';
-                if (type === 'planks') return 'Planks';
-                if (type === 'copper_ore') return 'Copper';
-                if (type === 'iron_ore') return 'Iron';
-                return type;
-            } else {
-                if (type === 'wood') return 'Wood';
-                if (type === 'stone') return 'Stn';
-                if (type === 'dirt' || type === 'grass') return 'Dirt';
-                if (type === 'leaves') return 'Leaf';
-                if (type === 'planks') return 'Plnk';
-                if (type === 'copper_ore') return 'Cu';
-                if (type === 'iron_ore') return 'Fe';
-                return type.substring(0, 4);
-            }
-        }
-
-        function addItemToInventory(itemType, count = 1) {
-            for (let i = 0; i < 37; i++) {
-                if (localPlayer.inventory[i].type === itemType) {
-                    localPlayer.inventory[i].count += count;
-                    updateHotbarUI();
-                    updateInventoryUI();
-                    return true;
-                }
-            }
-            for (let i = 0; i < 37; i++) {
-                if (localPlayer.inventory[i].type === null) {
-                    localPlayer.inventory[i].type = itemType;
-                    localPlayer.inventory[i].count = count;
-                    updateHotbarUI();
-                    updateInventoryUI();
-                    return true;
-                }
-            }
-            return false; 
-        }
-
-        function updateHotbarUI() {
-            for (let i = 0; i < 10; i++) {
-                const slot = document.getElementById(`slot-${i}`);
-                const item = localPlayer.inventory[i];
-                if (slot) {
-                    slot.querySelector('.item-icon').innerText = getItemShortLabel(item.type, true);
-                    slot.querySelector('span').innerText = item.count > 0 ? item.count : '';
-                    slot.classList.toggle('active', i === localPlayer.selectedSlot);
-                }
-            }
-        }
-
-        function getBlock(bx, by) {
-            const cx = Math.floor(bx / CHUNK_WIDTH);
-            const lx = ((bx % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-            let chunk = loadedChunks.get(cx);
-            if (!chunk) chunk = generateChunk(cx);
-            return chunk[lx]?.blocks[by] || null;
-        }
-
-        function setBlock(bx, by, type) {
-            const cx = Math.floor(bx / CHUNK_WIDTH);
-            const lx = ((bx % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-            let chunk = loadedChunks.get(cx);
-            if (!chunk) chunk = generateChunk(cx);
-            if (type === null) {
-                delete chunk[lx].blocks[by];
-            } else {
-                chunk[lx].blocks[by] = type;
-            }
-        }
-
-        function getTreeBlock(bx, by) {
-            const cx = Math.floor(bx / CHUNK_WIDTH);
-            const lx = ((bx % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-            let chunk = loadedChunks.get(cx);
-            if (!chunk) return null;
-            const col = chunk[lx];
-            if (!col || !col.trees) return null;
-            return col.trees.find(t => t.x === bx && t.y === by) || null;
-        }
-
-        function removeTreeBlock(bx, by) {
-            const cx = Math.floor(bx / CHUNK_WIDTH);
-            const lx = ((bx % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
-            let chunk = loadedChunks.get(cx);
-            if (!chunk) return null;
-            const col = chunk[lx];
-            if (!col || !col.trees) return null;
-            const idx = col.trees.findIndex(t => t.x === bx && t.y === by);
-            if (idx !== -1) {
-                const removed = col.trees[idx];
-                col.trees.splice(idx, 1);
-                checkAndDecayLeaves(col);
-                return removed.type;
-            }
-            return null;
-        }
-
-        function checkAndDecayLeaves(col) {
-            const hasWood = col.trees.some(t => t.type === 'wood');
-            if (!hasWood) {
-                col.trees.forEach(t => {
-                    if (t.type === 'leaves') {
-                        itemDrops.push({
-                            x: (t.x + 0.5) * TILE_SIZE,
-                            y: t.y * TILE_SIZE,
-                            vx: (Math.random() - 0.5) * 2,
-                            vy: -2,
-                            type: 'leaves'
-                        });
-                    }
-                });
-                col.trees = col.trees.filter(t => t.type !== 'leaves');
-            }
-        }
-
-        function checkCollision(nx, ny) {
-            const left = Math.floor(nx / TILE_SIZE);
-            const right = Math.floor((nx + localPlayer.width - 1) / TILE_SIZE);
-            const top = Math.floor(ny / TILE_SIZE);
-            const bottom = Math.floor((ny + localPlayer.height - 1) / TILE_SIZE);
-
-            for (let bx = left; bx <= right; bx++) {
-                for (let by = top; by <= bottom; by++) {
-                    if (getBlock(bx, by) !== null) return true;
-                }
-            }
-            return false;
-        }
-
-        function updateLocalPlayer() {
-            gameStats.timeOfDay = (gameStats.timeOfDay + 1) % 24000;
-            const isNight = gameStats.timeOfDay >= 12000 && gameStats.timeOfDay <= 23000;
-
-            if (isHost && Math.random() < 0.005 && mobs.length < 5 && isNight) {
-                const spawnX = localPlayer.x + (Math.random() > 0.5 ? 400 : -400);
-                const spawnChunk = loadedChunks.get(Math.floor(spawnX / (CHUNK_WIDTH * TILE_SIZE)));
-                if (spawnChunk) {
-                    mobs.push({
-                        type: 'skeleton',
-                        x: spawnX,
-                        y: localPlayer.y - 100,
-                        width: 22,
-                        height: 42,
-                        vx: 0,
-                        vy: 0,
-                        hp: 40,
-                        attackCooldown: 0
-                    });
-                }
-            }
-
-            if (isHost) {
-                const isDaylight = !isNight;
-                for (let i = mobs.length - 1; i >= 0; i--) {
-                    const mob = mobs[i];
-                    if (isDaylight) {
-                        mob.hp -= 2;
-                        if (mob.hp <= 0) {
-                            mobs.splice(i, 1);
-                            continue;
-                        }
-                    }
-
-                    if (mob.x < localPlayer.x) mob.vx = 1.2;
-                    else mob.vx = -1.2;
-
-                    mob.x += mob.vx;
-                    mob.vy += 0.45;
-                    mob.y += mob.vy;
-
-                    if (checkCollision(mob.x, mob.y)) {
-                        mob.y -= mob.vy;
-                        mob.vy = 0;
-                    }
-
-                    const distToPlayer = Math.hypot((localPlayer.x + localPlayer.width/2) - (mob.x + mob.width/2), (localPlayer.y + localPlayer.height/2) - (mob.y + mob.height/2));
-                    if (distToPlayer < 30) {
-                        localPlayer.hp -= 0.5;
-                        updateHealthUI();
-                    }
-                }
-            }
-
-            if (!inventoryOpen) {
-                localPlayer.vx = 0;
-                if (keys['KeyA'] || keys['ArrowLeft']) { localPlayer.vx = -localPlayer.speed; localPlayer.facing = -1; }
-                if (keys['KeyD'] || keys['ArrowRight']) { localPlayer.vx = localPlayer.speed; localPlayer.facing = 1; }
-
-                localPlayer.x += localPlayer.vx;
-                if (checkCollision(localPlayer.x, localPlayer.y)) localPlayer.x -= localPlayer.vx;
-
-                localPlayer.vy += localPlayer.gravity;
-                localPlayer.y += localPlayer.vy;
-                localPlayer.grounded = false;
-
-                if (checkCollision(localPlayer.x, localPlayer.y)) {
-                    localPlayer.y -= localPlayer.vy;
-                    if (localPlayer.vy > 0) localPlayer.grounded = true;
-                    localPlayer.vy = 0;
-                }
-
-                if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && localPlayer.grounded) {
-                    localPlayer.vy = localPlayer.jumpForce;
-                    localPlayer.grounded = false;
-                }
-            }
-
-            for (let i = itemDrops.length - 1; i >= 0; i--) {
-                const drop = itemDrops[i];
-                const dist = Math.hypot((localPlayer.x + localPlayer.width/2) - drop.x, (localPlayer.y + localPlayer.height/2) - drop.y);
-                if (dist < 30) {
-                    if (addItemToInventory(drop.type, 1)) {
-                        itemDrops.splice(i, 1);
-                    }
-                }
-            }
-
-            if (localPlayer.swingTimer > 0) localPlayer.swingTimer--;
-
-            if (!inventoryOpen && localPlayer.swingTimer === 0) {
-                const cameraX = localPlayer.x - canvas.width / 2 + localPlayer.width / 2;
-                const cameraY = localPlayer.y - canvas.height / 2 + localPlayer.height / 2;
-                const worldMouseX = mouse.x + cameraX;
-                const worldMouseY = mouse.y + cameraY;
-
-                const targetBx = Math.floor(worldMouseX / TILE_SIZE);
-                const targetBy = Math.floor(worldMouseY / TILE_SIZE);
-                const pBx = Math.floor((localPlayer.x + localPlayer.width / 2) / TILE_SIZE);
-                const pBy = Math.floor((localPlayer.y + localPlayer.height / 2) / TILE_SIZE);
-
-                if (Math.hypot(targetBx - pBx, targetBy - pBy) < 6) {
-                    if (mouse.leftClicked) {
-                        mouse.leftClicked = false;
-                        const block = getBlock(targetBx, targetBy);
-                        const treeBlock = getTreeBlock(targetBx, targetBy);
-
-                        if (treeBlock) {
-                            localPlayer.swingTimer = 12;
-                            const minedType = removeTreeBlock(targetBx, targetBy);
-                            if (minedType) {
-                                itemDrops.push({
-                                    x: (targetBx + 0.5) * TILE_SIZE,
-                                    y: targetBy * TILE_SIZE,
-                                    vx: (Math.random() - 0.5) * 3,
-                                    vy: -3,
-                                    type: minedType
-                                });
-                                const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: null, itemType: minedType };
-                                if (isHost) broadcastToClients(packet);
-                                else if (conn) conn.send(packet);
-                            }
-                        } else if (block) {
-                            localPlayer.swingTimer = 12;
-                            const minedType = block;
-                            setBlock(targetBx, targetBy, null);
-
-                            let dropName = 'stone';
-                            if (minedType.includes('ore')) dropName = minedType;
-                            else if (minedType === 'stone') dropName = 'stone';
-                            else if (minedType === 'dirt' || minedType === 'grass') dropName = 'dirt';
-
-                            itemDrops.push({
-                                x: (targetBx + 0.5) * TILE_SIZE,
-                                y: targetBy * TILE_SIZE,
-                                vx: (Math.random() - 0.5) * 3,
-                                vy: -3,
-                                type: dropName
-                            });
-
-                            const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: null, itemType: dropName };
-                            if (isHost) broadcastToClients(packet);
-                            else if (conn) conn.send(packet);
-                        }
-                    }
-
-                    if (mouse.rightClicked) {
-                        mouse.rightClicked = false;
-                        const block = getBlock(targetBx, targetBy);
-                        const treeBlock = getTreeBlock(targetBx, targetBy);
-                        const selectedSlotData = localPlayer.inventory[localPlayer.selectedSlot];
-
-                        if (!block && !treeBlock) {
-                            if (selectedSlotData.type !== null && selectedSlotData.count > 0) {
-                                let placeType = selectedSlotData.type;
-                                setBlock(targetBx, targetBy, placeType);
-                                selectedSlotData.count--;
-                                if (selectedSlotData.count <= 0) selectedSlotData.type = null;
-                                updateHotbarUI();
-                                updateInventoryUI();
-                                localPlayer.swingTimer = 10;
-
-                                const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: placeType };
-                                if (isHost) broadcastToClients(packet);
-                                else if (conn) conn.send(packet);
-                            }
-                        }
-                    }
-                }
-            }
-            mouse.leftClicked = false;
-            mouse.rightClicked = false;
-
-            const statePayload = {
-                x: localPlayer.x,
-                y: localPlayer.y,
-                facing: localPlayer.facing,
-                swingTimer: localPlayer.swingTimer,
-                name: localPlayer.name
-            };
-            if (isHost) {
-                broadcastToClients({ type: 'REMOTE_PLAYER_UPDATE', id: localPlayer.id, state: statePayload });
-            } else if (conn && conn.open) {
-                conn.send({ type: 'PLAYER_UPDATE', state: statePayload });
-            }
-        }
-
-        function draw() {
-            Object.values(remotePlayers).forEach(rp => {
-                if (rp.targetX !== undefined) rp.x += (rp.targetX - rp.x) * 0.25;
-                if (rp.targetY !== undefined) rp.y += (rp.targetY - rp.y) * 0.25;
-            });
-
-            const camera = {
-                x: localPlayer.x - canvas.width / 2 + localPlayer.width / 2,
-                y: localPlayer.y - canvas.height / 2 + localPlayer.height / 2
-            };
-
-            const time = gameStats.timeOfDay;
-            let skyTop = '#151d28', skyBottom = '#4a90e2';
-            if (time >= 11000 && time <= 13000) { 
-                skyTop = '#3a1c24'; skyBottom = '#d35400';
-            } else if (time > 13000 && time < 22000) { 
-                skyTop = '#05050c'; skyBottom = '#111827';
-            } else if (time >= 22000 || time <= 1000) { 
-                skyTop = '#2c1630'; skyBottom = '#e67e22';
-            }
-
-            const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            grad.addColorStop(0, skyTop);
-            grad.addColorStop(1, skyBottom);
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-            clouds.forEach(cloud => {
-                cloud.x -= cloud.speed;
-                if (cloud.x < -cloud.width) cloud.x = canvas.width + 300;
-                let renderCloudX = cloud.x - (camera.x * 0.2) % (canvas.width + 400);
-                ctx.fillRect(renderCloudX, cloud.y, cloud.width, cloud.height);
-            });
-
-            const startChunk = Math.floor(camera.x / (CHUNK_WIDTH * TILE_SIZE)) - 1;
-            const endChunk = startChunk + Math.ceil(canvas.width / (CHUNK_WIDTH * TILE_SIZE)) + 2;
-
-            for (let cx = startChunk; cx <= endChunk; cx++) {
-                let chunk = loadedChunks.get(cx) || generateChunk(cx);
-
-                chunk.forEach(col => {
-                    col.trees.forEach(t => {
-                        const sx = t.x * TILE_SIZE - camera.x;
-                        const sy = t.y * TILE_SIZE - camera.y;
-                        if (sx >= -TILE_SIZE && sx <= canvas.width + TILE_SIZE && sy >= -TILE_SIZE && sy <= canvas.height + TILE_SIZE) {
-                            ctx.fillStyle = COLORS[t.type];
-                            ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
-                        }
-                    });
-                });
-
-                for (let lx = 0; lx < CHUNK_WIDTH; lx++) {
-                    const bx = cx * CHUNK_WIDTH + lx;
-                    const col = chunk[lx];
-                    for (const [strY, type] of Object.entries(col.blocks)) {
-                        const by = parseInt(strY);
-                        const sx = bx * TILE_SIZE - camera.x;
-                        const sy = by * TILE_SIZE - camera.y;
-
-                        if (sx < -TILE_SIZE || sx > canvas.width + TILE_SIZE || sy < -TILE_SIZE || sy > canvas.height + TILE_SIZE) continue;
-
-                        ctx.fillStyle = COLORS[type] || '#fff';
-                        ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
-
-                        if (by > col.surfaceHeight) {
-                            const depth = by - col.surfaceHeight;
-                            const alpha = Math.min(0.88, depth * 0.08 + 0.05);
-                            ctx.fillStyle = `rgba(10, 10, 18, ${alpha})`;
-                            ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
-                        }
-                    }
-                }
-            }
-
-            itemDrops.forEach(drop => {
-                drop.x += drop.vx;
-                drop.y += drop.vy;
-                drop.vy += 0.4; 
-                const bx = Math.floor(drop.x / TILE_SIZE);
-                const by = Math.floor((drop.y + 8) / TILE_SIZE);
-                if (getBlock(bx, by) !== null) {
-                    drop.y = by * TILE_SIZE - 8;
-                    drop.vy = 0;
-                    drop.vx *= 0.8;
-                }
-
-                const sx = drop.x - camera.x;
-                const sy = drop.y - camera.y;
-                ctx.fillStyle = COLORS[drop.type] || '#f1c40f';
-                ctx.fillRect(sx - 5, sy - 5, 10, 10);
-            });
-
-            mobs.forEach(mob => {
-                const mx = mob.x - camera.x;
-                const my = mob.y - camera.y;
-                ctx.fillStyle = '#e0e0e0';
-                ctx.fillRect(mx + 6, my + 14, 10, 20);
-                ctx.fillRect(mx + 8, my + 2, 8, 12);
-                ctx.fillStyle = '#8d6e63';
-                ctx.fillRect(mx + 16, my + 16, 4, 16);
-
-                if (gameStats.timeOfDay < 12000 || gameStats.timeOfDay > 23000) {
-                    ctx.fillStyle = 'rgba(255, 100, 0, 0.7)';
-                    ctx.fillRect(mx + 4, my - 6, 14, 12);
-                }
-            });
-
-            function renderPlayerEntity(p, shirtColor, pantsColor) {
-                const px = p.x - camera.x;
-                const py = p.y - camera.y;
-
-                ctx.fillStyle = pantsColor;
-                ctx.fillRect(px + 4, py + 26, 6, 16);
-                ctx.fillRect(px + 12, py + 26, 6, 16);
-
-                ctx.fillStyle = shirtColor;
-                ctx.fillRect(px + 3, py + 12, 16, 14);
-
-                ctx.fillStyle = '#f3c5a4'; 
-                ctx.fillRect(px + 3, py + 2, 16, 12);
-                ctx.fillStyle = '#5c3a21'; 
-                ctx.fillRect(px + 3, py + 2, 16, 4);
-
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                ctx.font = '11px Courier New';
-                ctx.textAlign = 'center';
-                const nameWidth = ctx.measureText(p.name).width;
-                ctx.fillRect(px + 11 - nameWidth/2 - 4, py - 22, nameWidth + 8, 16);
-                ctx.fillStyle = '#ffffff';
-                ctx.fillText(p.name, px + 11, py - 10);
-
-                if (p.swingTimer > 0) {
-                    ctx.save();
-                    ctx.translate(px + 11, py + 18);
-                    ctx.rotate(p.facing * (1 - p.swingTimer / 12) * Math.PI * 1.2);
-                    ctx.fillStyle = '#bdc3c7';
-                    ctx.fillRect(8, -3, 18, 5);
-                    ctx.restore();
-                }
-            }
-
-            renderPlayerEntity(localPlayer, '#008080', '#0000aa');
-
-            Object.values(remotePlayers).forEach(rp => {
-                renderPlayerEntity(rp, '#8e44ad', '#2c3e50');
-            });
-        }
-
-        function loop() {
-            if (gameStarted) {
-                updateLocalPlayer();
-                draw();
-            }
-            requestAnimationFrame(loop);
-        }
-
-        loop();
-    </script>
+      }
+    }
+  });
+
+  // Periodically spawn mobs
+  if (Math.random() < 0.005 && activeMobs.length < 8) {
+    const types = ["cow", "pig", "zombie", "skeleton", "creeper"];
+    spawnMob(types[Math.floor(Math.random() * types.length)]);
+  }
+}
+
+function renderGame() {
+  // Background
+  ctx.fillStyle = "#70b3ff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Decorative Grass Tiles
+  ctx.fillStyle = "#55a630";
+  ctx.fillRect(0, 100, canvas.width, canvas.height - 100);
+
+  // Render Mobs
+  activeMobs.forEach(mob => {
+    ctx.fillStyle = mob.color;
+    ctx.fillRect(mob.x - mob.size/2, mob.y - mob.size/2, mob.size, mob.size);
+
+    // Eyes
+    ctx.fillStyle = "#000";
+    ctx.fillRect(mob.x - 6, mob.y - 6, 4, 4);
+    ctx.fillRect(mob.x + 2, mob.y - 6, 4, 4);
+
+    // Name Label
+    ctx.fillStyle = "#fff";
+    ctx.font = "10px Courier New";
+    ctx.textAlign = "center";
+    ctx.fillText(mob.name, mob.x, mob.y - mob.size/2 - 4);
+  });
+
+  // Render Player
+  ctx.fillStyle = "#00b4d8"; // Cyan Steve shirt
+  ctx.fillRect(player.x - player.size/2, player.y - player.size/2, player.size, player.size);
+  ctx.fillStyle = "#ffb5a7"; // Head/Face
+  ctx.fillRect(player.x - 8, player.y - 8, 16, 10);
+
+  // Render Crosshair / Target Indicator
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(player.x - player.size/2 - 4, player.y - player.size/2 - 4, player.size + 8, player.size + 8);
+}
+
+function gameLoop() {
+  updateGame();
+  renderGame();
+  requestAnimationFrame(gameLoop);
+}
+
+// Attack Mobs on Click
+canvas.addEventListener("click", (e) => {
+  if (!gameActive) return;
+  const rect = canvas.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+
+  activeMobs.forEach((mob, index) => {
+    const dist = Math.hypot(clickX - mob.x, clickY - mob.y);
+    if (dist < mob.size) {
+      mob.currentHp -= 10; // Player attack power
+      if (mob.currentHp <= 0) {
+        // Collect drop
+        const drop = mob.drop;
+        player.inventory[drop.item] = (player.inventory[drop.item] || 0) + drop.count;
+        player.score += mob.hostile ? 50 : 10;
+        activeMobs.splice(index, 1);
+        updateHUD();
+        renderHotbar();
+      }
+    }
+  });
+});
+
+// ==========================================
+// 4. PLAYER HEALTH & DEATH SCENE SYSTEM
+// ==========================================
+
+function takeDamage(amount, cause) {
+  player.hp -= amount;
+  if (player.hp < 0) player.hp = 0;
+  updateHUD();
+
+  if (player.hp === 0) {
+    triggerDeathScreen(cause);
+  }
+}
+
+function triggerDeathScreen(cause) {
+  gameActive = false;
+  document.getElementById("death-cause").innerText = cause;
+  document.getElementById("final-score").innerText = player.score;
+  document.getElementById("death-screen").style.display = "flex";
+}
+
+function respawn() {
+  player.hp = player.maxHp;
+  player.x = canvas.width / 2;
+  player.y = canvas.height / 2;
+  player.score = Math.max(0, player.score - 50);
+  activeMobs = [];
+  
+  // Re-populate basic mobs
+  for (let i = 0; i < 3; i++) spawnMob("cow");
+  for (let i = 0; i < 2; i++) spawnMob("zombie");
+
+  document.getElementById("death-screen").style.display = "none";
+  updateHUD();
+  gameActive = true;
+}
+
+document.getElementById("respawn-btn").addEventListener("click", respawn);
+
+// ==========================================
+// 5. RECIPE BOOK & CRAFTING ENGINE
+// ==========================================
+
+const craftModal = document.getElementById("crafting-modal");
+const recipeListUI = document.getElementById("recipe-list-ui");
+const ingredientsUI = document.getElementById("ingredients-ui");
+const craftBtn = document.getElementById("craft-action-btn");
+
+function toggleCraftingModal() {
+  const isVisible = craftModal.style.display === "flex";
+  craftModal.style.display = isVisible ? "none" : "flex";
+  if (!isVisible) {
+    populateRecipeList();
+  }
+}
+
+function populateRecipeList() {
+  recipeListUI.innerHTML = "";
+  RECIPES_DATABASE.forEach(recipe => {
+    const item = document.createElement("div");
+    item.className = `recipe-item ${selectedRecipe === recipe ? 'selected' : ''}`;
+    item.innerHTML = `<span>${recipe.name}</span><b>x${recipe.output.count}</b>`;
+    item.onclick = () => selectRecipe(recipe);
+    recipeListUI.appendChild(item);
+  });
+}
+
+function selectRecipe(recipe) {
+  selectedRecipe = recipe;
+  populateRecipeList();
+
+  document.getElementById("recipe-name").innerText = recipe.name;
+  document.getElementById("recipe-desc").innerText = recipe.desc;
+
+  ingredientsUI.innerHTML = "<b>Required Ingredients:</b>";
+  let canCraft = true;
+
+  recipe.inputs.forEach(input => {
+    const playerHas = player.inventory[input.item] || 0;
+    const satisfies = playerHas >= input.count;
+    if (!satisfies) canCraft = false;
+
+    const div = document.createElement("div");
+    div.className = `ingredient ${satisfies ? 'has' : 'missing'}`;
+    div.innerText = `• ${input.item}: ${playerHas} / ${input.count}`;
+    ingredientsUI.appendChild(div);
+  });
+
+  craftBtn.disabled = !canCraft;
+}
+
+craftBtn.addEventListener("click", () => {
+  if (!selectedRecipe) return;
+
+  // Deduct ingredients
+  selectedRecipe.inputs.forEach(input => {
+    player.inventory[input.item] -= input.count;
+  });
+
+  // Add craft result
+  const out = selectedRecipe.output;
+  player.inventory[out.item] = (player.inventory[out.item] || 0) + out.count;
+
+  selectRecipe(selectedRecipe);
+  renderHotbar();
+  updateHUD();
+});
+
+document.getElementById("open-craft-btn").onclick = toggleCraftingModal;
+document.getElementById("close-craft-btn").onclick = toggleCraftingModal;
+
+// ==========================================
+// 6. UI UPDATES & INITIALIZATION
+// ==========================================
+
+function updateHUD() {
+  // Update Health Hearts
+  const heartsCount = Math.ceil(player.hp / 2);
+  document.getElementById("hp-display").innerText = "❤".repeat(heartsCount);
+  document.getElementById("score-display").innerText = player.score;
+}
+
+function renderHotbar() {
+  const hotbar = document.getElementById("hotbar");
+  hotbar.innerHTML = "";
+  
+  Object.keys(player.inventory).forEach(itemName => {
+    const count = player.inventory[itemName];
+    if (count > 0) {
+      const slot = document.createElement("div");
+      slot.className = "slot";
+      slot.title = itemName;
+      slot.innerText = itemName.substring(0, 3);
+      
+      const countEl = document.createElement("span");
+      countEl.className = "slot-count";
+      countEl.innerText = count;
+      slot.appendChild(countEl);
+      
+      hotbar.appendChild(slot);
+    }
+  });
+}
+
+// Input Handlers
+window.addEventListener("keydown", e => {
+  keys[e.key] = true;
+  if (e.key === "e" || e.key === "E") toggleCraftingModal();
+});
+window.addEventListener("keyup", e => keys[e.key] = false);
+
+// Launch Engine
+updateHUD();
+renderHotbar();
+requestAnimationFrame(gameLoop);
+</script>
 </body>
 </html>
