@@ -229,7 +229,7 @@
             border-top-color: #fff;
             border-left-color: #fff;
             padding: 16px;
-            width: 340px;
+            width: 380px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             font-family: 'Courier New', Courier, monospace;
         }
@@ -239,6 +239,29 @@
             font-weight: bold;
             font-size: 14px;
             margin-bottom: 12px;
+        }
+
+        .crafting-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            background: #b5b5b5;
+            padding: 8px;
+            border-radius: 4px;
+            border: 2px solid #8b8b8b;
+        }
+
+        .crafting-grid-2x2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+        }
+
+        .crafting-arrow {
+            font-size: 18px;
+            color: #373737;
+            font-weight: bold;
         }
 
         .inventory-grid {
@@ -306,29 +329,43 @@
     <!-- Hotbar Container -->
     <div id="hotbar-container">
         <div id="hotbar">
-            <div class="slot active" id="slot-0" onclick="selectSlot(0)"><span></span></div>
-            <div class="slot" id="slot-1" onclick="selectSlot(1)"><span></span></div>
-            <div class="slot" id="slot-2" onclick="selectSlot(2)"><span></span></div>
-            <div class="slot" id="slot-3" onclick="selectSlot(3)"><span></span></div>
-            <div class="slot" id="slot-4" onclick="selectSlot(4)"><span></span></div>
-            <div class="slot" id="slot-5" onclick="selectSlot(5)"><span></span></div>
-            <div class="slot" id="slot-6" onclick="selectSlot(6)"><span></span></div>
-            <div class="slot" id="slot-7" onclick="selectSlot(7)"><span></span></div>
-            <div class="slot" id="slot-8" onclick="selectSlot(8)"><span></span></div>
-            <div class="slot" id="slot-9" onclick="selectSlot(9)"><span></span></div>
+            <div class="slot active" id="slot-0" onclick="selectHotbarSlot(0)"><span></span></div>
+            <div class="slot" id="slot-1" onclick="selectHotbarSlot(1)"><span></span></div>
+            <div class="slot" id="slot-2" onclick="selectHotbarSlot(2)"><span></span></div>
+            <div class="slot" id="slot-3" onclick="selectHotbarSlot(3)"><span></span></div>
+            <div class="slot" id="slot-4" onclick="selectHotbarSlot(4)"><span></span></div>
+            <div class="slot" id="slot-5" onclick="selectHotbarSlot(5)"><span></span></div>
+            <div class="slot" id="slot-6" onclick="selectHotbarSlot(6)"><span></span></div>
+            <div class="slot" id="slot-7" onclick="selectHotbarSlot(7)"><span></span></div>
+            <div class="slot" id="slot-8" onclick="selectHotbarSlot(8)"><span></span></div>
+            <div class="slot" id="slot-9" onclick="selectHotbarSlot(9)"><span></span></div>
         </div>
     </div>
 
     <!-- Minecraft Full Inventory Screen -->
     <div id="inventory-screen">
         <div class="inventory-window">
-            <div class="inventory-title">Inventory</div>
+            <div class="inventory-title">Inventory & Crafting</div>
+            
+            <!-- Crafting 2x2 Area -->
+            <div class="crafting-section">
+                <div class="crafting-grid-2x2" id="crafting-input-grid">
+                    <div class="slot" id="craft-in-0" onclick="handleCraftInputClick(0)"><span></span></div>
+                    <div class="slot" id="craft-in-1" onclick="handleCraftInputClick(1)"><span></span></div>
+                    <div class="slot" id="craft-in-2" onclick="handleCraftInputClick(2)"><span></span></div>
+                    <div class="slot" id="craft-in-3" onclick="handleCraftInputClick(3)"><span></span></div>
+                </div>
+                <div class="crafting-arrow">➜</div>
+                <div class="slot" id="craft-out" onclick="handleCraftOutputClick()"><span></span></div>
+            </div>
+
+            <div class="inventory-divider"></div>
             <div class="inventory-grid" id="main-inventory-grid">
-                <!-- 27 Main Inventory Slots -->
+                <!-- 27 Main Inventory Slots (indices 10 to 36) -->
             </div>
             <div class="inventory-divider"></div>
             <div class="inventory-grid" id="inv-hotbar-grid">
-                <!-- 10 Hotbar Slots inside menu -->
+                <!-- 10 Hotbar Slots inside menu (indices 0 to 9) -->
             </div>
         </div>
     </div>
@@ -353,6 +390,7 @@
         const CHUNK_WIDTH = 32;
         const WORLD_HEIGHT = 80;
         const loadedChunks = new Map();
+        let gameStats = { timeOfDay: 0 }; // 0 to 24000 (day starts at 0, night at 12000)
         let gameStarted = false;
         let isHost = true;
         let peer = null;
@@ -369,15 +407,14 @@
         const TAKEN_NAMES = ['steve', 'terrarian', 'builderx', 'minerbro', 'notch'];
 
         const COLORS = {
-            skyTop: '#151d28',
-            skyBottom: '#4a90e2',
             grass: '#558b2f',
             dirt: '#795548',
             stone: '#616161',
             copper_ore: '#d84315',
             iron_ore: '#b0bec5',
             wood: '#8d6e63',
-            leaves: '#2e7d32'
+            leaves: '#2e7d32',
+            planks: '#bcaaa4'
         };
 
         const localPlayer = {
@@ -398,16 +435,19 @@
             selectedSlot: 0,
             maxHp: 100,
             hp: 100,
-            inventory: {} // slots 0 to 36 (0-9 hotbar, 10-36 main inventory)
+            inventory: {}, // slots 0 to 36 (0-9 hotbar, 10-36 main inventory)
+            crafting: { 0: {type:null, count:0}, 1: {type:null, count:0}, 2: {type:null, count:0}, 3: {type:null, count:0} }
         };
 
-        // Initialize empty inventory (nothing in hotbar or inventory slots initially)
         for (let i = 0; i < 37; i++) {
             localPlayer.inventory[i] = { type: null, count: 0 };
         }
 
+        let carriedItem = { type: null, count: 0 };
+        let currentCraftOutput = { type: null, count: 0 };
+
         const remotePlayers = {};
-        const particles = [];
+        const mobs = [];
         const itemDrops = []; 
         const clouds = [
             { x: 100, y: 80, speed: 0.3, width: 120, height: 40 },
@@ -516,11 +556,8 @@
             for (let i = 0; i < 10; i++) {
                 const heart = document.getElementById(`heart-${i}`);
                 if (heart) {
-                    if (i < activeHearts) {
-                        heart.classList.add('full');
-                    } else {
-                        heart.classList.remove('full');
-                    }
+                    if (i < activeHearts) heart.classList.add('full');
+                    else heart.classList.remove('full');
                 }
             }
         }
@@ -539,11 +576,9 @@
                 const column = { surfaceHeight, blocks: {}, trees: [] };
                 for (let y = 0; y < WORLD_HEIGHT; y++) {
                     let type = null;
-                    if (y === surfaceHeight) {
-                        type = 'grass';
-                    } else if (y > surfaceHeight && y < surfaceHeight + 5) {
-                        type = 'dirt';
-                    } else if (y >= surfaceHeight + 5) {
+                    if (y === surfaceHeight) type = 'grass';
+                    else if (y > surfaceHeight && y < surfaceHeight + 5) type = 'dirt';
+                    else if (y >= surfaceHeight + 5) {
                         const oreCheck = seededRandom(worldSeed + worldX * 73 + y * 19);
                         if (y > surfaceHeight + 15 && oreCheck < 0.06) {
                             type = oreCheck < 0.03 ? 'copper_ore' : 'iron_ore';
@@ -583,9 +618,7 @@
         function handleHostNetworkData(connection, data) {
             if (data.type === 'JOIN_REQUEST') {
                 let clientName = data.name;
-                if (clientName.toLowerCase() === localPlayer.name.toLowerCase()) {
-                    clientName += '_2';
-                }
+                if (clientName.toLowerCase() === localPlayer.name.toLowerCase()) clientName += '_2';
 
                 remotePlayers[connection.peer] = {
                     id: connection.peer,
@@ -597,9 +630,7 @@
                 };
 
                 const serializedChunks = {};
-                loadedChunks.forEach((chunk, cx) => {
-                    serializedChunks[cx] = chunk;
-                });
+                loadedChunks.forEach((chunk, cx) => { serializedChunks[cx] = chunk; });
 
                 connection.send({
                     type: 'INIT_SUCCESS',
@@ -643,11 +674,7 @@
                 if (data.players) {
                     for (const [id, pData] of Object.entries(data.players)) {
                         if (id !== localPlayer.id) {
-                            remotePlayers[id] = {
-                                ...pData,
-                                targetX: pData.x,
-                                targetY: pData.y
-                            };
+                            remotePlayers[id] = { ...pData, targetX: pData.x, targetY: pData.y };
                         }
                     }
                 }
@@ -660,11 +687,7 @@
                 launchGame();
             }
             else if (data.type === 'PLAYER_JOINED') {
-                remotePlayers[data.player.id] = {
-                    ...data.player,
-                    targetX: data.player.x,
-                    targetY: data.player.y
-                };
+                remotePlayers[data.player.id] = { ...data.player, targetX: data.player.x, targetY: data.player.y };
             }
             else if (data.type === 'REMOTE_PLAYER_UPDATE') {
                 if (!remotePlayers[data.id]) {
@@ -690,9 +713,7 @@
 
         function broadcastToClients(packet, excludePeerId = null) {
             hostConnections.forEach(c => {
-                if (c.peer !== excludePeerId) {
-                    c.send(packet);
-                }
+                if (c.peer !== excludePeerId) c.send(packet);
             });
         }
 
@@ -701,9 +722,7 @@
 
         window.addEventListener('keydown', e => {
             if (!gameStarted) return;
-            if ((e.code >= 'Digit1' && e.code <= 'Digit9') || e.code === 'Digit0') {
-                e.preventDefault();
-            }
+            if ((e.code >= 'Digit1' && e.code <= 'Digit9') || e.code === 'Digit0') e.preventDefault();
             if (e.code === 'KeyE') {
                 e.preventDefault();
                 toggleInventory();
@@ -711,11 +730,8 @@
             keys[e.code] = true;
 
             if (!inventoryOpen) {
-                if (e.code >= 'Digit1' && e.code <= 'Digit9') {
-                    selectSlot(parseInt(e.code) - 1);
-                } else if (e.code === 'Digit0') {
-                    selectSlot(9);
-                }
+                if (e.code >= 'Digit1' && e.code <= 'Digit9') selectHotbarSlot(parseInt(e.code) - 1);
+                else if (e.code === 'Digit0') selectHotbarSlot(9);
             }
         });
         window.addEventListener('keyup', e => { if (gameStarted) keys[e.code] = false; });
@@ -726,13 +742,8 @@
         });
         window.addEventListener('mousedown', e => {
             if (!gameStarted || inventoryOpen) return;
-            if (e.button === 0) {
-                mouse.leftDown = true;
-                mouse.leftClicked = true;
-            } else if (e.button === 2) {
-                mouse.rightDown = true;
-                mouse.rightClicked = true;
-            }
+            if (e.button === 0) { mouse.leftDown = true; mouse.leftClicked = true; }
+            else if (e.button === 2) { mouse.rightDown = true; mouse.rightClicked = true; }
         });
         window.addEventListener('mouseup', e => {
             if (e.button === 0) mouse.leftDown = false;
@@ -743,9 +754,25 @@
         function toggleInventory() {
             inventoryOpen = !inventoryOpen;
             document.getElementById('inventory-screen').style.display = inventoryOpen ? 'flex' : 'none';
+            if (!inventoryOpen) {
+                // Return items from crafting grid back to inventory/carried
+                for (let i = 0; i < 4; i++) {
+                    const cItem = localPlayer.crafting[i];
+                    if (cItem.type !== null && cItem.count > 0) {
+                        addItemToInventory(cItem.type, cItem.count);
+                        cItem.type = null;
+                        cItem.count = 0;
+                    }
+                }
+                if (carriedItem.type !== null) {
+                    addItemToInventory(carriedItem.type, carriedItem.count);
+                    carriedItem = { type: null, count: 0 };
+                }
+                updateInventoryUI();
+            }
         }
 
-        function selectSlot(idx) {
+        function selectHotbarSlot(idx) {
             localPlayer.selectedSlot = idx;
             updateHotbarUI();
         }
@@ -756,7 +783,6 @@
             mainGrid.innerHTML = '';
             hotbarGrid.innerHTML = '';
 
-            // Main inventory (slots 10 to 36)
             for (let i = 10; i < 37; i++) {
                 const slotDiv = document.createElement('div');
                 slotDiv.className = 'slot';
@@ -766,7 +792,6 @@
                 mainGrid.appendChild(slotDiv);
             }
 
-            // Hotbar inside inventory menu (slots 0 to 9)
             for (let i = 0; i < 10; i++) {
                 const slotDiv = document.createElement('div');
                 slotDiv.className = 'slot';
@@ -777,8 +802,6 @@
             }
             updateInventoryUI();
         }
-
-        let carriedItem = { type: null, count: 0 };
 
         function handleInventoryClick(slotIdx) {
             const slotItem = localPlayer.inventory[slotIdx];
@@ -807,21 +830,107 @@
             updateHotbarUI();
         }
 
+        function handleCraftInputClick(idx) {
+            const cItem = localPlayer.crafting[idx];
+            if (carriedItem.type === null) {
+                if (cItem.type !== null) {
+                    carriedItem = { ...cItem };
+                    cItem.type = null;
+                    cItem.count = 0;
+                }
+            } else {
+                if (cItem.type === null) {
+                    cItem.type = carriedItem.type;
+                    cItem.count = 1;
+                    carriedItem.count--;
+                    if (carriedItem.count <= 0) carriedItem = { type: null, count: 0 };
+                } else if (cItem.type === carriedItem.type) {
+                    cItem.count++;
+                    carriedItem.count--;
+                    if (carriedItem.count <= 0) carriedItem = { type: null, count: 0 };
+                } else {
+                    const temp = { ...cItem };
+                    cItem.type = carriedItem.type;
+                    cItem.count = 1;
+                    carriedItem = temp;
+                }
+            }
+            checkCraftingRecipe();
+            updateInventoryUI();
+        }
+
+        function handleCraftOutputClick() {
+            if (currentCraftOutput.type !== null && currentCraftOutput.count > 0) {
+                if (carriedItem.type === null) {
+                    carriedItem = { ...currentCraftOutput };
+                } else if (carriedItem.type === currentCraftOutput.type) {
+                    carriedItem.count += currentCraftOutput.count;
+                } else {
+                    return; // Cannot pick up output if held item conflicts
+                }
+
+                // Consume 1 from each crafting grid input
+                for (let i = 0; i < 4; i++) {
+                    if (localPlayer.crafting[i].type !== null) {
+                        localPlayer.crafting[i].count--;
+                        if (localPlayer.crafting[i].count <= 0) {
+                            localPlayer.crafting[i].type = null;
+                        }
+                    }
+                }
+                checkCraftingRecipe();
+                updateInventoryUI();
+                updateHotbarUI();
+            }
+        }
+
+        function checkCraftingRecipe() {
+            // Count ingredients in 2x2 grid
+            let woodCount = 0;
+            let hasOther = false;
+            let totalItems = 0;
+
+            for (let i = 0; i < 4; i++) {
+                const item = localPlayer.crafting[i];
+                if (item.type !== null && item.count > 0) {
+                    totalItems += item.count;
+                    if (item.type === 'wood') woodCount += item.count;
+                    else hasOther = true;
+                }
+            }
+
+            // Recipe: 1 Wood = 4 Planks
+            if (totalItems === 1 && woodCount === 1) {
+                currentCraftOutput = { type: 'planks', count: 4 };
+            } else {
+                currentCraftOutput = { type: null, count: 0 };
+            }
+
+            // Update output slot UI
+            const outEl = document.getElementById('craft-out');
+            let label = '';
+            if (currentCraftOutput.type) label = 'Pl';
+            outEl.childNodes[0].nodeValue = label;
+            const countSpan = outEl.querySelector('span');
+            if (countSpan) countSpan.innerText = currentCraftOutput.count > 0 ? currentCraftOutput.count : '';
+        }
+
         function updateInventoryUI() {
             for (let i = 0; i < 37; i++) {
                 const slotEl = document.getElementById(`inv-slot-${i}`);
                 if (slotEl) {
                     const item = localPlayer.inventory[i];
-                    let label = '';
-                    if (item.type) {
-                        if (item.type === 'wood') label = 'W';
-                        else if (item.type === 'stone') label = 'St';
-                        else if (item.type === 'dirt' || item.type === 'grass') label = 'D';
-                        else if (item.type === 'leaves') label = 'L';
-                        else if (item.type === 'copper_ore') label = 'Cu';
-                        else if (item.type === 'iron_ore') label = 'Fe';
-                        else label = item.type.substring(0, 2).toUpperCase();
-                    }
+                    let label = getItemShortLabel(item.type);
+                    slotEl.childNodes[0].nodeValue = label;
+                    const countSpan = slotEl.querySelector('span');
+                    if (countSpan) countSpan.innerText = item.count > 0 ? item.count : '';
+                }
+            }
+            for (let i = 0; i < 4; i++) {
+                const slotEl = document.getElementById(`craft-in-${i}`);
+                if (slotEl) {
+                    const item = localPlayer.crafting[i];
+                    let label = getItemShortLabel(item.type);
                     slotEl.childNodes[0].nodeValue = label;
                     const countSpan = slotEl.querySelector('span');
                     if (countSpan) countSpan.innerText = item.count > 0 ? item.count : '';
@@ -829,21 +938,31 @@
             }
         }
 
-        function addItemToInventory(itemType) {
-            // First stack in hotbar & main inventory
+        function getItemShortLabel(type) {
+            if (!type) return '';
+            if (type === 'wood') return 'W';
+            if (type === 'stone') return 'St';
+            if (type === 'dirt' || type === 'grass') return 'D';
+            if (type === 'leaves') return 'L';
+            if (type === 'planks') return 'Pl';
+            if (type === 'copper_ore') return 'Cu';
+            if (type === 'iron_ore') return 'Fe';
+            return type.substring(0, 2).toUpperCase();
+        }
+
+        function addItemToInventory(itemType, count = 1) {
             for (let i = 0; i < 37; i++) {
                 if (localPlayer.inventory[i].type === itemType) {
-                    localPlayer.inventory[i].count++;
+                    localPlayer.inventory[i].count += count;
                     updateHotbarUI();
                     updateInventoryUI();
                     return true;
                 }
             }
-            // Otherwise find empty slot
             for (let i = 0; i < 37; i++) {
                 if (localPlayer.inventory[i].type === null) {
                     localPlayer.inventory[i].type = itemType;
-                    localPlayer.inventory[i].count = 1;
+                    localPlayer.inventory[i].count = count;
                     updateHotbarUI();
                     updateInventoryUI();
                     return true;
@@ -864,14 +983,13 @@
                         else if (item.type === 'stone') label = 'Stone';
                         else if (item.type === 'dirt' || item.type === 'grass') label = 'Dirt';
                         else if (item.type === 'leaves') label = 'Leaf';
+                        else if (item.type === 'planks') label = 'Planks';
                         else if (item.type === 'copper_ore') label = 'Copper';
                         else if (item.type === 'iron_ore') label = 'Iron';
                         else label = item.type;
                     }
                     slot.childNodes[0].nodeValue = label;
-                    if (countSpan) {
-                        countSpan.innerText = item.count > 0 ? item.count : '';
-                    }
+                    if (countSpan) countSpan.innerText = item.count > 0 ? item.count : '';
                     slot.classList.toggle('active', i === localPlayer.selectedSlot);
                 }
             }
@@ -911,16 +1029,39 @@
             const cx = Math.floor(bx / CHUNK_WIDTH);
             const lx = ((bx % CHUNK_WIDTH) + CHUNK_WIDTH) % CHUNK_WIDTH;
             let chunk = loadedChunks.get(cx);
-            if (!chunk) return;
+            if (!chunk) return null;
             const col = chunk[lx];
-            if (!col || !col.trees) return;
+            if (!col || !col.trees) return null;
             const idx = col.trees.findIndex(t => t.x === bx && t.y === by);
             if (idx !== -1) {
-                const type = col.trees[idx].type;
+                const removed = col.trees[idx];
                 col.trees.splice(idx, 1);
-                return type;
+
+                // Check if all wood is gone from this tree column cluster; if so, decay leaves!
+                checkAndDecayLeaves(col);
+
+                return removed.type;
             }
             return null;
+        }
+
+        function checkAndDecayLeaves(col) {
+            const hasWood = col.trees.some(t => t.type === 'wood');
+            if (!hasWood) {
+                // Drop all remaining leaves as items and clear them
+                col.trees.forEach(t => {
+                    if (t.type === 'leaves') {
+                        itemDrops.push({
+                            x: (t.x + 0.5) * TILE_SIZE,
+                            y: t.y * TILE_SIZE,
+                            vx: (Math.random() - 0.5) * 2,
+                            vy: -2,
+                            type: 'leaves'
+                        });
+                    }
+                });
+                col.trees = col.trees.filter(t => t.type !== 'leaves');
+            }
         }
 
         function checkCollision(nx, ny) {
@@ -938,6 +1079,65 @@
         }
 
         function updateLocalPlayer() {
+            // Advance Day/Night cycle
+            gameStats.timeOfDay = (gameStats.timeOfDay + 1) % 24000;
+            const isNight = gameStats.timeOfDay >= 12000 && gameStats.timeOfDay <= 23000;
+
+            // Host spawns skeletons at night
+            if (isHost && Math.random() < 0.005 && mobs.length < 5 && isNight) {
+                const spawnX = localPlayer.x + (Math.random() > 0.5 ? 400 : -400);
+                const spawnChunk = loadedChunks.get(Math.floor(spawnX / (CHUNK_WIDTH * TILE_SIZE)));
+                if (spawnChunk) {
+                    mobs.push({
+                        type: 'skeleton',
+                        x: spawnX,
+                        y: localPlayer.y - 100,
+                        width: 22,
+                        height: 42,
+                        vx: 0,
+                        vy: 0,
+                        hp: 40,
+                        attackCooldown: 0
+                    });
+                }
+            }
+
+            // Host updates hostile mobs
+            if (isHost) {
+                const isDaylight = !isNight;
+                for (let i = mobs.length - 1; i >= 0; i--) {
+                    const mob = mobs[i];
+                    // Burn in daylight
+                    if (isDaylight) {
+                        mob.hp -= 2;
+                        if (mob.hp <= 0) {
+                            mobs.splice(i, 1);
+                            continue;
+                        }
+                    }
+
+                    // Move toward local player
+                    if (mob.x < localPlayer.x) mob.vx = 1.2;
+                    else mob.vx = -1.2;
+
+                    mob.x += mob.vx;
+                    mob.vy += 0.45;
+                    mob.y += mob.vy;
+
+                    if (checkCollision(mob.x, mob.y)) {
+                        mob.y -= mob.vy;
+                        mob.vy = 0;
+                    }
+
+                    // Check attack on player
+                    const distToPlayer = Math.hypot((localPlayer.x + localPlayer.width/2) - (mob.x + mob.width/2), (localPlayer.y + localPlayer.height/2) - (mob.y + mob.height/2));
+                    if (distToPlayer < 30) {
+                        localPlayer.hp -= 0.5;
+                        updateHealthUI();
+                    }
+                }
+            }
+
             if (!inventoryOpen) {
                 localPlayer.vx = 0;
                 if (keys['KeyA'] || keys['ArrowLeft']) { localPlayer.vx = -localPlayer.speed; localPlayer.facing = -1; }
@@ -962,12 +1162,11 @@
                 }
             }
 
-            // Check picking up item drops in world
             for (let i = itemDrops.length - 1; i >= 0; i--) {
                 const drop = itemDrops[i];
                 const dist = Math.hypot((localPlayer.x + localPlayer.width/2) - drop.x, (localPlayer.y + localPlayer.height/2) - drop.y);
                 if (dist < 30) {
-                    if (addItemToInventory(drop.type)) {
+                    if (addItemToInventory(drop.type, 1)) {
                         itemDrops.splice(i, 1);
                     }
                 }
@@ -1044,9 +1243,7 @@
                                 let placeType = selectedSlotData.type;
                                 setBlock(targetBx, targetBy, placeType);
                                 selectedSlotData.count--;
-                                if (selectedSlotData.count <= 0) {
-                                    selectedSlotData.type = null;
-                                }
+                                if (selectedSlotData.count <= 0) selectedSlotData.type = null;
                                 updateHotbarUI();
                                 updateInventoryUI();
                                 localPlayer.swingTimer = 10;
@@ -1087,9 +1284,20 @@
                 y: localPlayer.y - canvas.height / 2 + localPlayer.height / 2
             };
 
+            // Dynamic Sky Coloring based on Day/Night Cycle
+            const time = gameStats.timeOfDay;
+            let skyTop = '#151d28', skyBottom = '#4a90e2';
+            if (time >= 11000 && time <= 13000) { // Sunset
+                skyTop = '#3a1c24'; skyBottom = '#d35400';
+            } else if (time > 13000 && time < 22000) { // Night
+                skyTop = '#05050c'; skyBottom = '#111827';
+            } else if (time >= 22000 || time <= 1000) { // Sunrise
+                skyTop = '#2c1630'; skyBottom = '#e67e22';
+            }
+
             const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            grad.addColorStop(0, COLORS.skyTop);
-            grad.addColorStop(1, COLORS.skyBottom);
+            grad.addColorStop(0, skyTop);
+            grad.addColorStop(1, skyBottom);
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -1141,7 +1349,6 @@
                 }
             }
 
-            // Draw item drops in world
             itemDrops.forEach(drop => {
                 drop.x += drop.vx;
                 drop.y += drop.vy;
@@ -1160,27 +1367,41 @@
                 ctx.fillRect(sx - 5, sy - 5, 10, 10);
             });
 
-            // Minecraft-style Blocky Character Rendering (Steve / Classic Style)
+            // Render Hostile Mobs (Skeletons with Bows)
+            mobs.forEach(mob => {
+                const mx = mob.x - camera.x;
+                const my = mob.y - camera.y;
+                // Skeleton bones
+                ctx.fillStyle = '#e0e0e0';
+                ctx.fillRect(mx + 6, my + 14, 10, 20); // body
+                ctx.fillRect(mx + 8, my + 2, 8, 12);   // skull
+                // Bow
+                ctx.fillStyle = '#8d6e63';
+                ctx.fillRect(mx + 16, my + 16, 4, 16);
+
+                // Burning effect in daylight
+                if (gameStats.timeOfDay < 12000 || gameStats.timeOfDay > 23000) {
+                    ctx.fillStyle = 'rgba(255, 100, 0, 0.7)';
+                    ctx.fillRect(mx + 4, my - 6, 14, 12);
+                }
+            });
+
             function renderPlayerEntity(p, shirtColor, pantsColor) {
                 const px = p.x - camera.x;
                 const py = p.y - camera.y;
 
-                // Legs
                 ctx.fillStyle = pantsColor;
                 ctx.fillRect(px + 4, py + 26, 6, 16);
                 ctx.fillRect(px + 12, py + 26, 6, 16);
 
-                // Torso / Shirt
                 ctx.fillStyle = shirtColor;
                 ctx.fillRect(px + 3, py + 12, 16, 14);
 
-                // Head
-                ctx.fillStyle = '#f3c5a4'; // Skin
+                ctx.fillStyle = '#f3c5a4'; 
                 ctx.fillRect(px + 3, py + 2, 16, 12);
-                ctx.fillStyle = '#5c3a21'; // Hair / Hat
+                ctx.fillStyle = '#5c3a21'; 
                 ctx.fillRect(px + 3, py + 2, 16, 4);
 
-                // Name tag
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
                 ctx.font = '11px Courier New';
                 ctx.textAlign = 'center';
@@ -1199,7 +1420,7 @@
                 }
             }
 
-            renderPlayerEntity(localPlayer, '#008080', '#0000aa'); // Classic Steve cyan shirt & blue pants
+            renderPlayerEntity(localPlayer, '#008080', '#0000aa');
 
             Object.values(remotePlayers).forEach(rp => {
                 renderPlayerEntity(rp, '#8e44ad', '#2c3e50');
@@ -1209,14 +1430,6 @@
         function loop() {
             if (gameStarted) {
                 updateLocalPlayer();
-
-                for (let i = particles.length - 1; i >= 0; i--) {
-                    const pt = particles[i];
-                    pt.x += pt.vx; pt.y += pt.vy;
-                    pt.vy += 0.3; pt.life--;
-                    if (pt.life <= 0) particles.splice(i, 1);
-                }
-
                 draw();
             }
             requestAnimationFrame(loop);
