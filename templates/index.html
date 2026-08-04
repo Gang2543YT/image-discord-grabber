@@ -130,6 +130,34 @@
             display: none;
             line-height: 1.5;
         }
+        #health-container {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            display: none;
+            flex-direction: column;
+            align-items: flex-end;
+            pointer-events: none;
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px #000;
+        }
+        #health-bar-bg {
+            width: 180px;
+            height: 18px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #7f8c8d;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        #health-bar-fill {
+            width: 100%;
+            height: 100%;
+            background: #e74c3c;
+            transition: width 0.1s ease-out;
+        }
         #hotbar {
             position: absolute;
             bottom: 20px;
@@ -203,6 +231,11 @@
         <strong>Hotbar:</strong> 1-5 to select items
     </div>
 
+    <div id="health-container">
+        <div>HP: <span id="hp-text">100</span> / 100</div>
+        <div id="health-bar-bg"><div id="health-bar-fill"></div></div>
+    </div>
+
     <div id="hotbar">
         <div class="slot active" id="slot-0">Sword<span>1</span></div>
         <div class="slot" id="slot-1">Pick<span>2</span></div>
@@ -261,7 +294,7 @@
             id: null,
             name: '',
             x: 0,
-            y: 35 * TILE_SIZE,
+            y: 0, // Calculated correctly upon world generation load
             width: 20,
             height: 38,
             vx: 0,
@@ -273,6 +306,8 @@
             facing: 1,
             swingTimer: 0,
             selectedSlot: 0,
+            maxHp: 100,
+            hp: 100,
             inventory: { copper_broadsword: 1, copper_pickaxe: 1, wood: 15, stone: 0, copper_ore: 0 }
         };
 
@@ -331,6 +366,7 @@
 
             if (isHost) {
                 worldSeed = Math.floor(Math.random() * 100000);
+                initializeWorldAndSpawn();
                 launchGame();
             } else {
                 const roomCode = document.getElementById('room-code-input').value.trim();
@@ -356,18 +392,34 @@
             }
         }
 
-        function launchGame() {
-            gameStarted = true;
-            document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('ui-overlay').style.display = 'block';
-            document.getElementById('hotbar').style.display = 'flex';
-
+        function initializeWorldAndSpawn() {
             generateChunk(0);
             generateChunk(1);
             generateChunk(-1);
             generateChunk(2);
             generateChunk(-2);
+
+            // Compute correct surface height at X = 0 so player drops safely onto grass instead of spawning inside blocks
+            const chunk0 = loadedChunks.get(0);
+            const surfaceY = chunk0[0].surfaceHeight;
+            localPlayer.x = 0;
+            localPlayer.y = (surfaceY - 3) * TILE_SIZE;
+        }
+
+        function launchGame() {
+            gameStarted = true;
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('ui-overlay').style.display = 'block';
+            document.getElementById('health-container').style.display = 'flex';
+            document.getElementById('hotbar').style.display = 'flex';
             updateHotbarUI();
+            updateHealthUI();
+        }
+
+        function updateHealthUI() {
+            document.getElementById('hp-text').innerText = localPlayer.hp;
+            const pct = Math.max(0, Math.min(100, (localPlayer.hp / localPlayer.maxHp) * 100));
+            document.getElementById('health-bar-fill').style.width = pct + '%';
         }
 
         // --- PROC GEN SEED-BASED PSEUDO-RANDOM ---
@@ -437,7 +489,7 @@
                     id: connection.peer,
                     name: clientName,
                     x: data.x || 0, 
-                    y: data.y || (35 * TILE_SIZE),
+                    y: data.y || 0,
                     facing: 1, 
                     swingTimer: 0
                 };
@@ -451,6 +503,8 @@
                     type: 'INIT_SUCCESS',
                     seed: worldSeed,
                     name: clientName,
+                    spawnX: localPlayer.x,
+                    spawnY: localPlayer.y,
                     players: remotePlayers,
                     chunks: serializedChunks
                 });
@@ -478,6 +532,9 @@
             if (data.type === 'INIT_SUCCESS') {
                 worldSeed = data.seed;
                 localPlayer.name = data.name;
+                localPlayer.x = data.spawnX;
+                localPlayer.y = data.spawnY;
+
                 if (data.players) {
                     for (const [id, pData] of Object.entries(data.players)) {
                         if (id !== localPlayer.id) {
@@ -804,7 +861,7 @@
                 updateLocalPlayer();
 
                 for (let i = particles.length - 1; i >= 0; i--) {
-                    const pt = particles.get ? null : particles[i]; // standard array check
+                    const pt = particles[i];
                     pt.x += pt.vx; pt.y += pt.vy;
                     pt.vy += 0.3; pt.life--;
                     if (pt.life <= 0) particles.splice(i, 1);
