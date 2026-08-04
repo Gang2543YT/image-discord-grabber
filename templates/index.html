@@ -3,27 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minecraft Web Engine & Crafting Guide</title>
+  <title>Minecraft Web Engine - Full Screen</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body {
       background-color: #111;
       color: #fff;
       font-family: 'Courier New', Courier, monospace;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      overflow: hidden;
+      overflow: hidden; /* Prevents scrollbars */
+      width: 100vw;
+      height: 100vh;
     }
 
+    /* Game container now fills the screen */
     #game-container {
-      position: relative;
-      width: 800px;
-      height: 500px;
-      border: 4px solid #333;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
       background-color: #70b3ff;
     }
 
@@ -36,20 +34,21 @@
     /* HUD Elements */
     #hud {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      right: 10px;
+      top: 15px;
+      left: 20px;
+      right: 20px;
       display: flex;
       justify-content: space-between;
       pointer-events: none;
       font-weight: bold;
       text-shadow: 2px 2px #000;
+      z-index: 5;
     }
 
     .status-bar {
       display: flex;
-      gap: 15px;
-      font-size: 16px;
+      gap: 20px;
+      font-size: 18px;
     }
 
     .heart { color: #ff3333; }
@@ -58,17 +57,19 @@
     /* UI Controls & Recipe Book Button */
     #ui-buttons {
       position: absolute;
-      bottom: 10px;
-      right: 10px;
+      bottom: 20px;
+      right: 20px;
       display: flex;
       gap: 10px;
+      z-index: 5;
     }
 
     .btn {
       background: #4a4a4a;
       border: 2px solid #8b8b8b;
       color: #fff;
-      padding: 8px 14px;
+      padding: 10px 18px;
+      font-size: 16px;
       font-family: inherit;
       font-weight: bold;
       cursor: pointer;
@@ -84,13 +85,13 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 600px;
-      height: 400px;
+      width: 700px;
+      height: 450px;
       background: #c6c6c6;
       border: 4px solid #373737;
       color: #000;
-      box-shadow: inset -3px -3px 0 #555, inset 3px 3px 0 #fff, 0 0 20px rgba(0,0,0,0.8);
-      padding: 16px;
+      box-shadow: inset -3px -3px 0 #555, inset 3px 3px 0 #fff, 0 0 30px rgba(0,0,0,0.8);
+      padding: 20px;
       flex-direction: column;
       z-index: 10;
     }
@@ -100,16 +101,16 @@
       justify-content: space-between;
       align-items: center;
       border-bottom: 2px solid #555;
-      padding-bottom: 8px;
-      margin-bottom: 12px;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
     }
 
-    .modal-title { font-size: 18px; font-weight: bold; }
+    .modal-title { font-size: 22px; font-weight: bold; }
 
     .recipe-container {
       display: flex;
       flex: 1;
-      gap: 12px;
+      gap: 15px;
       overflow: hidden;
     }
 
@@ -118,19 +119,19 @@
       background: #8b8b8b;
       border: 2px solid #373737;
       overflow-y: auto;
-      padding: 6px;
+      padding: 8px;
     }
 
     .recipe-item {
       background: #8b8b8b;
-      padding: 6px 10px;
-      margin-bottom: 4px;
+      padding: 8px 12px;
+      margin-bottom: 6px;
       border: 2px solid #555;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 13px;
+      font-size: 14px;
     }
     .recipe-item:hover { background: #9b9b9b; }
     .recipe-item.selected { background: #3b5998; color: white; border-color: #fff; }
@@ -139,14 +140,14 @@
       width: 50%;
       background: #a0a0a0;
       border: 2px solid #373737;
-      padding: 12px;
+      padding: 15px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
     }
 
-    .ingredients-list { margin-top: 10px; font-size: 14px; }
-    .ingredient { margin-bottom: 4px; }
+    .ingredients-list { margin-top: 15px; font-size: 15px; }
+    .ingredient { margin-bottom: 6px; }
     .ingredient.has { color: #006600; }
     .ingredient.missing { color: #990000; }
 
@@ -156,7 +157,7 @@
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(180, 0, 0, 0.65);
-      backdrop-filter: blur(2px);
+      backdrop-filter: blur(4px);
       flex-direction: column;
       justify-content: center;
       align-items: center;
@@ -170,59 +171,62 @@
     }
 
     #death-screen h1 {
-      font-size: 56px;
+      font-size: 72px;
       color: #ff3333;
       text-shadow: 4px 4px 0px #000;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
     }
 
     #death-screen p {
-      font-size: 18px;
+      font-size: 24px;
       text-shadow: 2px 2px 0px #000;
-      margin-bottom: 25px;
+      margin-bottom: 35px;
     }
 
     .respawn-btn {
-      font-size: 20px;
-      padding: 12px 24px;
+      font-size: 24px;
+      padding: 15px 30px;
       background: #4a4a4a;
       color: #fff;
       border: 3px solid #fff;
       cursor: pointer;
       box-shadow: 0 4px 0 #222;
+      font-family: inherit;
+      font-weight: bold;
     }
     .respawn-btn:hover { background: #666; }
 
     /* Hotbar */
     #hotbar {
       position: absolute;
-      bottom: 10px;
+      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
       background: rgba(0,0,0,0.6);
       border: 2px solid #555;
-      padding: 4px;
-      gap: 4px;
+      padding: 6px;
+      gap: 6px;
+      z-index: 5;
     }
 
     .slot {
-      width: 36px;
-      height: 36px;
+      width: 48px;
+      height: 48px;
       background: #8b8b8b;
       border: 2px solid #373737;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 11px;
+      font-size: 13px;
       font-weight: bold;
       position: relative;
     }
     .slot-count {
       position: absolute;
-      bottom: 1px;
-      right: 2px;
-      font-size: 10px;
+      bottom: 2px;
+      right: 4px;
+      font-size: 12px;
       color: #fff;
       text-shadow: 1px 1px #000;
     }
@@ -231,7 +235,7 @@
 <body>
 
   <div id="game-container">
-    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    <canvas id="gameCanvas"></canvas>
 
     <!-- HUD -->
     <div id="hud">
@@ -254,17 +258,17 @@
     <div id="crafting-modal">
       <div class="modal-header">
         <span class="modal-title">Crafting Guide & Recipes</span>
-        <button class="btn" id="close-craft-btn" style="padding:2px 8px;">X</button>
+        <button class="btn" id="close-craft-btn" style="padding:2px 10px;">X</button>
       </div>
       <div class="recipe-container">
         <div class="recipe-list" id="recipe-list-ui"></div>
         <div class="recipe-detail" id="recipe-detail-ui">
           <div>
             <h3 id="recipe-name">Select a Recipe</h3>
-            <p id="recipe-desc" style="font-size: 12px; margin: 6px 0; color: #333;"></p>
+            <p id="recipe-desc" style="font-size: 14px; margin: 8px 0; color: #333;"></p>
             <div class="ingredients-list" id="ingredients-ui"></div>
           </div>
-          <button class="btn" id="craft-action-btn" style="width: 100%;" disabled>Craft Item</button>
+          <button class="btn" id="craft-action-btn" style="width: 100%; margin-top: auto;" disabled>Craft Item</button>
         </div>
       </div>
     </div>
@@ -284,70 +288,22 @@
 // ==========================================
 
 const MOBS_DATABASE = {
-  cow: { name: "Cow", hp: 10, hostile: false, color: "#5c4033", size: 28, speed: 0.8, drop: { item: "Raw Beef", count: 2 } },
-  pig: { name: "Pig", hp: 10, hostile: false, color: "#f8a4a4", size: 24, speed: 1.0, drop: { item: "Raw Porkchop", count: 2 } },
-  zombie: { name: "Zombie", hp: 20, hostile: true, damage: 2, color: "#2d6a4f", size: 28, speed: 1.2, drop: { item: "Rotten Flesh", count: 1 } },
-  skeleton: { name: "Skeleton", hp: 20, hostile: true, damage: 3, color: "#d3d3d3", size: 26, speed: 1.1, drop: { item: "Bone", count: 2 } },
-  creeper: { name: "Creeper", hp: 20, hostile: true, damage: 8, color: "#38b000", size: 26, speed: 1.4, drop: { item: "Gunpowder", count: 1 } }
+  cow: { name: "Cow", hp: 10, hostile: false, color: "#5c4033", size: 32, speed: 0.8, drop: { item: "Raw Beef", count: 2 } },
+  pig: { name: "Pig", hp: 10, hostile: false, color: "#f8a4a4", size: 28, speed: 1.0, drop: { item: "Raw Porkchop", count: 2 } },
+  zombie: { name: "Zombie", hp: 20, hostile: true, damage: 2, color: "#2d6a4f", size: 32, speed: 1.2, drop: { item: "Rotten Flesh", count: 1 } },
+  skeleton: { name: "Skeleton", hp: 20, hostile: true, damage: 3, color: "#d3d3d3", size: 30, speed: 1.1, drop: { item: "Bone", count: 2 } },
+  creeper: { name: "Creeper", hp: 20, hostile: true, damage: 8, color: "#38b000", size: 30, speed: 1.4, drop: { item: "Gunpowder", count: 1 } }
 };
 
 const RECIPES_DATABASE = [
-  {
-    id: "planks",
-    name: "Oak Planks",
-    output: { item: "Oak Planks", count: 4 },
-    inputs: [{ item: "Oak Log", count: 1 }],
-    desc: "Basic building material processed from logs."
-  },
-  {
-    id: "stick",
-    name: "Sticks",
-    output: { item: "Stick", count: 4 },
-    inputs: [{ item: "Oak Planks", count: 2 }],
-    desc: "Used to craft tools, torches, and weapons."
-  },
-  {
-    id: "crafting_table",
-    name: "Crafting Table",
-    output: { item: "Crafting Table", count: 1 },
-    inputs: [{ item: "Oak Planks", count: 4 }],
-    desc: "Allows crafting complex 3x3 items."
-  },
-  {
-    id: "wooden_sword",
-    name: "Wooden Sword",
-    output: { item: "Wooden Sword", count: 1 },
-    inputs: [{ item: "Oak Planks", count: 2 }, { item: "Stick", count: 1 }],
-    desc: "Deals basic melee attack damage (+4 Damage)."
-  },
-  {
-    id: "stone_sword",
-    name: "Stone Sword",
-    output: { item: "Stone Sword", count: 1 },
-    inputs: [{ item: "Cobblestone", count: 2 }, { item: "Stick", count: 1 }],
-    desc: "Durable early game weapon (+5 Damage)."
-  },
-  {
-    id: "iron_sword",
-    name: "Iron Sword",
-    output: { item: "Iron Sword", count: 1 },
-    inputs: [{ item: "Iron Ingot", count: 2 }, { item: "Stick", count: 1 }],
-    desc: "High damage combat sword (+6 Damage)."
-  },
-  {
-    id: "torch",
-    name: "Torch",
-    output: { item: "Torch", count: 4 },
-    inputs: [{ item: "Coal", count: 1 }, { item: "Stick", count: 1 }],
-    desc: "Provides light and repels darkness."
-  },
-  {
-    id: "furnace",
-    name: "Furnace",
-    output: { item: "Furnace", count: 1 },
-    inputs: [{ item: "Cobblestone", count: 8 }],
-    desc: "Used for smelting ores and cooking food."
-  }
+  { id: "planks", name: "Oak Planks", output: { item: "Oak Planks", count: 4 }, inputs: [{ item: "Oak Log", count: 1 }], desc: "Basic building material processed from logs." },
+  { id: "stick", name: "Sticks", output: { item: "Stick", count: 4 }, inputs: [{ item: "Oak Planks", count: 2 }], desc: "Used to craft tools, torches, and weapons." },
+  { id: "crafting_table", name: "Crafting Table", output: { item: "Crafting Table", count: 1 }, inputs: [{ item: "Oak Planks", count: 4 }], desc: "Allows crafting complex 3x3 items." },
+  { id: "wooden_sword", name: "Wooden Sword", output: { item: "Wooden Sword", count: 1 }, inputs: [{ item: "Oak Planks", count: 2 }, { item: "Stick", count: 1 }], desc: "Deals basic melee attack damage (+4 Damage)." },
+  { id: "stone_sword", name: "Stone Sword", output: { item: "Stone Sword", count: 1 }, inputs: [{ item: "Cobblestone", count: 2 }, { item: "Stick", count: 1 }], desc: "Durable early game weapon (+5 Damage)." },
+  { id: "iron_sword", name: "Iron Sword", output: { item: "Iron Sword", count: 1 }, inputs: [{ item: "Iron Ingot", count: 2 }, { item: "Stick", count: 1 }], desc: "High damage combat sword (+6 Damage)." },
+  { id: "torch", name: "Torch", output: { item: "Torch", count: 4 }, inputs: [{ item: "Coal", count: 1 }, { item: "Stick", count: 1 }], desc: "Provides light and repels darkness." },
+  { id: "furnace", name: "Furnace", output: { item: "Furnace", count: 1 }, inputs: [{ item: "Cobblestone", count: 8 }], desc: "Used for smelting ores and cooking food." }
 ];
 
 // ==========================================
@@ -357,20 +313,23 @@ const RECIPES_DATABASE = [
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+// Handle Fullscreen Canvas Resizing
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas(); // Set initial size
+
 let player = {
-  x: 400,
-  y: 250,
-  size: 24,
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  size: 28,
   hp: 20,
   maxHp: 20,
-  speed: 3,
+  speed: 4,
   score: 0,
-  inventory: {
-    "Oak Log": 5,
-    "Cobblestone": 8,
-    "Coal": 2,
-    "Iron Ingot": 2
-  }
+  inventory: { "Oak Log": 5, "Cobblestone": 8, "Coal": 2, "Iron Ingot": 2 }
 };
 
 let activeMobs = [];
@@ -387,10 +346,12 @@ function spawnMob(typeKey) {
   const template = MOBS_DATABASE[typeKey];
   const side = Math.floor(Math.random() * 4);
   let x, y;
-  if (side === 0) { x = Math.random() * canvas.width; y = -30; }
-  else if (side === 1) { x = canvas.width + 30; y = Math.random() * canvas.height; }
-  else if (side === 2) { x = Math.random() * canvas.width; y = canvas.height + 30; }
-  else { x = -30; y = Math.random() * canvas.height; }
+  
+  // Spawn just outside the current screen view
+  if (side === 0) { x = Math.random() * canvas.width; y = -50; }
+  else if (side === 1) { x = canvas.width + 50; y = Math.random() * canvas.height; }
+  else if (side === 2) { x = Math.random() * canvas.width; y = canvas.height + 50; }
+  else { x = -50; y = Math.random() * canvas.height; }
 
   activeMobs.push({
     ...template,
@@ -402,14 +363,14 @@ function spawnMob(typeKey) {
 }
 
 // Initial Mob Population
-for (let i = 0; i < 3; i++) spawnMob("cow");
-for (let i = 0; i < 2; i++) spawnMob("zombie");
-for (let i = 0; i < 1; i++) spawnMob("creeper");
+for (let i = 0; i < 5; i++) spawnMob("cow");
+for (let i = 0; i < 4; i++) spawnMob("zombie");
+for (let i = 0; i < 2; i++) spawnMob("creeper");
 
 function updateGame() {
   if (!gameActive) return;
 
-  // Player Movement
+  // Player Movement (Constrained to full screen bounds)
   if (keys['w'] || keys['W'] || keys['ArrowUp']) player.y = Math.max(player.size, player.y - player.speed);
   if (keys['s'] || keys['S'] || keys['ArrowDown']) player.y = Math.min(canvas.height - player.size, player.y + player.speed);
   if (keys['a'] || keys['A'] || keys['ArrowLeft']) player.x = Math.max(player.size, player.x - player.speed);
@@ -436,21 +397,21 @@ function updateGame() {
     }
   });
 
-  // Periodically spawn mobs
-  if (Math.random() < 0.005 && activeMobs.length < 8) {
+  // Periodically spawn mobs up to a larger cap for full screen
+  if (Math.random() < 0.01 && activeMobs.length < 15) {
     const types = ["cow", "pig", "zombie", "skeleton", "creeper"];
     spawnMob(types[Math.floor(Math.random() * types.length)]);
   }
 }
 
 function renderGame() {
-  // Background
+  // Background (Sky color)
   ctx.fillStyle = "#70b3ff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Decorative Grass Tiles
+  // Decorative Grass Tiles (Starts a bit lower)
   ctx.fillStyle = "#55a630";
-  ctx.fillRect(0, 100, canvas.width, canvas.height - 100);
+  ctx.fillRect(0, 150, canvas.width, canvas.height - 150);
 
   // Render Mobs
   activeMobs.forEach(mob => {
@@ -459,26 +420,26 @@ function renderGame() {
 
     // Eyes
     ctx.fillStyle = "#000";
-    ctx.fillRect(mob.x - 6, mob.y - 6, 4, 4);
-    ctx.fillRect(mob.x + 2, mob.y - 6, 4, 4);
+    ctx.fillRect(mob.x - 8, mob.y - 8, 5, 5);
+    ctx.fillRect(mob.x + 3, mob.y - 8, 5, 5);
 
     // Name Label
     ctx.fillStyle = "#fff";
-    ctx.font = "10px Courier New";
+    ctx.font = "12px Courier New";
     ctx.textAlign = "center";
-    ctx.fillText(mob.name, mob.x, mob.y - mob.size/2 - 4);
+    ctx.fillText(mob.name, mob.x, mob.y - mob.size/2 - 6);
   });
 
   // Render Player
   ctx.fillStyle = "#00b4d8"; // Cyan Steve shirt
   ctx.fillRect(player.x - player.size/2, player.y - player.size/2, player.size, player.size);
   ctx.fillStyle = "#ffb5a7"; // Head/Face
-  ctx.fillRect(player.x - 8, player.y - 8, 16, 10);
+  ctx.fillRect(player.x - 10, player.y - 10, 20, 12);
 
   // Render Crosshair / Target Indicator
   ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
   ctx.lineWidth = 2;
-  ctx.strokeRect(player.x - player.size/2 - 4, player.y - player.size/2 - 4, player.size + 8, player.size + 8);
+  ctx.strokeRect(player.x - player.size/2 - 5, player.y - player.size/2 - 5, player.size + 10, player.size + 10);
 }
 
 function gameLoop() {
@@ -496,7 +457,7 @@ canvas.addEventListener("click", (e) => {
 
   activeMobs.forEach((mob, index) => {
     const dist = Math.hypot(clickX - mob.x, clickY - mob.y);
-    if (dist < mob.size) {
+    if (dist < mob.size + 15) { // Slightly forgiving hitbox for full screen
       mob.currentHp -= 10; // Player attack power
       if (mob.currentHp <= 0) {
         // Collect drop
@@ -540,8 +501,8 @@ function respawn() {
   activeMobs = [];
   
   // Re-populate basic mobs
-  for (let i = 0; i < 3; i++) spawnMob("cow");
-  for (let i = 0; i < 2; i++) spawnMob("zombie");
+  for (let i = 0; i < 5; i++) spawnMob("cow");
+  for (let i = 0; i < 4; i++) spawnMob("zombie");
 
   document.getElementById("death-screen").style.display = "none";
   updateHUD();
