@@ -129,12 +129,13 @@
             font-size: 12px;
             display: none;
             line-height: 1.5;
+            z-index: 5;
         }
         #health-container {
             position: absolute;
             top: 15px;
             right: 20px;
-            display: none;
+            display: flex; /* Ensured block/flex state is explicitly controlled via script */
             flex-direction: column;
             align-items: flex-end;
             pointer-events: none;
@@ -142,6 +143,7 @@
             color: white;
             font-weight: bold;
             text-shadow: 1px 1px #000;
+            z-index: 5;
         }
         #health-bar-bg {
             width: 180px;
@@ -164,15 +166,16 @@
             left: 50%;
             transform: translateX(-50%);
             display: none;
-            gap: 8px;
+            gap: 6px;
             background: rgba(0, 0, 0, 0.75);
             padding: 8px;
             border-radius: 8px;
             border: 2px solid #555;
+            z-index: 5;
         }
         .slot {
-            width: 42px;
-            height: 42px;
+            width: 38px;
+            height: 38px;
             background: rgba(255, 255, 255, 0.1);
             border: 2px solid #666;
             display: flex;
@@ -181,7 +184,7 @@
             justify-content: center;
             color: white;
             font-weight: bold;
-            font-size: 10px;
+            font-size: 9px;
             position: relative;
         }
         .slot.active {
@@ -191,8 +194,8 @@
         .slot span {
             position: absolute;
             bottom: 2px;
-            right: 4px;
-            font-size: 9px;
+            right: 3px;
+            font-size: 8px;
             color: #f1c40f;
         }
     </style>
@@ -228,7 +231,7 @@
 
     <div id="ui-overlay">
         <strong>Controls:</strong> A/D to Move | Space to Jump | Mouse to Aim & Mine<br>
-        <strong>Hotbar:</strong> 1-5 to select items
+        <strong>Hotbar:</strong> 0-9 to select items
     </div>
 
     <div id="health-container">
@@ -242,6 +245,11 @@
         <div class="slot" id="slot-2">Wood<span>15</span></div>
         <div class="slot" id="slot-3">Stone<span>0</span></div>
         <div class="slot" id="slot-4">Ore<span>0</span></div>
+        <div class="slot" id="slot-5">Iron<span>0</span></div>
+        <div class="slot" id="slot-6">Dirt<span>0</span></div>
+        <div class="slot" id="slot-7">Leaf<span>0</span></div>
+        <div class="slot" id="slot-8">Slot9<span>0</span></div>
+        <div class="slot" id="slot-9">Slot0<span>0</span></div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -294,7 +302,7 @@
             id: null,
             name: '',
             x: 0,
-            y: 0, // Calculated correctly upon world generation load
+            y: 0,
             width: 20,
             height: 38,
             vx: 0,
@@ -308,11 +316,22 @@
             selectedSlot: 0,
             maxHp: 100,
             hp: 100,
-            inventory: { copper_broadsword: 1, copper_pickaxe: 1, wood: 15, stone: 0, copper_ore: 0 }
+            inventory: { 
+                copper_broadsword: 1, 
+                copper_pickaxe: 1, 
+                wood: 15, 
+                stone: 0, 
+                copper_ore: 0, 
+                iron_ore: 0, 
+                dirt: 0, 
+                leaves: 0, 
+                slot9: 0, 
+                slot0: 0 
+            }
         };
 
         const remotePlayers = {};
-        const hotbarKeys = ['copper_broadsword', 'copper_pickaxe', 'wood', 'stone', 'copper_ore'];
+        const hotbarKeys = ['copper_broadsword', 'copper_pickaxe', 'wood', 'stone', 'copper_ore', 'iron_ore', 'dirt', 'leaves', 'slot9', 'slot0'];
         const particles = [];
         const clouds = [
             { x: 100, y: 80, speed: 0.3, width: 120, height: 40 },
@@ -399,7 +418,6 @@
             generateChunk(2);
             generateChunk(-2);
 
-            // Compute correct surface height at X = 0 so player drops safely onto grass instead of spawning inside blocks
             const chunk0 = loadedChunks.get(0);
             const surfaceY = chunk0[0].surfaceHeight;
             localPlayer.x = 0;
@@ -422,7 +440,6 @@
             document.getElementById('health-bar-fill').style.width = pct + '%';
         }
 
-        // --- PROC GEN SEED-BASED PSEUDO-RANDOM ---
         function seededRandom(seed) {
             let x = Math.sin(seed++) * 10000;
             return x - Math.floor(x);
@@ -594,8 +611,13 @@
         window.addEventListener('keydown', e => {
             if (!gameStarted) return;
             keys[e.code] = true;
-            if (e.code >= 'Digit1' && e.code <= 'Digit5') {
+
+            // Map keys 1-9 and Digit0 for 10-slot hotbar selection
+            if (e.code >= 'Digit1' && e.code <= 'Digit9') {
                 localPlayer.selectedSlot = parseInt(e.code) - 1;
+                updateHotbarUI();
+            } else if (e.code === 'Digit0') {
+                localPlayer.selectedSlot = 9;
                 updateHotbarUI();
             }
         });
@@ -610,11 +632,14 @@
         window.addEventListener('contextmenu', e => e.preventDefault());
 
         function updateHotbarUI() {
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 10; i++) {
                 const slot = document.getElementById(`slot-${i}`);
                 const itemName = hotbarKeys[i];
-                slot.querySelector('span').innerText = localPlayer.inventory[itemName] || 0;
-                slot.classList.toggle('active', i === localPlayer.selectedSlot);
+                if (slot) {
+                    const countSpan = slot.querySelector('span');
+                    if (countSpan) countSpan.innerText = localPlayer.inventory[itemName] || 0;
+                    slot.classList.toggle('active', i === localPlayer.selectedSlot);
+                }
             }
         }
 
@@ -706,7 +731,12 @@
                                 });
                             }
 
-                            const dropName = block.includes('ore') ? block : (block === 'stone' ? 'stone' : 'wood');
+                            let dropName = 'wood';
+                            if (block.includes('ore')) dropName = block;
+                            else if (block === 'stone') dropName = 'stone';
+                            else if (block === 'dirt' || block === 'grass') dropName = 'dirt';
+                            else if (block === 'leaves') dropName = 'leaves';
+
                             localPlayer.inventory[dropName] = (localPlayer.inventory[dropName] || 0) + 1;
                             updateHotbarUI();
 
@@ -714,14 +744,24 @@
                             if (isHost) broadcastToClients(packet);
                             else if (conn) conn.send(packet);
                         }
-                    } else if (selectedItem === 'wood' || selectedItem === 'stone') {
+                    } else {
+                        // Placing items (wood, stone, dirt, leaves, ores, or custom slots)
                         if (!block && localPlayer.inventory[selectedItem] > 0) {
-                            setBlock(targetBx, targetBy, selectedItem);
+                            let placeType = selectedItem;
+                            if (selectedItem === 'copper_ore' || selectedItem === 'iron_ore') {
+                                // place corresponding ore block
+                            } else if (selectedItem === 'dirt' || selectedItem === 'stone' || selectedItem === 'wood' || selectedItem === 'leaves') {
+                                // place directly
+                            } else {
+                                placeType = 'wood'; // fallback block type if using custom empty slot
+                            }
+
+                            setBlock(targetBx, targetBy, placeType);
                             localPlayer.inventory[selectedItem]--;
                             updateHotbarUI();
                             localPlayer.swingTimer = 10;
 
-                            const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: selectedItem };
+                            const packet = { type: 'BLOCK_ACTION', bx: targetBx, by: targetBy, typeAction: placeType };
                             if (isHost) broadcastToClients(packet);
                             else if (conn) conn.send(packet);
                         }
