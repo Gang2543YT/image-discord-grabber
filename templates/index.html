@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Stationary Turret Defense - Balanced Economy</title>
+  <title>Stationary Turret Defense - Refined Spawns</title>
   <style>
     body {
       margin: 0;
@@ -420,7 +420,7 @@ function update() {
     }
   }
 
-  // 2. Enemy Spawning Loop (Reduces purple and yellow spawn chances significantly)
+  // 2. Enemy Spawning Loop (Made purple/yellow even scarcer: 88% Red, 9% Purple, 3% Yellow)
   spawnTimer--;
   if (spawnTimer <= 0) {
     spawnTimer = Math.max(15, 40 - (wave * 2));
@@ -433,10 +433,9 @@ function update() {
     let rand = Math.random();
     let tierData;
 
-    // 80% Red (common), 15% Purple (uncommon), 5% Yellow (rare boss-type)
-    if (rand < 0.80) {
+    if (rand < 0.88) {
       tierData = { color: "#e74c3c", size: 14, hp: 25, speed: 2.8, damage: 6, goldValue: 3 };
-    } else if (rand < 0.95) {
+    } else if (rand < 0.97) {
       tierData = { color: "#9b59b6", size: 26, hp: 90, speed: 1.5, damage: 18, goldValue: 8 };
     } else {
       tierData = { color: "#f1c40f", size: 34, hp: 220, speed: 2.0, damage: 30, goldValue: 20 };
