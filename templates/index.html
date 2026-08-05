@@ -463,7 +463,6 @@ function updateGlobalLeaderboardDisplay(savedScores) {
 function recordScoreAndRefresh() {
   if (!gameStarted) return;
   
-  // Score formula strictly accumulates from zero based on current gold and performance
   player.score = player.gold;
 
   let savedScores = JSON.parse(localStorage.getItem("turret_lifetime_scores") || "[]");
@@ -531,7 +530,6 @@ function addFloatingText(x, y, text, color) {
 function resetGame() {
   recordScoreAndRefresh();
 
-  // Reset active run stats & starting score to 0 strictly
   player.hp = 100;
   player.maxHp = 100;
   player.gold = 0;
@@ -544,18 +542,16 @@ function resetGame() {
   player.armorReduction = 0;
   player.goldBonusMultiplier = 1.0;
 
-  // Immediately push 0 score entry for the fresh run restart
   let savedScores = JSON.parse(localStorage.getItem("turret_lifetime_scores") || "[]");
   let existingEntry = savedScores.find(s => s.id === player.id);
   if (existingEntry) {
-    if (0 > existingEntry.score) existingEntry.score = 0; // keeps high score, but updates current view/session if desired
+    if (0 > existingEntry.score) existingEntry.score = 0;
   } else {
     savedScores.push({ id: player.id, name: player.name, score: 0 });
   }
   localStorage.setItem("turret_lifetime_scores", JSON.stringify(savedScores));
   updateGlobalLeaderboardDisplay(savedScores);
 
-  // Reset upgrades state
   upgradesState = {
     damage: { level: 0, cost: 35, costMult: 1.4 },
     fireRate: { level: 0, cost: 50, costMult: 1.5 },
@@ -702,10 +698,10 @@ function update() {
     }
   }
 
-  // 2. Enemy Spawning Loop
+  // 2. Enemy Spawning Loop with Multiple Enemy Types
   spawnTimer--;
   if (spawnTimer <= 0) {
-    spawnTimer = Math.max(15, 40 - (wave * 2));
+    spawnTimer = Math.max(15, 38 - (wave * 1.5));
     
     let angle = Math.random() * Math.PI * 2;
     let dist = Math.max(window.innerWidth, window.innerHeight) / 2 + 100;
@@ -713,26 +709,39 @@ function update() {
     let ey = player.y + Math.sin(angle) * dist;
 
     let rand = Math.random();
-    let tierData;
+    let typeConfig;
 
-    if (rand < 0.85) {
-      tierData = { color: "#e74c3c", size: 14, hp: 25, speed: 2.8, damage: 6, goldValue: 3 };
+    if (rand < 0.35) {
+      // 1. Runner (Fast & Weak - Orange)
+      typeConfig = { name: "Runner", color: "#e67e22", size: 11, hp: 15, speed: 4.2, damage: 4, goldValue: 2, shape: "circle" };
+    } else if (rand < 0.60) {
+      // 2. Grunt (Standard - Red)
+      typeConfig = { name: "Grunt", color: "#e74c3c", size: 15, hp: 30, speed: 2.6, damage: 7, goldValue: 4, shape: "circle" };
+    } else if (rand < 0.78) {
+      // 3. Tank (Slow & Heavy - Purple)
+      typeConfig = { name: "Tank", color: "#9b59b6", size: 28, hp: 110, speed: 1.4, damage: 18, goldValue: 10, shape: "square" };
+    } else if (rand < 0.90) {
+      // 4. Sprinter (Insane Speed, Low HP - Cyan)
+      typeConfig = { name: "Sprinter", color: "#00bcd4", size: 12, hp: 20, speed: 5.5, damage: 8, goldValue: 7, shape: "triangle" };
     } else if (rand < 0.97) {
-      tierData = { color: "#9b59b6", size: 26, hp: 90, speed: 1.5, damage: 18, goldValue: 8 };
+      // 5. Heavy Juggernaut (High HP & Damage - Amber/Gold)
+      typeConfig = { name: "Juggernaut", color: "#f1c40f", size: 34, hp: 250, speed: 1.8, damage: 32, goldValue: 22, shape: "square" };
     } else {
-      tierData = { color: "#f1c40f", size: 34, hp: 220, speed: 2.0, damage: 30, goldValue: 20 };
+      // 6. Phantom (Ghostly/Semi-translucent, Medium - Teal/Green)
+      typeConfig = { name: "Phantom", color: "#2ecc71", size: 18, hp: 55, speed: 3.2, damage: 12, goldValue: 12, shape: "triangle" };
     }
 
     enemies.push({
       x: ex,
       y: ey,
-      hp: tierData.hp,
-      maxHp: tierData.hp,
-      speed: tierData.speed,
-      size: tierData.size,
-      damage: tierData.damage,
-      color: tierData.color,
-      goldValue: tierData.goldValue
+      hp: typeConfig.hp,
+      maxHp: typeConfig.hp,
+      speed: typeConfig.speed,
+      size: typeConfig.size,
+      damage: typeConfig.damage,
+      color: typeConfig.color,
+      goldValue: typeConfig.goldValue,
+      shape: typeConfig.shape
     });
   }
 
@@ -824,21 +833,39 @@ function draw() {
   ctx.arc(player.x, player.y, player.range, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Draw Enemies
+  // Draw Enemies with varied shapes and colors
   enemies.forEach(e => {
     ctx.fillStyle = e.color;
-    ctx.beginPath();
-    ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
-    ctx.fill();
     ctx.strokeStyle = "#111";
     ctx.lineWidth = 3;
-    ctx.stroke();
 
-    // Health bar
+    if (e.shape === "square") {
+      ctx.beginPath();
+      ctx.rect(e.x - e.size, e.y - e.size, e.size * 2, e.size * 2);
+      ctx.fill();
+      ctx.stroke();
+    } else if (e.shape === "triangle") {
+      ctx.beginPath();
+      ctx.moveTo(e.x, e.y - e.size * 1.3);
+      ctx.lineTo(e.x - e.size, e.y + e.size);
+      ctx.lineTo(e.x + e.size, e.y + e.size);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      // Circle shape
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Health bar above enemy
+    let barWidth = e.size * 2.2;
     ctx.fillStyle = "#222";
-    ctx.fillRect(e.x - 18, e.y - e.size - 12, 36, 5);
+    ctx.fillRect(e.x - barWidth / 2, e.y - e.size - 12, barWidth, 5);
     ctx.fillStyle = "#2ecc71";
-    ctx.fillRect(e.x - 18, e.y - e.size - 12, 36 * (e.hp / e.maxHp), 5);
+    ctx.fillRect(e.x - barWidth / 2, e.y - e.size - 12, barWidth * (e.hp / e.maxHp), 5);
   });
 
   // Draw Projectiles
