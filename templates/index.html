@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Arena Survival - Gold & Auto-Shoot</title>
+  <title>Stationary Turret Defense</title>
   <style>
     body {
       margin: 0;
@@ -33,29 +33,27 @@
       display: inline-block;
       font-size: 18px;
       font-weight: bold;
+      pointer-events: auto;
     }
     #gold-display {
       color: #f1c40f;
     }
-    #xp-bar-container {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 50%;
-      height: 20px;
-      background: rgba(0,0,0,0.8);
-      border: 2px solid #555;
-      border-radius: 10px;
-      overflow: hidden;
+    #shop-btn {
+      background: #f1c40f;
+      color: #111;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-left: 15px;
+      transition: 0.2s;
     }
-    #xp-bar {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #3498db, #2ecc71);
-      transition: width 0.1s;
-    }
-    #upgrade-modal, #game-over {
+    #shop-btn:hover { background: #f39c12; }
+
+    /* Upgrade Shop Modal */
+    #shop-modal {
       display: none;
       position: absolute;
       top: 0;
@@ -68,27 +66,62 @@
       align-items: center;
       pointer-events: auto;
     }
-    .cards-container {
+    .shop-container {
+      background: #222;
+      border: 3px solid #444;
+      border-radius: 12px;
+      padding: 30px;
+      width: 450px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(0,0,0,0.8);
+    }
+    .shop-item {
       display: flex;
-      gap: 20px;
+      justify-content: space-between;
+      align-items: center;
+      background: #2a2a2a;
+      margin: 10px 0;
+      padding: 12px 20px;
+      border-radius: 8px;
+      border: 2px solid #444;
+    }
+    .shop-item button {
+      background: #2ecc71;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .shop-item button:hover { background: #27ae60; }
+    .close-btn {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
       margin-top: 20px;
     }
-    .upgrade-card {
-      background: #222;
-      border: 3px solid #555;
-      border-radius: 10px;
-      padding: 25px;
-      width: 200px;
-      text-align: center;
-      cursor: pointer;
-      transition: 0.2s;
+    .close-btn:hover { background: #c0392b; }
+
+    #game-over {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      pointer-events: auto;
     }
-    .upgrade-card:hover {
-      background: #333;
-      border-color: #3498db;
-      transform: translateY(-5px);
-    }
-    button {
+    button.retry {
       padding: 15px 30px;
       font-size: 20px;
       font-weight: bold;
@@ -99,30 +132,52 @@
       cursor: pointer;
       margin-top: 20px;
     }
-    button:hover { background: #c0392b; }
+    button.retry:hover { background: #c0392b; }
   </style>
 </head>
 <body>
 
   <div id="ui-layer">
     <div class="hud-panel" id="hp-box">HP: 100 / 100</div>
-    <div class="hud-panel" id="lvl-box" style="margin-left: 10px;">Level: 1</div>
     <div class="hud-panel" style="margin-left: 10px;">Gold: <span id="gold-display">0</span></div>
+    <button class="hud-panel" id="shop-btn" onclick="toggleShop(true)">Upgrade Shop</button>
     
-    <div id="xp-bar-container">
-      <div id="xp-bar"></div>
-    </div>
-
-    <div id="upgrade-modal">
-      <h1 style="color: #f1c40f; font-size: 40px; margin: 0;">LEVEL UP!</h1>
-      <p style="color: #ccc; margin-top: 5px;">Choose an upgrade:</p>
-      <div class="cards-container" id="cards-box"></div>
+    <!-- Upgrade Shop Overlay -->
+    <div id="shop-modal">
+      <div class="shop-container">
+        <h2 style="color: #f1c40f; margin-top: 0;">TURRET UPGRADE SHOP</h2>
+        <div class="shop-item">
+          <div style="text-align: left;">
+            <strong>Damage Boost</strong><br><span style="font-size: 13px; color: #aaa;" id="dmg-desc">+10 Damage</span>
+          </div>
+          <button onclick="buyUpgrade('damage')">Cost: <span id="cost-damage">50</span>g</button>
+        </div>
+        <div class="shop-item">
+          <div style="text-align: left;">
+            <strong>Rapid Fire</strong><br><span style="font-size: 13px; color: #aaa;" id="fire-desc">Shoot Faster</span>
+          </div>
+          <button onclick="buyUpgrade('fireRate')">Cost: <span id="cost-fireRate">75</span>g</button>
+        </div>
+        <div class="shop-item">
+          <div style="text-align: left;">
+            <strong>Radar Range</strong><br><span style="font-size: 13px; color: #aaa;" id="range-desc">+75 Range</span>
+          </div>
+          <button onclick="buyUpgrade('range')">Cost: <span id="cost-range">60</span>g</button>
+        </div>
+        <div class="shop-item">
+          <div style="text-align: left;">
+            <strong>Repair Base</strong><br><span style="font-size: 13px; color: #aaa;">Restore 30 HP</span>
+          </div>
+          <button onclick="buyUpgrade('heal')">Cost: <span id="cost-heal">40</span>g</button>
+        </div>
+        <button class="close-btn" onclick="toggleShop(false)">Resume Game</button>
+      </div>
     </div>
 
     <div id="game-over">
-      <h1 style="color: #e74c3c; font-size: 60px; margin: 0;">DEFEATED</h1>
-      <p id="final-stats" style="font-size: 20px; margin: 10px 0;">You reached Level 1</p>
-      <button onclick="location.reload()">Play Again</button>
+      <h1 style="color: #e74c3c; font-size: 60px; margin: 0;">BASE DESTROYED</h1>
+      <p id="final-stats" style="font-size: 20px; margin: 10px 0;">You survived valiantly</p>
+      <button class="retry" onclick="location.reload()">Play Again</button>
     </div>
   </div>
 
@@ -140,97 +195,80 @@ window.addEventListener("resize", resize);
 resize();
 
 // --- GAME SETTINGS & STATE ---
-const WORLD_SIZE = 2500;
-let keys = {};
-
 let player = {
-  x: WORLD_SIZE / 2,
-  y: WORLD_SIZE / 2,
-  size: 24,
-  speed: 4.5,
+  x: window.innerWidth / 2,
+  y: window.innerHeight / 2,
+  size: 28,
   hp: 100,
   maxHp: 100,
   damage: 25,
   cooldown: 0,
   maxCooldown: 25,
-  range: 400,
-  level: 1,
-  xp: 0,
-  xpNeeded: 50,
+  range: 350,
   gold: 0
 };
 
+let upgradeCosts = {
+  damage: 50,
+  fireRate: 75,
+  range: 60,
+  heal: 40
+};
+
 let enemies = [];
-let gems = [];
-let coins = [];
 let projectiles = [];
 let floatingTexts = [];
 let spawnTimer = 0;
+let wave = 1;
 let gameOver = false;
-let gamePaused = false;
-
-// --- INPUT HANDLERS ---
-window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+let shopOpen = false;
 
 function addFloatingText(x, y, text, color) {
   floatingTexts.push({ x, y, text, color, life: 30 });
 }
 
-// --- UPGRADE SYSTEM ---
-const UPGRADE_POOL = [
-  { title: "Max Health", desc: "+30 Max HP & Heal", apply: () => { player.maxHp += 30; player.hp = player.maxHp; } },
-  { title: "Sharpened", desc: "+12 Attack Damage", apply: () => { player.damage += 12; } },
-  { title: "Agility", desc: "+0.8 Move Speed", apply: () => { player.speed += 0.8; } },
-  { title: "Rapid Fire", desc: "Shoot Faster", apply: () => { player.maxCooldown = Math.max(8, player.maxCooldown - 4); } },
-  { title: "Radar Scope", desc: "+100 Targeting Range", apply: () => { player.range += 100; } }
-];
+// --- SHOP LOGIC ---
+function toggleShop(open) {
+  shopOpen = open;
+  document.getElementById("shop-modal").style.display = open ? "flex" : "none";
+}
 
-function triggerLevelUp() {
-  gamePaused = true;
-  document.getElementById("upgrade-modal").style.display = "flex";
-  
-  let container = document.getElementById("cards-box");
-  container.innerHTML = "";
-
-  let shuffled = [...UPGRADE_POOL].sort(() => 0.5 - Math.random());
-  let choices = shuffled.slice(0, 3);
-
-  choices.forEach(choice => {
-    let card = document.createElement("div");
-    card.className = "upgrade-card";
-    card.innerHTML = `<h3 style="margin-top:0; color:#3498db;">${choice.title}</h3><p style="font-size:14px; color:#ccc;">${choice.desc}</p>`;
-    card.onclick = () => {
-      choice.apply();
-      document.getElementById("upgrade-modal").style.display = "none";
-      gamePaused = false;
-    };
-    container.appendChild(card);
-  });
+function buyUpgrade(type) {
+  let cost = upgradeCosts[type];
+  if (player.gold >= cost) {
+    player.gold -= cost;
+    
+    if (type === 'damage') {
+      player.damage += 12;
+      upgradeCosts.damage = Math.floor(upgradeCosts.damage * 1.5);
+      document.getElementById("cost-damage").innerText = upgradeCosts.damage;
+    } else if (type === 'fireRate') {
+      player.maxCooldown = Math.max(6, player.maxCooldown - 4);
+      upgradeCosts.fireRate = Math.floor(upgradeCosts.fireRate * 1.6);
+      document.getElementById("cost-fireRate").innerText = upgradeCosts.fireRate;
+    } else if (type === 'range') {
+      player.range += 75;
+      upgradeCosts.range = Math.floor(upgradeCosts.range * 1.4);
+      document.getElementById("cost-range").innerText = upgradeCosts.range;
+    } else if (type === 'heal') {
+      player.hp = Math.min(player.maxHp, player.hp + 30);
+      upgradeCosts.heal = Math.floor(upgradeCosts.heal * 1.3);
+      document.getElementById("cost-heal").innerText = upgradeCosts.heal;
+    }
+  } else {
+    addFloatingText(player.x, player.y - 40, "Not enough Gold!", "#e74c3c");
+  }
 }
 
 // --- UPDATE LOOP ---
 function update() {
-  if (gameOver || gamePaused) return;
+  if (gameOver || shopOpen) return;
 
-  // 1. Move Player (WASD)
-  let dx = 0, dy = 0;
-  if (keys['w'] || keys['arrowup']) dy -= 1;
-  if (keys['s'] || keys['arrowdown']) dy += 1;
-  if (keys['a'] || keys['arrowleft']) dx -= 1;
-  if (keys['d'] || keys['arrowright']) dx += 1;
+  // Keep player completely stationary at the center of the screen/world
+  player.x = window.innerWidth / 2;
+  player.y = window.innerHeight / 2;
 
-  if (dx !== 0 && dy !== 0) {
-    dx *= 0.7071;
-    dy *= 0.7071;
-  }
-  player.x += dx * player.speed;
-  player.y += dy * player.speed;
-
-  player.x = Math.max(player.size, Math.min(WORLD_SIZE - player.size, player.x));
-  player.y = Math.max(player.size, Math.min(WORLD_SIZE - player.size, player.y));
-
-  // 2. Player Auto-Shooting
+  // 1. Auto-Shooting (Closest enemy in range)
   if (player.cooldown > 0) {
     player.cooldown--;
   } else if (enemies.length > 0) {
@@ -252,33 +290,33 @@ function update() {
       projectiles.push({
         x: player.x,
         y: player.y,
-        vx: Math.cos(angle) * 10,
-        vy: Math.sin(angle) * 10,
+        vx: Math.cos(angle) * 11,
+        vy: Math.sin(angle) * 11,
         damage: player.damage,
         life: 100
       });
     }
   }
 
-  // 3. Enemy Spawning Loop
+  // 2. Enemy Spawning Loop
   spawnTimer--;
   if (spawnTimer <= 0) {
-    spawnTimer = Math.max(15, 45 - (player.level * 2));
+    spawnTimer = Math.max(15, 40 - (wave * 2));
     
     let angle = Math.random() * Math.PI * 2;
-    let dist = Math.max(canvas.width, canvas.height) / 2 + 100;
+    let dist = Math.max(window.innerWidth, window.innerHeight) / 2 + 100;
     let ex = player.x + Math.cos(angle) * dist;
     let ey = player.y + Math.sin(angle) * dist;
 
     let rand = Math.random();
     let tierData;
 
-    if (rand < 0.60 || player.level < 2) {
-      tierData = { color: "#e74c3c", size: 14, hp: 20, speed: 3.2, damage: 8, xpValue: 10, goldValue: 2 };
-    } else if (rand < 0.88 || player.level < 4) {
-      tierData = { color: "#9b59b6", size: 28, hp: 80, speed: 1.6, damage: 25, xpValue: 35, goldValue: 5 };
+    if (rand < 0.60) {
+      tierData = { color: "#e74c3c", size: 14, hp: 25, speed: 2.8, damage: 6, goldValue: 3 };
+    } else if (rand < 0.88) {
+      tierData = { color: "#9b59b6", size: 26, hp: 90, speed: 1.5, damage: 18, goldValue: 8 };
     } else {
-      tierData = { color: "#f1c40f", size: 36, hp: 200, speed: 2.2, damage: 40, xpValue: 100, goldValue: 15 };
+      tierData = { color: "#f1c40f", size: 34, hp: 220, speed: 2.0, damage: 30, goldValue: 20 };
     }
 
     enemies.push({
@@ -290,12 +328,11 @@ function update() {
       size: tierData.size,
       damage: tierData.damage,
       color: tierData.color,
-      xpValue: tierData.xpValue,
       goldValue: tierData.goldValue
     });
   }
 
-  // 4. Update Enemies
+  // 3. Update Enemies
   for (let i = enemies.length - 1; i >= 0; i--) {
     let e = enemies[i];
     let angle = Math.atan2(player.y - e.y, player.x - e.x);
@@ -308,13 +345,13 @@ function update() {
       if (player.hp <= 0) {
         player.hp = 0;
         gameOver = true;
-        document.getElementById("final-stats").innerText = `You reached Level ${player.level}`;
+        document.getElementById("final-stats").innerText = `Your base fell to the swarm!`;
         document.getElementById("game-over").style.display = "flex";
       }
     }
   }
 
-  // 5. Update Projectiles
+  // 4. Update Projectiles
   for (let i = projectiles.length - 1; i >= 0; i--) {
     let p = projectiles[i];
     p.x += p.vx;
@@ -331,8 +368,7 @@ function update() {
         hit = true;
         
         if (e.hp <= 0) {
-          gems.push({ x: e.x, y: e.y, val: e.xpValue });
-          coins.push({ x: e.x, y: e.y, val: e.goldValue });
+          player.gold += e.goldValue;
           enemies.splice(j, 1);
         }
         break;
@@ -344,50 +380,7 @@ function update() {
     }
   }
 
-  // 6. Update XP Gems
-  for (let i = gems.length - 1; i >= 0; i--) {
-    let g = gems[i];
-    let dist = Math.hypot(player.x - g.x, player.y - g.y);
-
-    if (dist < 180) {
-      let angle = Math.atan2(player.y - g.y, player.x - g.x);
-      g.x += Math.cos(angle) * 6;
-      g.y += Math.sin(angle) * 6;
-    }
-
-    if (dist < player.size + 8) {
-      player.xp += g.val;
-      gems.splice(i, 1);
-
-      if (player.xp >= player.xpNeeded) {
-        player.xp -= player.xpNeeded;
-        player.level++;
-        player.xpNeeded = Math.floor(player.xpNeeded * 1.4);
-        triggerLevelUp();
-      }
-    }
-  }
-
-  // 7. Update Gold Coins
-  for (let i = coins.length - 1; i >= 0; i--) {
-    let c = coins[i];
-    let dist = Math.hypot(player.x - c.x, player.y - c.y);
-
-    // Coins have a slightly wider magnet range
-    if (dist < 200) {
-      let angle = Math.atan2(player.y - c.y, player.x - c.x);
-      c.x += Math.cos(angle) * 7;
-      c.y += Math.sin(angle) * 7;
-    }
-
-    if (dist < player.size + 8) {
-      player.gold += c.val;
-      addFloatingText(c.x, c.y - 10, `+${c.val}g`, "#f1c40f");
-      coins.splice(i, 1);
-    }
-  }
-
-  // 8. Update Floating Text
+  // 5. Update Floating Text
   for (let i = floatingTexts.length - 1; i >= 0; i--) {
     floatingTexts[i].life--;
     floatingTexts[i].y -= 0.6;
@@ -395,11 +388,8 @@ function update() {
   }
 
   // Update HUD
-  document.getElementById("hp-box").innerText = `HP: ${Math.ceil(player.hp)} / ${player.maxHp}`;
-  document.getElementById("lvl-box").innerText = `Level: ${player.level}`;
+  document.getElementById("hp-box").innerText = `Base HP: ${Math.ceil(player.hp)} / ${player.maxHp}`;
   document.getElementById("gold-display").innerText = player.gold;
-  let xpPercent = (player.xp / player.xpNeeded) * 100;
-  document.getElementById("xp-bar").style.width = `${xpPercent}%`;
 }
 
 // --- RENDER LOOP ---
@@ -407,47 +397,25 @@ function draw() {
   ctx.fillStyle = "#161616";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.save();
-  let camX = player.x - canvas.width / 2;
-  let camY = player.y - canvas.height / 2;
-  ctx.translate(-camX, -camY);
-
-  // Draw World Grid
+  // Draw Background Grid Pattern
   ctx.strokeStyle = "#222";
   ctx.lineWidth = 2;
-  for (let i = 0; i <= WORLD_SIZE; i += 200) {
-    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, WORLD_SIZE); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(WORLD_SIZE, i); ctx.stroke();
+  let gridSize = 100;
+  let offsetX = (canvas.width / 2) % gridSize;
+  let offsetY = (canvas.height / 2) % gridSize;
+  for (let x = offsetX; x < canvas.width; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
   }
-  ctx.strokeStyle = "#e74c3c";
-  ctx.lineWidth = 6;
-  ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+  for (let y = offsetY; y < canvas.height; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
 
-  // Draw Range Circle
+  // Draw Range Circle around stationary base
   ctx.strokeStyle = "rgba(52, 152, 219, 0.15)";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(player.x, player.y, player.range, 0, Math.PI * 2);
   ctx.stroke();
-
-  // Draw XP Gems
-  gems.forEach(g => {
-    ctx.fillStyle = g.val > 50 ? "#f1c40f" : "#3498db";
-    ctx.beginPath();
-    ctx.arc(g.x, g.y, g.val > 50 ? 8 : 5, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  // Draw Gold Coins
-  coins.forEach(c => {
-    ctx.fillStyle = "#f1c40f";
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#d4ac0d";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  });
 
   // Draw Enemies
   enemies.forEach(e => {
@@ -474,7 +442,7 @@ function draw() {
     ctx.fill();
   });
 
-  // Draw Player
+  // Draw Stationary Turret Base (Player)
   ctx.fillStyle = "#3498db";
   ctx.beginPath();
   ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
@@ -482,6 +450,12 @@ function draw() {
   ctx.strokeStyle = "#2980b9";
   ctx.lineWidth = 4;
   ctx.stroke();
+
+  // Inner core visual
+  ctx.fillStyle = "#1abc9c";
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, 10, 0, Math.PI * 2);
+  ctx.fill();
 
   // Draw Floating Text
   floatingTexts.forEach(ft => {
@@ -492,8 +466,6 @@ function draw() {
     ctx.fillText(ft.text, ft.x, ft.y);
     ctx.globalAlpha = 1.0;
   });
-
-  ctx.restore();
 }
 
 function loop() {
