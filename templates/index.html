@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Stationary Turret Defense - Refined Spawns</title>
+  <title>Stationary Turret Defense - Final Spawn Balance</title>
   <style>
     body {
       margin: 0;
@@ -420,7 +420,7 @@ function update() {
     }
   }
 
-  // 2. Enemy Spawning Loop (Made purple/yellow even scarcer: 88% Red, 9% Purple, 3% Yellow)
+  // 2. Enemy Spawning Loop (Yellow is now rarer than Purple: 85% Red, 12% Purple, 3% Yellow)
   spawnTimer--;
   if (spawnTimer <= 0) {
     spawnTimer = Math.max(15, 40 - (wave * 2));
@@ -433,7 +433,7 @@ function update() {
     let rand = Math.random();
     let tierData;
 
-    if (rand < 0.88) {
+    if (rand < 0.85) {
       tierData = { color: "#e74c3c", size: 14, hp: 25, speed: 2.8, damage: 6, goldValue: 3 };
     } else if (rand < 0.97) {
       tierData = { color: "#9b59b6", size: 26, hp: 90, speed: 1.5, damage: 18, goldValue: 8 };
