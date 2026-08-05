@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Player Defense Arena</title>
+  <title>Arena Survival - RPG Update</title>
   <style>
     body {
       margin: 0;
-      background: #111;
+      background: #121212;
       color: #fff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       overflow: hidden;
@@ -26,15 +26,33 @@
       box-sizing: border-box;
     }
     .hud-panel {
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.75);
       border: 2px solid #444;
       border-radius: 8px;
-      padding: 10px 15px;
+      padding: 10px 18px;
       display: inline-block;
       font-size: 18px;
       font-weight: bold;
     }
-    #game-over {
+    #xp-bar-container {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50%;
+      height: 20px;
+      background: rgba(0,0,0,0.8);
+      border: 2px solid #555;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    #xp-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3498db, #2ecc71);
+      transition: width 0.1s;
+    }
+    #upgrade-modal, #game-over {
       display: none;
       position: absolute;
       top: 0;
@@ -46,6 +64,26 @@
       justify-content: center;
       align-items: center;
       pointer-events: auto;
+    }
+    .cards-container {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .upgrade-card {
+      background: #222;
+      border: 3px solid #555;
+      border-radius: 10px;
+      padding: 25px;
+      width: 200px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .upgrade-card:hover {
+      background: #333;
+      border-color: #3498db;
+      transform: translateY(-5px);
     }
     button {
       padding: 15px 30px;
@@ -65,11 +103,21 @@
 
   <div id="ui-layer">
     <div class="hud-panel" id="hp-box">HP: 100 / 100</div>
-    <div class="hud-panel" id="wave-box" style="margin-left: 10px;">Wave: 1</div>
+    <div class="hud-panel" id="lvl-box" style="margin-left: 10px;">Level: 1</div>
     
+    <div id="xp-bar-container">
+      <div id="xp-bar"></div>
+    </div>
+
+    <div id="upgrade-modal">
+      <h1 style="color: #f1c40f; font-size: 40px; margin: 0;">LEVEL UP!</h1>
+      <p style="color: #ccc; margin-top: 5px;">Choose an upgrade:</p>
+      <div class="cards-container" id="cards-box"></div>
+    </div>
+
     <div id="game-over">
-      <h1 style="color: #e74c3c; font-size: 50px; margin: 0;">YOU DIED</h1>
-      <p id="final-score" style="font-size: 20px; margin: 10px 0;">Survived 0 Waves</p>
+      <h1 style="color: #e74c3c; font-size: 60px; margin: 0;">DEFEATED</h1>
+      <p id="final-stats" style="font-size: 20px; margin: 10px 0;">You reached Level 1</p>
       <button onclick="location.reload()">Play Again</button>
     </div>
   </div>
@@ -95,23 +143,25 @@ let mouse = { x: 0, y: 0, down: false };
 let player = {
   x: WORLD_SIZE / 2,
   y: WORLD_SIZE / 2,
-  size: 30,
+  size: 24, // Circle radius
   speed: 4.5,
   hp: 100,
   maxHp: 100,
   damage: 25,
   cooldown: 0,
-  maxCooldown: 15
+  maxCooldown: 15,
+  level: 1,
+  xp: 0,
+  xpNeeded: 50
 };
 
 let enemies = [];
+let gems = [];
 let projectiles = [];
 let floatingTexts = [];
-let wave = 1;
-let enemiesToSpawn = 0;
 let spawnTimer = 0;
-let waveActive = false;
 let gameOver = false;
+let gamePaused = false;
 
 // --- INPUT HANDLERS ---
 window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
@@ -128,15 +178,41 @@ function addFloatingText(x, y, text, color) {
   floatingTexts.push({ x, y, text, color, life: 30 });
 }
 
-function startNextWave() {
-  waveActive = true;
-  enemiesToSpawn = 5 + (wave * 4);
-  spawnTimer = 0;
+// --- UPGRADE SYSTEM ---
+const UPGRADE_POOL = [
+  { title: "Max Health", desc: "+30 Max HP & Heal", apply: () => { player.maxHp += 30; player.hp = player.maxHp; } },
+  { title: "Sharpened", desc: "+12 Attack Damage", apply: () => { player.damage += 12; } },
+  { title: "Agility", desc: "+0.8 Move Speed", apply: () => { player.speed += 0.8; } },
+  { title: "Fast Fire", desc: "Attack Faster", apply: () => { player.maxCooldown = Math.max(5, player.maxCooldown - 3); } }
+];
+
+function triggerLevelUp() {
+  gamePaused = true;
+  document.getElementById("upgrade-modal").style.display = "flex";
+  
+  let container = document.getElementById("cards-box");
+  container.innerHTML = "";
+
+  // Pick 3 random choices
+  let shuffled = [...UPGRADE_POOL].sort(() => 0.5 - Math.random());
+  let choices = shuffled.slice(0, 3);
+
+  choices.forEach(choice => {
+    let card = document.createElement("div");
+    card.className = "upgrade-card";
+    card.innerHTML = `<h3 style="margin-top:0; color:#3498db;">${choice.title}</h3><p style="font-size:14px; color:#ccc;">${choice.desc}</p>`;
+    card.onclick = () => {
+      choice.apply();
+      document.getElementById("upgrade-modal").style.display = "none";
+      gamePaused = false;
+    };
+    container.appendChild(card);
+  });
 }
 
 // --- UPDATE LOOP ---
 function update() {
-  if (gameOver) return;
+  if (gameOver || gamePaused) return;
 
   // 1. Move Player (WASD)
   let dx = 0, dy = 0;
@@ -160,7 +236,6 @@ function update() {
   if (player.cooldown > 0) player.cooldown--;
   else if (mouse.down) {
     player.cooldown = player.maxCooldown;
-    // Calculate world position of mouse
     let camX = player.x - canvas.width / 2;
     let camY = player.y - canvas.height / 2;
     let targetWorldX = mouse.x + camX;
@@ -170,41 +245,33 @@ function update() {
     projectiles.push({
       x: player.x,
       y: player.y,
-      vx: Math.cos(angle) * 8,
-      vy: Math.sin(angle) * 8,
+      vx: Math.cos(angle) * 9,
+      vy: Math.sin(angle) * 9,
       damage: player.damage,
       life: 100
     });
   }
 
-  // 3. Wave & Enemy Spawning
-  if (!waveActive) {
-    wave++;
-    startNextWave();
-  } else if (enemiesToSpawn > 0) {
-    spawnTimer--;
-    if (spawnTimer <= 0) {
-      // Spawn enemies outside the screen border tracking the player
-      let angle = Math.random() * Math.PI * 2;
-      let dist = Math.max(canvas.width, canvas.height) / 2 + 100;
-      let ex = player.x + Math.cos(angle) * dist;
-      let ey = player.y + Math.sin(angle) * dist;
+  // 3. Enemy Spawning Loop
+  spawnTimer--;
+  if (spawnTimer <= 0) {
+    spawnTimer = Math.max(15, 45 - (player.level * 3));
+    let angle = Math.random() * Math.PI * 2;
+    let dist = Math.max(canvas.width, canvas.height) / 2 + 100;
+    let ex = player.x + Math.cos(angle) * dist;
+    let ey = player.y + Math.sin(angle) * dist;
 
-      let baseHp = 40 + (wave * 10);
-      enemies.push({
-        x: ex,
-        y: ey,
-        hp: baseHp,
-        maxHp: baseHp,
-        speed: 2 + (wave * 0.05),
-        size: 20,
-        damage: 15
-      });
-      enemiesToSpawn--;
-      spawnTimer = 30 - Math.min(15, wave);
-    }
-  } else if (enemies.length === 0) {
-    waveActive = false; // Wave cleared, loop triggers next
+    let scale = 1 + (player.level * 0.15);
+    enemies.push({
+      x: ex,
+      y: ey,
+      hp: 30 * scale,
+      maxHp: 30 * scale,
+      speed: 2.2 + (player.level * 0.05),
+      size: 18,
+      damage: 12,
+      xpValue: 20
+    });
   }
 
   // 4. Update Enemies (Directly tracking player)
@@ -214,14 +281,14 @@ function update() {
     e.x += Math.cos(angle) * e.speed;
     e.y += Math.sin(angle) * e.speed;
 
-    // Melee hit player check
+    // Melee damage check against player circle
     let distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
-    if (distToPlayer < player.size / 2 + e.size / 2) {
-      player.hp -= e.damage / 30; // continuous damage over time on contact
+    if (distToPlayer < player.size + e.size) {
+      player.hp -= e.damage / 30; // continuous contact damage
       if (player.hp <= 0) {
         player.hp = 0;
         gameOver = true;
-        document.getElementById("final-score").innerText = `Survived ${wave - 1} Waves`;
+        document.getElementById("final-stats").innerText = `You reached Level ${player.level}`;
         document.getElementById("game-over").style.display = "flex";
       }
     }
@@ -234,17 +301,18 @@ function update() {
     p.y += p.vy;
     p.life--;
 
-    // Check hit against enemies
     let hit = false;
     for (let j = enemies.length - 1; j >= 0; j--) {
       let e = enemies[j];
       let dist = Math.hypot(p.x - e.x, p.y - e.y);
       if (dist < e.size + 4) {
         e.hp -= p.damage;
-        addFloatingText(e.x, e.y, `-${p.damage}`, "#f1c40f");
+        addFloatingText(e.x, e.y, `-${Math.floor(p.damage)}`, "#f1c40f");
         hit = true;
         
         if (e.hp <= 0) {
+          // Drop XP Gem on defeat
+          gems.push({ x: e.x, y: e.y, val: e.xpValue });
           enemies.splice(j, 1);
         }
         break;
@@ -256,21 +324,48 @@ function update() {
     }
   }
 
-  // 6. Update Floating Text
+  // 6. Update XP Gems (Magnet & Collection)
+  for (let i = gems.length - 1; i >= 0; i--) {
+    let g = gems[i];
+    let dist = Math.hypot(player.x - g.x, player.y - g.y);
+
+    // Magnet range
+    if (dist < 180) {
+      let angle = Math.atan2(player.y - g.y, player.x - g.x);
+      g.x += Math.cos(angle) * 6;
+      g.y += Math.sin(angle) * 6;
+    }
+
+    if (dist < player.size + 8) {
+      player.xp += g.val;
+      gems.splice(i, 1);
+
+      if (player.xp >= player.xpNeeded) {
+        player.xp -= player.xpNeeded;
+        player.level++;
+        player.xpNeeded = Math.floor(player.xpNeeded * 1.4);
+        triggerLevelUp();
+      }
+    }
+  }
+
+  // 7. Update Floating Text
   for (let i = floatingTexts.length - 1; i >= 0; i--) {
     floatingTexts[i].life--;
     floatingTexts[i].y -= 0.6;
     if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
   }
 
-  // Update HUD text
+  // Update HUD Display
   document.getElementById("hp-box").innerText = `HP: ${Math.ceil(player.hp)} / ${player.maxHp}`;
-  document.getElementById("wave-box").innerText = `Wave: ${wave}`;
+  document.getElementById("lvl-box").innerText = `Level: ${player.level}`;
+  let xpPercent = (player.xp / player.xpNeeded) * 100;
+  document.getElementById("xp-bar").style.width = `${xpPercent}%`;
 }
 
 // --- RENDER LOOP ---
 function draw() {
-  ctx.fillStyle = "#1a1a1a";
+  ctx.fillStyle = "#161616";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.save();
@@ -279,8 +374,8 @@ function draw() {
   let camY = player.y - canvas.height / 2;
   ctx.translate(-camX, -camY);
 
-  // Draw World Bounds Grid
-  ctx.strokeStyle = "#333";
+  // Draw World Grid
+  ctx.strokeStyle = "#222";
   ctx.lineWidth = 2;
   for (let i = 0; i <= WORLD_SIZE; i += 200) {
     ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, WORLD_SIZE); ctx.stroke();
@@ -290,32 +385,40 @@ function draw() {
   ctx.lineWidth = 6;
   ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
 
-  // Draw Enemies
+  // Draw XP Gems
+  gems.forEach(g => {
+    ctx.fillStyle = "#3498db";
+    ctx.beginPath();
+    ctx.arc(g.x, g.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Draw Enemies (Circles)
   enemies.forEach(e => {
-    ctx.fillStyle = "#c0392b";
+    ctx.fillStyle = "#e74c3c";
     ctx.beginPath();
     ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "#962d22";
+    ctx.strokeStyle = "#c0392b";
     ctx.lineWidth = 3;
     ctx.stroke();
 
     // Enemy Health Bar
     ctx.fillStyle = "#222";
-    ctx.fillRect(e.x - 15, e.y - e.size - 12, 30, 4);
+    ctx.fillRect(e.x - 15, e.y - e.size - 10, 30, 4);
     ctx.fillStyle = "#2ecc71";
-    ctx.fillRect(e.x - 15, e.y - e.size - 12, 30 * (e.hp / e.maxHp), 4);
+    ctx.fillRect(e.x - 15, e.y - e.size - 10, 30 * (e.hp / e.maxHp), 4);
   });
 
   // Draw Projectiles
   projectiles.forEach(p => {
-    ctx.fillStyle = "#f39c12";
+    ctx.fillStyle = "#f1c40f";
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  // Draw Player
+  // Draw Player (Circle)
   ctx.fillStyle = "#3498db";
   ctx.beginPath();
   ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
