@@ -433,49 +433,66 @@ function startGame() {
   document.getElementById("name-modal").style.display = "none";
   gameStarted = true;
   
-  // Starting score is 0
+  // Ensure starting score is explicitly 0 and register 0 on the leaderboard initially
   player.score = 0;
-  postScoreToGlobal(true);
+  updateGlobalLeaderboardDisplay(savedScores);
 }
 
-function postScoreToGlobal(forceRecord = false) {
-  if (!gameStarted) return;
-  
-  // Calculate current run score
-  let currentRunScore = player.gold + Math.floor(player.hp * 2);
-  player.score = currentRunScore;
-
-  let savedScores = JSON.parse(localStorage.getItem("turret_lifetime_scores") || "[]");
-  let existingEntry = savedScores.find(s => s.id === player.id);
-
-  if (existingEntry) {
-    // Only update lifetime high score if current run beats it, or if forced (like initialization)
-    if (currentRunScore > existingEntry.score || forceRecord) {
-      if (currentRunScore > existingEntry.score) {
-        existingEntry.score = currentRunScore;
-      }
-      existingEntry.name = player.name;
-    }
-  } else {
-    savedScores.push({ id: player.id, name: player.name, score: currentRunScore });
-  }
-
-  localStorage.setItem("turret_lifetime_scores", JSON.stringify(savedScores));
-
-  // Sort and render lifetime top scores
+function updateGlobalLeaderboardDisplay(savedScores) {
   savedScores.sort((a, b) => b.score - a.score);
   let html = "";
-  savedScores.slice(0, 5).forEach((p, index) => {
+  let displayed = savedScores.slice(0, 5);
+  
+  // If player isn't in the top 5 yet, we can ensure they show up or just show top 5
+  displayed.forEach((p, index) => {
     let rowClass = p.id === player.id ? "lb-row player-score" : "lb-row";
     html += `<div class="${rowClass}"><span>${index + 1}. ${p.name}</span><span>${p.score}</span></div>`;
   });
   document.getElementById("lb-content").innerHTML = html;
 }
 
-// Keep updating active personal best checks every second
+function recordScoreAndRefresh() {
+  if (!gameStarted) return;
+  
+  // Calculate current run score
+  let currentRunScore = player.gold + Math.floor((player.maxHp - player.hp)); // or whatever formula, keeping gold + health lost/earned
+  // Let's use the standard score formula based on current progress:
+  currentRunScore = player.gold + Math.floor(Math.max(0, player.maxHp - player.hp)); // example score formula or stick to gold + hp
+  // Actually, let's use player.score calculated during gameplay:
+  player.score = player.gold + Math.floor(player.hp * 2);
+
+  let savedScores = JSON.parse(localStorage.getItem("turret_lifetime_scores") || "[]");
+  let existingEntry = savedScores.find(s => s.id === player.id);
+
+  if (existingEntry) {
+    if (player.score > existingEntry.score) {
+      existingEntry.score = player.score;
+      existingEntry.name = player.name;
+    }
+  } else {
+    savedScores.push({ id: player.id, name: player.name, score: player.score });
+  }
+
+  localStorage.setItem("turret_lifetime_scores", JSON.stringify(savedScores));
+  updateGlobalLeaderboardDisplay(savedScores);
+}
+
+// Keep leaderboard updated during gameplay (only updates high score if beaten)
 setInterval(() => {
   if (gameStarted && !gameOver) {
-    postScoreToGlobal();
+    // Calculate live score
+    let liveScore = player.gold + Math.floor(player.hp * 2);
+    let savedScores = JSON.parse(localStorage.getItem("turret_lifetime_scores") || "[]");
+    let existingEntry = savedScores.find(s => s.id === player.id);
+    
+    if (existingEntry && liveScore > existingEntry.score) {
+      existingEntry.score = liveScore;
+      localStorage.setItem("turret_lifetime_scores", JSON.stringify(savedScores));
+    } else if (!existingEntry) {
+      savedScores.push({ id: player.id, name: player.name, score: liveScore });
+      localStorage.setItem("turret_lifetime_scores", JSON.stringify(savedScores));
+    }
+    updateGlobalLeaderboardDisplay(savedScores);
   }
 }, 1000);
 
@@ -503,7 +520,10 @@ function addFloatingText(x, y, text, color) {
 
 // --- RESET GAME LOGIC ---
 function resetGame() {
-  // Reset active run stats & starting score to 0
+  // Save high score before wiping run stats
+  recordScoreAndRefresh();
+
+  // Reset active run stats & starting score to 0 strictly
   player.hp = 100;
   player.maxHp = 100;
   player.gold = 0;
@@ -711,7 +731,7 @@ function update() {
       if (player.hp <= 0) {
         player.hp = 0;
         gameOver = true;
-        postScoreToGlobal();
+        recordScoreAndRefresh();
         document.getElementById("final-stats").innerText = `Your base fell to the swarm! Final Score: ${player.score}`;
         document.getElementById("game-over").style.display = "flex";
       }
@@ -803,6 +823,7 @@ function draw() {
   });
 
   // Draw Projectiles
+  projectiles.push; // reference check
   projectiles.forEach(p => {
     ctx.fillStyle = "#f1c40f";
     ctx.beginPath();
