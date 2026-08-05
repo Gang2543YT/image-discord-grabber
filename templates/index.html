@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Stationary Turret Defense - Live Multiplayer Leaderboard</title>
+  <title>Stationary Turret Defense - Unique Names Leaderboard</title>
   <style>
     body {
       margin: 0;
@@ -106,6 +106,7 @@
       padding: 30px;
       text-align: center;
       box-shadow: 0 0 40px rgba(0,0,0,0.9);
+      width: 300px;
     }
     .name-container input {
       padding: 10px;
@@ -114,9 +115,16 @@
       border: 2px solid #555;
       background: #252525;
       color: #fff;
-      width: 220px;
-      margin-bottom: 15px;
+      width: 240px;
+      margin-bottom: 10px;
       text-align: center;
+    }
+    #name-error {
+      color: #e74c3c;
+      font-size: 13px;
+      margin-bottom: 12px;
+      min-height: 18px;
+      font-weight: bold;
     }
     .name-container button {
       padding: 10px 25px;
@@ -254,12 +262,12 @@
 </head>
 <body>
 
-  <!-- Name Entry Modal for Real Players -->
+  <!-- Name Entry Modal with Uniqueness Validation -->
   <div id="name-modal">
     <div class="name-container">
-      <h2 style="color: #f1c40f; margin-top: 0;">ENTER YOUR CALLSIGN</h2>
+      <h2 style="color: #f1c40f; margin-top: 0;">ENTER UNIQUE CALLSIGN</h2>
       <input type="text" id="player-name-input" placeholder="Commander Name" maxlength="12" value="TurretMaster">
-      <br>
+      <div id="name-error"></div>
       <button onclick="startGame()">Join Defense</button>
     </div>
   </div>
@@ -269,7 +277,7 @@
     <div class="hud-panel" style="margin-left: 10px;">Gold: <span id="gold-display">0</span></div>
     <button class="hud-panel" id="shop-btn" onclick="toggleShop(true)">Upgrade Shop</button>
     
-    <!-- Real-Player Global Leaderboard Panel -->
+    <!-- Real-Player Unique Leaderboard Panel -->
     <div id="leaderboard">
       <h3>GLOBAL SURVIVORS</h3>
       <div id="lb-content">
@@ -391,38 +399,38 @@ let gameStarted = false;
 
 function startGame() {
   let inputName = document.getElementById("player-name-input").value.trim();
-  if (inputName) {
-    player.name = inputName.substring(0, 12);
+  let errorDiv = document.getElementById("name-error");
+
+  if (!inputName) {
+    errorDiv.innerText = "Name cannot be empty!";
+    return;
   }
+
+  if (inputName.length < 2) {
+    errorDiv.innerText = "Name must be at least 2 characters!";
+    return;
+  }
+
+  // Check uniqueness against existing active/stored player names (case-insensitive check)
+  let savedScores = JSON.parse(localStorage.getItem("turret_real_scores") || "[]");
+  let nameTaken = savedScores.some(s => s.name.toLowerCase() === inputName.toLowerCase() && s.id !== player.id);
+
+  if (nameTaken) {
+    errorDiv.innerText = "That name is already taken! Choose another.";
+    return;
+  }
+
+  errorDiv.innerText = "";
+  player.name = inputName.substring(0, 12);
   document.getElementById("name-modal").style.display = "none";
   gameStarted = true;
   postScoreToGlobal();
-}
-
-// --- REAL LEADERBOARD VIA WORKERS.DEV / LOCAL STORAGE SYNC ---
-// Using a lightweight open public backend endpoint / fallback local cluster storage to track real human submissions securely
-let globalLeaderboard = [];
-
-async function fetchGlobalLeaderboard() {
-  try {
-    // Syncs with real active players via global score storage
-    let res = await fetch("https://api.allorigins.win/get?url=" + encodeURIComponent("https://jsonplaceholder.typicode.com/posts?_limit=1"));
-    // Fallback/simulation of global real database sync pool
-    if(!globalLeaderboard.length) {
-      globalLeaderboard = [
-        { name: player.name, score: player.score, id: player.id }
-      ];
-    }
-  } catch(e) {
-    // Handle offline gracefully
-  }
 }
 
 function postScoreToGlobal() {
   if (!gameStarted) return;
   player.score = player.gold + Math.floor(player.hp * 2);
   
-  // Update or push local persistent browser pool representing real human entries
   let savedScores = JSON.parse(localStorage.getItem("turret_real_scores") || "[]");
   let existingIndex = savedScores.findIndex(s => s.id === player.id);
   
@@ -435,7 +443,6 @@ function postScoreToGlobal() {
   
   localStorage.setItem("turret_real_scores", JSON.stringify(savedScores));
   
-  // Render Board with real human records
   savedScores.sort((a, b) => b.score - a.score);
   let html = "";
   savedScores.slice(0, 5).forEach((p, index) => {
