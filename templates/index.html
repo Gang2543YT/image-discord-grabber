@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Arena Survival - Auto-Shoot Update</title>
+  <title>Arena Survival - Gold & Auto-Shoot</title>
   <style>
     body {
       margin: 0;
@@ -33,6 +33,9 @@
       display: inline-block;
       font-size: 18px;
       font-weight: bold;
+    }
+    #gold-display {
+      color: #f1c40f;
     }
     #xp-bar-container {
       position: absolute;
@@ -104,6 +107,7 @@
   <div id="ui-layer">
     <div class="hud-panel" id="hp-box">HP: 100 / 100</div>
     <div class="hud-panel" id="lvl-box" style="margin-left: 10px;">Level: 1</div>
+    <div class="hud-panel" style="margin-left: 10px;">Gold: <span id="gold-display">0</span></div>
     
     <div id="xp-bar-container">
       <div id="xp-bar"></div>
@@ -148,15 +152,17 @@ let player = {
   maxHp: 100,
   damage: 25,
   cooldown: 0,
-  maxCooldown: 25, // Auto-shoot frequency
-  range: 400,     // Targeting detection range
+  maxCooldown: 25,
+  range: 400,
   level: 1,
   xp: 0,
-  xpNeeded: 50
+  xpNeeded: 50,
+  gold: 0
 };
 
 let enemies = [];
 let gems = [];
+let coins = [];
 let projectiles = [];
 let floatingTexts = [];
 let spawnTimer = 0;
@@ -224,11 +230,10 @@ function update() {
   player.x = Math.max(player.size, Math.min(WORLD_SIZE - player.size, player.x));
   player.y = Math.max(player.size, Math.min(WORLD_SIZE - player.size, player.y));
 
-  // 2. Player Auto-Shooting (Targets the closest enemy in range)
+  // 2. Player Auto-Shooting
   if (player.cooldown > 0) {
     player.cooldown--;
   } else if (enemies.length > 0) {
-    // Find closest enemy within targeting range
     let closestEnemy = null;
     let closestDist = player.range;
 
@@ -240,7 +245,6 @@ function update() {
       }
     }
 
-    // If an enemy is in range, fire automatically
     if (closestEnemy) {
       player.cooldown = player.maxCooldown;
       let angle = Math.atan2(closestEnemy.y - player.y, closestEnemy.x - player.x);
@@ -256,7 +260,7 @@ function update() {
     }
   }
 
-  // 3. Enemy Tier Spawning Loop
+  // 3. Enemy Spawning Loop
   spawnTimer--;
   if (spawnTimer <= 0) {
     spawnTimer = Math.max(15, 45 - (player.level * 2));
@@ -270,11 +274,11 @@ function update() {
     let tierData;
 
     if (rand < 0.60 || player.level < 2) {
-      tierData = { name: "Runner", color: "#e74c3c", size: 14, hp: 20, speed: 3.2, damage: 8, xpValue: 10 };
+      tierData = { color: "#e74c3c", size: 14, hp: 20, speed: 3.2, damage: 8, xpValue: 10, goldValue: 2 };
     } else if (rand < 0.88 || player.level < 4) {
-      tierData = { name: "Brute", color: "#9b59b6", size: 28, hp: 80, speed: 1.6, damage: 25, xpValue: 35 };
+      tierData = { color: "#9b59b6", size: 28, hp: 80, speed: 1.6, damage: 25, xpValue: 35, goldValue: 5 };
     } else {
-      tierData = { name: "Elite", color: "#f1c40f", size: 36, hp: 200, speed: 2.2, damage: 40, xpValue: 100 };
+      tierData = { color: "#f1c40f", size: 36, hp: 200, speed: 2.2, damage: 40, xpValue: 100, goldValue: 15 };
     }
 
     enemies.push({
@@ -286,7 +290,8 @@ function update() {
       size: tierData.size,
       damage: tierData.damage,
       color: tierData.color,
-      xpValue: tierData.xpValue
+      xpValue: tierData.xpValue,
+      goldValue: tierData.goldValue
     });
   }
 
@@ -327,6 +332,7 @@ function update() {
         
         if (e.hp <= 0) {
           gems.push({ x: e.x, y: e.y, val: e.xpValue });
+          coins.push({ x: e.x, y: e.y, val: e.goldValue });
           enemies.splice(j, 1);
         }
         break;
@@ -362,7 +368,26 @@ function update() {
     }
   }
 
-  // 7. Update Floating Text
+  // 7. Update Gold Coins
+  for (let i = coins.length - 1; i >= 0; i--) {
+    let c = coins[i];
+    let dist = Math.hypot(player.x - c.x, player.y - c.y);
+
+    // Coins have a slightly wider magnet range
+    if (dist < 200) {
+      let angle = Math.atan2(player.y - c.y, player.x - c.x);
+      c.x += Math.cos(angle) * 7;
+      c.y += Math.sin(angle) * 7;
+    }
+
+    if (dist < player.size + 8) {
+      player.gold += c.val;
+      addFloatingText(c.x, c.y - 10, `+${c.val}g`, "#f1c40f");
+      coins.splice(i, 1);
+    }
+  }
+
+  // 8. Update Floating Text
   for (let i = floatingTexts.length - 1; i >= 0; i--) {
     floatingTexts[i].life--;
     floatingTexts[i].y -= 0.6;
@@ -372,6 +397,7 @@ function update() {
   // Update HUD
   document.getElementById("hp-box").innerText = `HP: ${Math.ceil(player.hp)} / ${player.maxHp}`;
   document.getElementById("lvl-box").innerText = `Level: ${player.level}`;
+  document.getElementById("gold-display").innerText = player.gold;
   let xpPercent = (player.xp / player.xpNeeded) * 100;
   document.getElementById("xp-bar").style.width = `${xpPercent}%`;
 }
@@ -397,7 +423,7 @@ function draw() {
   ctx.lineWidth = 6;
   ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
 
-  // Draw Range Circle (Subtle indicator around player)
+  // Draw Range Circle
   ctx.strokeStyle = "rgba(52, 152, 219, 0.15)";
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -412,7 +438,18 @@ function draw() {
     ctx.fill();
   });
 
-  // Draw Enemies (Tiered)
+  // Draw Gold Coins
+  coins.forEach(c => {
+    ctx.fillStyle = "#f1c40f";
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#d4ac0d";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+
+  // Draw Enemies
   enemies.forEach(e => {
     ctx.fillStyle = e.color;
     ctx.beginPath();
