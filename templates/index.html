@@ -2,370 +2,453 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>2D Block Miner</title>
+  <title>RPG Tower Defense</title>
   <style>
     body {
       margin: 0;
-      overflow: hidden;
-      background: #87CEEB; /* Sky blue */
+      background: #1e1e1e;
+      color: #fff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       user-select: none;
+    }
+    h1 {
+      margin: 10px 0;
+      font-size: 24px;
+      color: #f1c40f;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    #game-container {
+      position: relative;
+      box-shadow: 0 0 20px rgba(0,0,0,0.8);
+      border: 4px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
     }
     canvas {
       display: block;
+      background: #2d3436; /* Dark background */
     }
-    /* Inventory UI */
-    #ui-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      pointer-events: none;
-      padding: 15px;
-      box-sizing: border-box;
-    }
-    #inventory {
-      background: rgba(0, 0, 0, 0.6);
-      border: 3px solid #444;
-      border-radius: 10px;
-      padding: 10px;
-      display: inline-flex;
-      gap: 15px;
-      pointer-events: auto;
-    }
-    .inv-slot {
-      width: 50px;
-      height: 50px;
-      background: rgba(255, 255, 255, 0.2);
-      border: 2px solid #fff;
-      border-radius: 6px;
-      position: relative;
+    #ui-panel {
+      width: 800px;
       display: flex;
-      justify-content: center;
-      align-items: center;
-      box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-    }
-    .inv-slot .block-icon {
-      width: 30px;
-      height: 30px;
-      border-radius: 4px;
-    }
-    .inv-count {
-      position: absolute;
-      bottom: -5px;
-      right: -5px;
+      justify-content: space-between;
       background: #222;
-      color: #fff;
-      font-size: 14px;
-      font-weight: bold;
-      padding: 2px 6px;
-      border-radius: 10px;
-      border: 2px solid #555;
+      padding: 10px 20px;
+      box-sizing: border-box;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border: 2px solid #444;
     }
+    .stat {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .stat span {
+      color: #e74c3c;
+    }
+    #gold span { color: #f1c40f; }
+    #wave span { color: #3498db; }
+    
+    #controls {
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      background: #34495e;
+      color: white;
+      border: 2px solid #2c3e50;
+      padding: 5px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    .btn:hover { background: #3498db; }
+    .btn.active { background: #27ae60; border-color: #2ecc71; }
   </style>
 </head>
 <body>
 
-  <div id="ui-layer">
-    <div id="inventory">
-      <div class="inv-slot">
-        <div class="block-icon" style="background: #4CAF50;"></div>
-        <div class="inv-count" id="count-grass">0</div>
-      </div>
-      <div class="inv-slot">
-        <div class="block-icon" style="background: #795548;"></div>
-        <div class="inv-count" id="count-dirt">0</div>
-      </div>
-      <div class="inv-slot">
-        <div class="block-icon" style="background: #9E9E9E;"></div>
-        <div class="inv-count" id="count-stone">0</div>
-      </div>
+  <h1>Leveling Tower Defense</h1>
+  
+  <div id="ui-panel">
+    <div class="stat">Base HP: <span id="hp-display">20</span></div>
+    <div class="stat" id="gold">Gold: <span id="gold-display">100</span></div>
+    <div class="stat" id="wave">Wave: <span id="wave-display">1</span></div>
+    <div id="controls">
+      <button class="btn active" id="btn-build">Build Turret (50g)</button>
+      <button class="btn" id="btn-next">Start Wave</button>
     </div>
   </div>
 
-  <canvas id="gameCanvas"></canvas>
+  <div id="game-container">
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+  </div>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// --- GAME SETTINGS ---
-const TILE = 40;
-const COLS = 100;
-const ROWS = 50;
-const GRAVITY = 0.5;
-const FRICTION = 0.8;
+// --- GAME SETTINGS & GRID ---
+const TILE = 50;
+const COLS = canvas.width / TILE; // 16
+const ROWS = canvas.height / TILE; // 10
 
-// Resize handling
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-window.addEventListener("resize", resize);
-resize();
-
-// --- WORLD GENERATION ---
-// 0: Air, 1: Grass, 2: Dirt, 3: Stone
-let world = [];
-for (let y = 0; y < ROWS; y++) {
-  let row = [];
-  for (let x = 0; x < COLS; x++) {
-    if (y < 20) row.push(0); // Sky
-    else if (y === 20) row.push(1); // Surface Grass
-    else if (y > 20 && y < 25) row.push(2); // Dirt layer
-    else row.push(3); // Deep Stone
-  }
-  world.push(row);
+// Path coordinates (Grid [x, y])
+const pathMap = [
+  [0, 2], [12, 2], [12, 7], [3, 7], [3, 4], [8, 4]
+];
+// Generate full pixel path for enemies to follow
+let pathPoints = [];
+for (let i = 0; i < pathMap.length; i++) {
+  pathPoints.push({
+    x: pathMap[i][0] * TILE + TILE / 2,
+    y: pathMap[i][1] * TILE + TILE / 2
+  });
 }
 
-// Block Colors Dictionary
-const blockColors = {
-  1: "#4CAF50", // Grass
-  2: "#795548", // Dirt
-  3: "#9E9E9E"  // Stone
-};
+// Map Grid (0 = empty, 1 = path, 2 = tower)
+let grid = Array(ROWS).fill().map(() => Array(COLS).fill(0));
 
-// --- PLAYER STATE ---
-let player = {
-  x: TILE * 5,
-  y: TILE * 15, // Start above ground
-  w: 26,
-  h: 38,
-  vx: 0,
-  vy: 0,
-  speed: 4,
-  jumpPower: -10,
-  grounded: false,
-  facingRight: true,
-  walkFrame: 0, // For walking animation
-  miningFrame: 0, // For arm swinging
-  inventory: { 1: 0, 2: 0, 3: 0 }
-};
-
-// --- PARTICLES ---
-let particles = [];
-function spawnParticles(x, y, color) {
-  for (let i = 0; i < 6; i++) {
-    particles.push({
-      x: x + TILE / 2,
-      y: y + TILE / 2,
-      vx: (Math.random() - 0.5) * 8,
-      vy: (Math.random() - 0.5) * 8 - 2,
-      size: Math.random() * 6 + 4,
-      life: 1.0,
-      color: color
-    });
-  }
-}
-
-// --- INPUTS ---
-let keys = {};
-window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
-
-let mouse = { x: 0, y: 0, down: false };
-window.addEventListener("mousemove", e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-window.addEventListener("mousedown", e => { mouse.down = true; attemptMine(); });
-window.addEventListener("mouseup", e => { mouse.down = false; });
-
-// --- CAMERA ---
-let cam = { x: 0, y: 0 };
-
-// --- COLLISION LOGIC ---
-function getTile(tx, ty) {
-  if (tx < 0 || tx >= COLS || ty < 0 || ty >= ROWS) return 1; // Bounds act as solid blocks
-  return world[ty][tx];
-}
-
-function checkCollision(x, y, w, h) {
-  let leftTile = Math.floor(x / TILE);
-  let rightTile = Math.floor((x + w) / TILE);
-  let topTile = Math.floor(y / TILE);
-  let bottomTile = Math.floor((y + h) / TILE);
-
-  for (let ty = topTile; ty <= bottomTile; ty++) {
-    for (let tx = leftTile; tx <= rightTile; tx++) {
-      if (getTile(tx, ty) !== 0) return true;
+// Mark path segments on the grid so players can't build on them
+for (let i = 0; i < pathMap.length - 1; i++) {
+  let p1 = pathMap[i], p2 = pathMap[i+1];
+  let minX = Math.min(p1[0], p2[0]), maxX = Math.max(p1[0], p2[0]);
+  let minY = Math.min(p1[1], p2[1]), maxY = Math.max(p1[1], p2[1]);
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      grid[y][x] = 1; 
     }
   }
-  return false;
 }
 
-// --- MINING MECHANICS ---
-function attemptMine() {
-  // Translate screen mouse to world coordinates
-  let worldX = mouse.x + cam.x;
-  let worldY = mouse.y + cam.y;
+// --- GAME STATE ---
+let gold = 120;
+let hp = 20;
+let wave = 0;
+let waveActive = false;
+let enemiesToSpawn = 0;
+let spawnTimer = 0;
+let gameOver = false;
+
+// Entities
+let towers = [];
+let enemies = [];
+let projectiles = [];
+let floatingTexts = [];
+
+// UI Elements
+const hpUI = document.getElementById('hp-display');
+const goldUI = document.getElementById('gold-display');
+const waveUI = document.getElementById('wave-display');
+const btnNext = document.getElementById('btn-next');
+
+// Mouse Interactions
+let mouse = { x: -1, y: -1, gridX: -1, gridY: -1 };
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
+  mouse.gridX = Math.floor(mouse.x / TILE);
+  mouse.gridY = Math.floor(mouse.y / TILE);
+});
+
+canvas.addEventListener('mousedown', e => {
+  if (gameOver) return;
+  // Try to build a tower
+  let gx = mouse.gridX;
+  let gy = mouse.gridY;
   
-  let tx = Math.floor(worldX / TILE);
-  let ty = Math.floor(worldY / TILE);
-
-  // Check distance (reach)
-  let pCenterX = player.x + player.w / 2;
-  let pCenterY = player.y + player.h / 2;
-  let dist = Math.hypot((tx * TILE + TILE / 2) - pCenterX, (ty * TILE + TILE / 2) - pCenterY);
-
-  if (dist < TILE * 4 && tx >= 0 && tx < COLS && ty >= 0 && ty < ROWS) {
-    let blockType = world[ty][tx];
-    if (blockType !== 0) {
-      // Trigger mining animation
-      player.miningFrame = 15;
-      
-      // Add to inventory and UI
-      player.inventory[blockType]++;
-      updateUI();
-      
-      // Break block and spawn particles
-      spawnParticles(tx * TILE, ty * TILE, blockColors[blockType]);
-      world[ty][tx] = 0; 
+  if (gx >= 0 && gx < COLS && gy >= 0 && gy < ROWS) {
+    if (grid[gy][gx] === 0 && gold >= 50) {
+      gold -= 50;
+      grid[gy][gx] = 2; // Mark as built
+      towers.push({
+        x: gx * TILE + TILE / 2,
+        y: gy * TILE + TILE / 2,
+        range: 120,
+        damage: 15,
+        fireRate: 40,
+        cooldown: 0,
+        level: 1,
+        xp: 0,
+        xpNeeded: 100,
+        color: '#3498db'
+      });
+      updateHUD();
     }
   }
+});
+
+btnNext.addEventListener('click', () => {
+  if (!waveActive && !gameOver) {
+    wave++;
+    enemiesToSpawn = 5 + (wave * 3);
+    spawnTimer = 0;
+    waveActive = true;
+    updateHUD();
+  }
+});
+
+function updateHUD() {
+  hpUI.innerText = hp;
+  goldUI.innerText = gold;
+  waveUI.innerText = wave;
 }
 
-function updateUI() {
-  document.getElementById("count-grass").innerText = player.inventory[1];
-  document.getElementById("count-dirt").innerText = player.inventory[2];
-  document.getElementById("count-stone").innerText = player.inventory[3];
+// --- HELPER CLASSES & FUNCTIONS ---
+function spawnEnemy() {
+  let baseHp = 30 + (wave * 15);
+  enemies.push({
+    x: pathPoints[0].x,
+    y: pathPoints[0].y,
+    hp: baseHp,
+    maxHp: baseHp,
+    speed: 1.5 + (wave * 0.1),
+    pathIndex: 1,
+    radius: 12,
+    reward: 10 + Math.floor(wave / 2)
+  });
 }
 
-// --- MAIN UPDATE LOOP ---
+function addFloatingText(x, y, text, color) {
+  floatingTexts.push({ x, y, text, color, life: 40 });
+}
+
+// --- GAME LOOP ---
 function update() {
-  // 1. Horizontal Movement
-  if (keys['a']) { player.vx = -player.speed; player.facingRight = false; player.walkFrame++; }
-  else if (keys['d']) { player.vx = player.speed; player.facingRight = true; player.walkFrame++; }
-  else { player.vx *= FRICTION; player.walkFrame = 0; }
+  if (gameOver) return;
 
-  player.x += player.vx;
-  if (checkCollision(player.x, player.y, player.w, player.h)) {
-    // Resolve X collision
-    if (player.vx > 0) player.x = Math.floor((player.x + player.w) / TILE) * TILE - player.w - 0.01;
-    if (player.vx < 0) player.x = Math.floor(player.x / TILE) * TILE + TILE + 0.01;
-    player.vx = 0;
-  }
-
-  // 2. Vertical Movement (Gravity)
-  player.vy += GRAVITY;
-  player.y += player.vy;
-  player.grounded = false;
-
-  if (checkCollision(player.x, player.y, player.w, player.h)) {
-    // Resolve Y collision
-    if (player.vy > 0) {
-      player.y = Math.floor((player.y + player.h) / TILE) * TILE - player.h - 0.01;
-      player.grounded = true;
+  // Spawning logic
+  if (waveActive) {
+    if (enemiesToSpawn > 0) {
+      spawnTimer--;
+      if (spawnTimer <= 0) {
+        spawnEnemy();
+        enemiesToSpawn--;
+        spawnTimer = 40 - Math.min(20, wave); // Spawn faster over time
+      }
+    } else if (enemies.length === 0) {
+      waveActive = false; // Wave cleared
+      gold += 50 + (wave * 10); // Wave clear bonus
+      updateHUD();
     }
-    if (player.vy < 0) {
-      player.y = Math.floor(player.y / TILE) * TILE + TILE + 0.01;
+  }
+
+  // Update Enemies
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    let e = enemies[i];
+    let target = pathPoints[e.pathIndex];
+    let dx = target.x - e.x;
+    let dy = target.y - e.y;
+    let dist = Math.hypot(dx, dy);
+
+    if (dist < e.speed) {
+      e.x = target.x;
+      e.y = target.y;
+      e.pathIndex++;
+      if (e.pathIndex >= pathPoints.length) {
+        // Reached base
+        hp--;
+        updateHUD();
+        enemies.splice(i, 1);
+        if (hp <= 0) gameOver = true;
+        continue;
+      }
+    } else {
+      e.x += (dx / dist) * e.speed;
+      e.y += (dy / dist) * e.speed;
     }
-    player.vy = 0;
   }
 
-  // Jumping
-  if ((keys['w'] || keys[' ']) && player.grounded) {
-    player.vy = player.jumpPower;
-  }
+  // Update Towers
+  towers.forEach(t => {
+    if (t.cooldown > 0) t.cooldown--;
+    
+    // Level Up Logic (RPG Element)
+    if (t.xp >= t.xpNeeded) {
+      t.level++;
+      t.xp -= t.xpNeeded;
+      t.xpNeeded = Math.floor(t.xpNeeded * 1.5);
+      t.damage += 10;
+      t.range += 15;
+      t.fireRate = Math.max(10, t.fireRate - 2); // Cap max attack speed
+      if (t.level === 3) t.color = '#9b59b6'; // Purple for level 3
+      if (t.level === 5) t.color = '#e67e22'; // Orange for level 5
+      addFloatingText(t.x, t.y - 20, "Level Up!", "#f1c40f");
+    }
 
-  // Animation Timers
-  if (player.miningFrame > 0) player.miningFrame--;
+    // Target tracking & shooting
+    if (t.cooldown <= 0) {
+      let bestEnemy = null;
+      let minHomingDist = Infinity;
+      
+      // Find furthest enemy along the path that is within range
+      enemies.forEach(e => {
+        let dist = Math.hypot(t.x - e.x, t.y - e.y);
+        if (dist <= t.range) {
+          // Simple targeting: pick the first one in array (usually spawned first)
+          if (!bestEnemy) bestEnemy = e;
+        }
+      });
 
-  // Update Particles
-  for (let i = particles.length - 1; i >= 0; i--) {
-    let p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.vy += 0.3; // Gravity on particles
-    p.life -= 0.05;
-    if (p.life <= 0) particles.splice(i, 1);
-  }
-
-  // Update Camera (Smooth follow)
-  let targetCamX = (player.x + player.w / 2) - canvas.width / 2;
-  let targetCamY = (player.y + player.h / 2) - canvas.height / 2;
-  
-  // Clamp camera to world bounds
-  targetCamX = Math.max(0, Math.min(targetCamX, COLS * TILE - canvas.width));
-  targetCamY = Math.max(0, Math.min(targetCamY, ROWS * TILE - canvas.height));
-
-  cam.x += (targetCamX - cam.x) * 0.1;
-  cam.y += (targetCamY - cam.y) * 0.1;
-}
-
-// --- DRAW LOOP ---
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.save();
-  ctx.translate(-cam.x, -cam.y);
-
-  // Draw Blocks (Only visible ones)
-  let startCol = Math.max(0, Math.floor(cam.x / TILE));
-  let endCol = Math.min(COLS, startCol + Math.ceil(canvas.width / TILE) + 1);
-  let startRow = Math.max(0, Math.floor(cam.y / TILE));
-  let endRow = Math.min(ROWS, startRow + Math.ceil(canvas.height / TILE) + 1);
-
-  for (let y = startRow; y < endRow; y++) {
-    for (let x = startCol; x < endCol; x++) {
-      let block = world[y][x];
-      if (block !== 0) {
-        ctx.fillStyle = blockColors[block];
-        ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
-        
-        // Block shading/borders for depth
-        ctx.fillStyle = "rgba(0,0,0,0.15)";
-        ctx.fillRect(x * TILE, y * TILE + TILE - 4, TILE, 4);
-        ctx.fillRect(x * TILE + TILE - 4, y * TILE, 4, TILE);
+      if (bestEnemy) {
+        t.cooldown = t.fireRate;
+        projectiles.push({
+          x: t.x,
+          y: t.y,
+          target: bestEnemy,
+          speed: 6,
+          damage: t.damage,
+          parentTower: t 
+        });
       }
     }
-  }
-
-  // Draw Player (Animated)
-  let px = player.x;
-  let py = player.y;
-  
-  // Walking bounce animation
-  let bounce = (player.vx !== 0 && player.grounded) ? Math.sin(player.walkFrame * 0.5) * 3 : 0;
-  
-  ctx.fillStyle = "#FFC107"; // Player head/body color
-  
-  // Draw Body
-  ctx.fillRect(px, py + bounce, player.w, player.h - bounce);
-  
-  // Draw Eyes based on facing direction
-  ctx.fillStyle = "#000";
-  let eyeOffset = player.facingRight ? 16 : 4;
-  ctx.fillRect(px + eyeOffset, py + bounce + 6, 6, 6);
-
-  // Draw Mining Tool (Pickaxe Arm)
-  if (player.miningFrame > 0) {
-    ctx.save();
-    let armX = px + (player.facingRight ? player.w : 0);
-    let armY = py + player.h / 2 + bounce;
-    ctx.translate(armX, armY);
-    
-    // Calculate rotation angle towards mouse
-    let angle = Math.atan2(mouse.y + cam.y - armY, mouse.x + cam.x - armX);
-    
-    // Add swinging motion based on the miningFrame
-    let swing = (player.miningFrame / 15) * Math.PI / 2;
-    ctx.rotate(angle - (player.facingRight ? swing : -swing));
-
-    // Draw Pickaxe
-    ctx.fillStyle = "#8D6E63"; // Wood handle
-    ctx.fillRect(0, -2, 20, 4);
-    ctx.fillStyle = "#CFD8DC"; // Iron head
-    ctx.fillRect(15, -10, 6, 20);
-    
-    ctx.restore();
-  }
-
-  // Draw Particles
-  particles.forEach(p => {
-    ctx.globalAlpha = Math.max(0, p.life);
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x, p.y, p.size, p.size);
   });
-  ctx.globalAlpha = 1.0;
 
-  ctx.restore();
+  // Update Projectiles (Homing Missiles)
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    let p = projectiles[i];
+    
+    // If target died before hit, just delete projectile to prevent errors
+    if (p.target.hp <= 0 && !enemies.includes(p.target)) {
+        projectiles.splice(i, 1);
+        continue;
+    }
+
+    let dx = p.target.x - p.x;
+    let dy = p.target.y - p.y;
+    let dist = Math.hypot(dx, dy);
+
+    if (dist < p.speed) {
+      // Hit
+      p.target.hp -= p.damage;
+      addFloatingText(p.target.x, p.target.y, `-${p.damage}`, "#e74c3c");
+      
+      if (p.target.hp <= 0) {
+        // Enemy defeated
+        gold += p.target.reward;
+        p.parentTower.xp += p.target.maxHp; // Grant XP based on enemy strength
+        updateHUD();
+        let eIndex = enemies.indexOf(p.target);
+        if (eIndex > -1) enemies.splice(eIndex, 1);
+      }
+      projectiles.splice(i, 1);
+    } else {
+      p.x += (dx / dist) * p.speed;
+      p.y += (dy / dist) * p.speed;
+    }
+  }
+
+  // Update Floating Text
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    floatingTexts[i].life--;
+    floatingTexts[i].y -= 0.5; // Float up
+    if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+  }
+}
+
+// --- RENDERING LOOP ---
+function draw() {
+  // Clear canvas
+  ctx.fillStyle = "#2d3436";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw Grid Map (Path)
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (grid[y][x] === 1) {
+        ctx.fillStyle = "#636e72"; // Path color
+        ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+      }
+      // Grid lines
+      ctx.strokeStyle = "rgba(0,0,0,0.1)";
+      ctx.strokeRect(x * TILE, y * TILE, TILE, TILE);
+    }
+  }
+
+  // Draw Start & End indicators
+  ctx.fillStyle = "#27ae60";
+  ctx.fillRect(pathMap[0][0]*TILE, pathMap[0][1]*TILE, TILE, TILE);
+  ctx.fillStyle = "#e74c3c";
+  let lastP = pathMap[pathMap.length-1];
+  ctx.fillRect(lastP[0]*TILE, lastP[1]*TILE, TILE, TILE);
+
+  // Draw Hover Indicator
+  if (mouse.gridX >= 0 && mouse.gridX < COLS && mouse.gridY >= 0 && mouse.gridY < ROWS) {
+    if (grid[mouse.gridY][mouse.gridX] === 0) {
+      // Valid spot
+      ctx.fillStyle = "rgba(46, 204, 113, 0.3)";
+      ctx.beginPath();
+      ctx.arc(mouse.gridX * TILE + TILE/2, mouse.gridY * TILE + TILE/2, 120, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Invalid spot
+      ctx.fillStyle = "rgba(231, 76, 60, 0.4)";
+    }
+    ctx.fillRect(mouse.gridX * TILE, mouse.gridY * TILE, TILE, TILE);
+  }
+
+  // Draw Towers
+  towers.forEach(t => {
+    // Base
+    ctx.fillStyle = "#2c3e50";
+    ctx.fillRect(t.x - 16, t.y - 16, 32, 32);
+    // Turret Color (Changes based on level)
+    ctx.fillStyle = t.color;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, 12, 0, Math.PI * 2);
+    ctx.fill();
+    // Level text
+    ctx.fillStyle = "#fff";
+    ctx.font = "12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Lv" + t.level, t.x, t.y + 4);
+  });
+
+  // Draw Enemies
+  enemies.forEach(e => {
+    ctx.fillStyle = "#c0392b";
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Health bar
+    ctx.fillStyle = "#333";
+    ctx.fillRect(e.x - 10, e.y - 20, 20, 4);
+    ctx.fillStyle = "#2ecc71";
+    ctx.fillRect(e.x - 10, e.y - 20, 20 * (e.hp / e.maxHp), 4);
+  });
+
+  // Draw Projectiles
+  projectiles.forEach(p => {
+    ctx.fillStyle = "#f1c40f";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Draw Floating Text
+  floatingTexts.forEach(ft => {
+    ctx.fillStyle = ft.color;
+    ctx.globalAlpha = ft.life / 40;
+    ctx.font = "bold 16px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.globalAlpha = 1.0;
+  });
+
+  if (gameOver) {
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#e74c3c";
+    ctx.font = "bold 48px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+  }
 }
 
 function loop() {
@@ -374,6 +457,7 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
+// Start Game Loop
 loop();
 </script>
 </body>
