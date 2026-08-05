@@ -91,6 +91,21 @@
       color: #3498db;
       font-weight: bold;
     }
+    .admin-reset-btn {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      background: #c0392b;
+      color: white;
+      border: none;
+      padding: 6px;
+      font-size: 11px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .admin-reset-btn:hover { background: #e74c3c; }
 
     /* Name Prompt Modal */
     #name-modal {
@@ -145,6 +160,22 @@
       cursor: pointer;
     }
     .name-container button:hover { background: #27ae60; }
+
+    /* Admin Password Modal */
+    #admin-modal {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      pointer-events: auto;
+      z-index: 20;
+    }
 
     /* Expanded Upgrade Shop Modal */
     #shop-modal {
@@ -280,18 +311,33 @@
     </div>
   </div>
 
+  <!-- Admin Verification Modal -->
+  <div id="admin-modal">
+    <div class="name-container" style="border-color: #c0392b;">
+      <h2 style="color: #e74c3c; margin-top: 0;">ADMIN VERIFICATION</h2>
+      <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Enter admin code to wipe all global scores.</p>
+      <input type="password" id="admin-pass-input" placeholder="Admin Password">
+      <div id="admin-error"></div>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button onclick="verifyAdminReset()" style="background: #c0392b;">Wipe Board</button>
+        <button onclick="closeAdminModal()" style="background: #555;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <div id="ui-layer">
     <div class="hud-panel" id="hp-box">Base HP: 100 / 100</div>
     <div class="hud-panel" style="margin-left: 10px;">Gold: <span id="gold-display">0</span></div>
     <button class="hud-panel" id="shop-btn" onclick="toggleShop(true)">Upgrade Shop</button>
     
-    <!-- Real-Player Unique Leaderboard Panel -->
+    <!-- Real-Player Unique Leaderboard Panel with Admin Reset Button -->
     <div id="leaderboard">
       <h3>GLOBAL SURVIVORS</h3>
       <div class="lb-subtitle">Tracking All-Time Best Scores</div>
       <div id="lb-content">
         <div class="lb-row"><span>Connecting...</span><span>-</span></div>
       </div>
+      <button class="admin-reset-btn" onclick="openAdminModal()">Admin Reset Leaderboard</button>
     </div>
 
     <!-- Expanded Upgrade Shop Modal -->
@@ -433,10 +479,8 @@ function startGame() {
   document.getElementById("name-modal").style.display = "none";
   gameStarted = true;
   
-  // Explicitly set starting score to 0
   player.score = 0;
   
-  // Register initial 0 score entry for this player session
   let existingEntry = savedScores.find(s => s.id === player.id);
   if (existingEntry) {
     existingEntry.score = 0;
@@ -448,15 +492,55 @@ function startGame() {
   updateGlobalLeaderboardDisplay(savedScores);
 }
 
+// --- ADMIN RESET FUNCTIONS ---
+const ADMIN_PASSWORD_CODE = "admin123"; // Change this password as needed
+
+function openAdminModal() {
+  document.getElementById("admin-pass-input").value = "";
+  document.getElementById("admin-error").innerText = "";
+  document.getElementById("admin-modal").style.display = "flex";
+}
+
+function closeAdminModal() {
+  document.getElementById("admin-modal").style.display = "none";
+}
+
+function verifyAdminReset() {
+  let passInput = document.getElementById("admin-pass-input").value;
+  let errorDiv = document.getElementById("admin-error");
+
+  if (passInput === ADMIN_PASSWORD_CODE) {
+    // Wipe local storage leaderboard records
+    localStorage.removeItem("turret_lifetime_scores");
+    
+    // Re-register current player's baseline score if game has started
+    if (gameStarted) {
+      let freshScores = [{ id: player.id, name: player.name, score: player.score }];
+      localStorage.setItem("turret_lifetime_scores", JSON.stringify(freshScores));
+      updateGlobalLeaderboardDisplay(freshScores);
+    } else {
+      updateGlobalLeaderboardDisplay([]);
+    }
+
+    closeAdminModal();
+  } else {
+    errorDiv.innerText = "Incorrect admin password!";
+  }
+}
+
 function updateGlobalLeaderboardDisplay(savedScores) {
   savedScores.sort((a, b) => b.score - a.score);
   let html = "";
   let displayed = savedScores.slice(0, 5);
   
-  displayed.forEach((p, index) => {
-    let rowClass = p.id === player.id ? "lb-row player-score" : "lb-row";
-    html += `<div class="${rowClass}"><span>${index + 1}. ${p.name}</span><span>${p.score}</span></div>`;
-  });
+  if (displayed.length === 0) {
+    html = `<div class="lb-row"><span>No scores recorded</span><span>-</span></div>`;
+  } else {
+    displayed.forEach((p, index) => {
+      let rowClass = p.id === player.id ? "lb-row player-score" : "lb-row";
+      html += `<div class="${rowClass}"><span>${index + 1}. ${p.name}</span><span>${p.score}</span></div>`;
+    });
+  }
   document.getElementById("lb-content").innerHTML = html;
 }
 
@@ -712,22 +796,16 @@ function update() {
     let typeConfig;
 
     if (rand < 0.35) {
-      // 1. Runner (Fast & Weak - Orange)
       typeConfig = { name: "Runner", color: "#e67e22", size: 11, hp: 15, speed: 4.2, damage: 4, goldValue: 2, shape: "circle" };
     } else if (rand < 0.60) {
-      // 2. Grunt (Standard - Red)
       typeConfig = { name: "Grunt", color: "#e74c3c", size: 15, hp: 30, speed: 2.6, damage: 7, goldValue: 4, shape: "circle" };
     } else if (rand < 0.78) {
-      // 3. Tank (Slow & Heavy - Purple)
       typeConfig = { name: "Tank", color: "#9b59b6", size: 28, hp: 110, speed: 1.4, damage: 18, goldValue: 10, shape: "square" };
     } else if (rand < 0.90) {
-      // 4. Sprinter (Insane Speed, Low HP - Cyan)
       typeConfig = { name: "Sprinter", color: "#00bcd4", size: 12, hp: 20, speed: 5.5, damage: 8, goldValue: 7, shape: "triangle" };
     } else if (rand < 0.97) {
-      // 5. Heavy Juggernaut (High HP & Damage - Amber/Gold)
       typeConfig = { name: "Juggernaut", color: "#f1c40f", size: 34, hp: 250, speed: 1.8, damage: 32, goldValue: 22, shape: "square" };
     } else {
-      // 6. Phantom (Ghostly/Semi-translucent, Medium - Teal/Green)
       typeConfig = { name: "Phantom", color: "#2ecc71", size: 18, hp: 55, speed: 3.2, damage: 12, goldValue: 12, shape: "triangle" };
     }
 
@@ -853,7 +931,6 @@ function draw() {
       ctx.fill();
       ctx.stroke();
     } else {
-      // Circle shape
       ctx.beginPath();
       ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
       ctx.fill();
