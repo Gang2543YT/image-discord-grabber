@@ -3,26 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minecraft Web Engine - Full Screen</title>
+  <title>RPG Arena IO - Ranged Update</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body {
-      background-color: #111;
+      background-color: #222;
       color: #fff;
-      font-family: 'Courier New', Courier, monospace;
-      overflow: hidden; /* Prevents scrollbars */
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
       width: 100vw;
       height: 100vh;
-    }
-
-    /* Game container now fills the screen */
-    #game-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background-color: #70b3ff;
     }
 
     canvas {
@@ -31,602 +21,585 @@
       height: 100%;
     }
 
-    /* HUD Elements */
+    /* HUD */
     #hud {
       position: absolute;
-      top: 15px;
+      top: 20px;
       left: 20px;
-      right: 20px;
-      display: flex;
-      justify-content: space-between;
       pointer-events: none;
-      font-weight: bold;
-      text-shadow: 2px 2px #000;
       z-index: 5;
     }
-
-    .status-bar {
-      display: flex;
-      gap: 20px;
+    
+    .stat-box {
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid #555;
+      padding: 10px 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
       font-size: 18px;
-    }
-
-    .heart { color: #ff3333; }
-    .score { color: #ffcc00; }
-
-    /* UI Controls & Recipe Book Button */
-    #ui-buttons {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-      display: flex;
-      gap: 10px;
-      z-index: 5;
-    }
-
-    .btn {
-      background: #4a4a4a;
-      border: 2px solid #8b8b8b;
-      color: #fff;
-      padding: 10px 18px;
-      font-size: 16px;
-      font-family: inherit;
       font-weight: bold;
-      cursor: pointer;
-      box-shadow: inset -2px -2px 0px #222, inset 2px 2px 0px #aaa;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
-    .btn:hover { background: #5a5a5a; }
-    .btn:active { box-shadow: inset 2px 2px 0px #222; }
 
-    /* Recipe & Crafting Modal */
-    #crafting-modal {
-      display: none;
+    /* XP Bar */
+    #xp-container {
       position: absolute;
-      top: 50%;
+      bottom: 30px;
       left: 50%;
-      transform: translate(-50%, -50%);
-      width: 700px;
-      height: 450px;
-      background: #c6c6c6;
-      border: 4px solid #373737;
-      color: #000;
-      box-shadow: inset -3px -3px 0 #555, inset 3px 3px 0 #fff, 0 0 30px rgba(0,0,0,0.8);
-      padding: 20px;
-      flex-direction: column;
-      z-index: 10;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 2px solid #555;
-      padding-bottom: 10px;
-      margin-bottom: 15px;
-    }
-
-    .modal-title { font-size: 22px; font-weight: bold; }
-
-    .recipe-container {
-      display: flex;
-      flex: 1;
-      gap: 15px;
+      transform: translateX(-50%);
+      width: 60%;
+      height: 25px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid #aaa;
+      border-radius: 12px;
+      z-index: 5;
       overflow: hidden;
     }
-
-    .recipe-list {
-      width: 50%;
-      background: #8b8b8b;
-      border: 2px solid #373737;
-      overflow-y: auto;
-      padding: 8px;
+    #xp-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%);
+      transition: width 0.2s ease-out;
+    }
+    #level-indicator {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 20px;
+      font-weight: bold;
+      text-shadow: 2px 2px 0 #000;
+      color: #00d2ff;
     }
 
-    .recipe-item {
-      background: #8b8b8b;
-      padding: 8px 12px;
-      margin-bottom: 6px;
-      border: 2px solid #555;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 14px;
-    }
-    .recipe-item:hover { background: #9b9b9b; }
-    .recipe-item.selected { background: #3b5998; color: white; border-color: #fff; }
-
-    .recipe-detail {
-      width: 50%;
-      background: #a0a0a0;
-      border: 2px solid #373737;
-      padding: 15px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .ingredients-list { margin-top: 15px; font-size: 15px; }
-    .ingredient { margin-bottom: 6px; }
-    .ingredient.has { color: #006600; }
-    .ingredient.missing { color: #990000; }
-
-    /* Death Scene Screen Overlay */
-    #death-screen {
+    /* Upgrade Modal */
+    #upgrade-modal {
       display: none;
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(180, 0, 0, 0.65);
-      backdrop-filter: blur(4px);
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
       flex-direction: column;
       justify-content: center;
       align-items: center;
       z-index: 20;
-      animation: fadeIn 0.8s ease-in-out;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    #upgrade-modal h1 {
+      font-size: 48px;
+      color: #ffcc00;
+      margin-bottom: 30px;
+      text-shadow: 0 0 20px #ffcc00;
+      animation: pulse 1s infinite alternate;
     }
 
-    #death-screen h1 {
-      font-size: 72px;
-      color: #ff3333;
-      text-shadow: 4px 4px 0px #000;
-      margin-bottom: 15px;
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.05); }
     }
 
-    #death-screen p {
-      font-size: 24px;
-      text-shadow: 2px 2px 0px #000;
-      margin-bottom: 35px;
+    .cards-container {
+      display: flex;
+      gap: 20px;
     }
 
-    .respawn-btn {
-      font-size: 24px;
+    .upgrade-card {
+      background: #333;
+      border: 3px solid #555;
+      border-radius: 12px;
+      width: 220px;
+      padding: 30px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    }
+    .upgrade-card:hover {
+      background: #444;
+      border-color: #00d2ff;
+      transform: translateY(-10px);
+    }
+    .upgrade-card h2 { font-size: 24px; margin-bottom: 10px; color: #fff; }
+    .upgrade-card p { font-size: 16px; color: #ccc; }
+
+    /* Death Screen */
+    #death-screen {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(150, 0, 0, 0.8);
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 30;
+    }
+    #death-screen h1 { font-size: 72px; margin-bottom: 20px; text-shadow: 4px 4px 0 #000; }
+    .btn {
       padding: 15px 30px;
-      background: #4a4a4a;
+      font-size: 24px;
+      font-weight: bold;
+      background: #222;
       color: #fff;
       border: 3px solid #fff;
+      border-radius: 8px;
       cursor: pointer;
-      box-shadow: 0 4px 0 #222;
-      font-family: inherit;
-      font-weight: bold;
     }
-    .respawn-btn:hover { background: #666; }
+    .btn:hover { background: #444; }
 
-    /* Hotbar */
-    #hotbar {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      background: rgba(0,0,0,0.6);
-      border: 2px solid #555;
-      padding: 6px;
-      gap: 6px;
-      z-index: 5;
-    }
-
-    .slot {
-      width: 48px;
-      height: 48px;
-      background: #8b8b8b;
-      border: 2px solid #373737;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: bold;
-      position: relative;
-    }
-    .slot-count {
-      position: absolute;
-      bottom: 2px;
-      right: 4px;
-      font-size: 12px;
-      color: #fff;
-      text-shadow: 1px 1px #000;
-    }
   </style>
 </head>
 <body>
 
-  <div id="game-container">
-    <canvas id="gameCanvas"></canvas>
+  <canvas id="gameCanvas"></canvas>
 
-    <!-- HUD -->
-    <div id="hud">
-      <div class="status-bar">
-        <div>Health: <span id="hp-display" class="heart">❤❤❤❤❤❤❤❤❤❤</span></div>
-        <div>Score: <span id="score-display" class="score">0</span></div>
-      </div>
-      <div>Press <b style="color:#ffcc00">[E]</b> for Recipe Book</div>
+  <div id="hud">
+    <div class="stat-box" id="hp-box">HP: 100 / 100</div>
+    <div class="stat-box" id="stats-box">ATK: 25 | SPD: 5</div>
+  </div>
+
+  <div id="xp-container">
+    <div id="level-indicator">Level 1</div>
+    <div id="xp-bar"></div>
+  </div>
+
+  <div id="upgrade-modal">
+    <h1>Level Up!</h1>
+    <div class="cards-container" id="cards-container">
+      <!-- Cards generated via JS -->
     </div>
+  </div>
 
-    <!-- Hotbar -->
-    <div id="hotbar"></div>
-
-    <!-- UI Buttons -->
-    <div id="ui-buttons">
-      <button class="btn" id="open-craft-btn">Recipe Book (E)</button>
-    </div>
-
-    <!-- Crafting Modal / Recipe Guide -->
-    <div id="crafting-modal">
-      <div class="modal-header">
-        <span class="modal-title">Crafting Guide & Recipes</span>
-        <button class="btn" id="close-craft-btn" style="padding:2px 10px;">X</button>
-      </div>
-      <div class="recipe-container">
-        <div class="recipe-list" id="recipe-list-ui"></div>
-        <div class="recipe-detail" id="recipe-detail-ui">
-          <div>
-            <h3 id="recipe-name">Select a Recipe</h3>
-            <p id="recipe-desc" style="font-size: 14px; margin: 8px 0; color: #333;"></p>
-            <div class="ingredients-list" id="ingredients-ui"></div>
-          </div>
-          <button class="btn" id="craft-action-btn" style="width: 100%; margin-top: auto;" disabled>Craft Item</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Death Screen -->
-    <div id="death-screen">
-      <h1>You Died!</h1>
-      <p id="death-cause">Slain by Zombie</p>
-      <p>Score: <span id="final-score">0</span></p>
-      <button class="respawn-btn" id="respawn-btn">Respawn</button>
-    </div>
+  <div id="death-screen">
+    <h1>Defeated</h1>
+    <p style="font-size: 24px; margin-bottom: 30px;">You reached <span id="final-level">Level 1</span></p>
+    <button class="btn" onclick="location.reload()">Play Again</button>
   </div>
 
 <script>
 // ==========================================
-// 1. MINECRAFT DATA REGISTRIES (Mobs & Recipes)
+// 1. ENGINE SETUP & ARENA CONSTANTS
 // ==========================================
-
-const MOBS_DATABASE = {
-  cow: { name: "Cow", hp: 10, hostile: false, color: "#5c4033", size: 32, speed: 0.8, drop: { item: "Raw Beef", count: 2 } },
-  pig: { name: "Pig", hp: 10, hostile: false, color: "#f8a4a4", size: 28, speed: 1.0, drop: { item: "Raw Porkchop", count: 2 } },
-  zombie: { name: "Zombie", hp: 20, hostile: true, damage: 2, color: "#2d6a4f", size: 32, speed: 1.2, drop: { item: "Rotten Flesh", count: 1 } },
-  skeleton: { name: "Skeleton", hp: 20, hostile: true, damage: 3, color: "#d3d3d3", size: 30, speed: 1.1, drop: { item: "Bone", count: 2 } },
-  creeper: { name: "Creeper", hp: 20, hostile: true, damage: 8, color: "#38b000", size: 30, speed: 1.4, drop: { item: "Gunpowder", count: 1 } }
-};
-
-const RECIPES_DATABASE = [
-  { id: "planks", name: "Oak Planks", output: { item: "Oak Planks", count: 4 }, inputs: [{ item: "Oak Log", count: 1 }], desc: "Basic building material processed from logs." },
-  { id: "stick", name: "Sticks", output: { item: "Stick", count: 4 }, inputs: [{ item: "Oak Planks", count: 2 }], desc: "Used to craft tools, torches, and weapons." },
-  { id: "crafting_table", name: "Crafting Table", output: { item: "Crafting Table", count: 1 }, inputs: [{ item: "Oak Planks", count: 4 }], desc: "Allows crafting complex 3x3 items." },
-  { id: "wooden_sword", name: "Wooden Sword", output: { item: "Wooden Sword", count: 1 }, inputs: [{ item: "Oak Planks", count: 2 }, { item: "Stick", count: 1 }], desc: "Deals basic melee attack damage (+4 Damage)." },
-  { id: "stone_sword", name: "Stone Sword", output: { item: "Stone Sword", count: 1 }, inputs: [{ item: "Cobblestone", count: 2 }, { item: "Stick", count: 1 }], desc: "Durable early game weapon (+5 Damage)." },
-  { id: "iron_sword", name: "Iron Sword", output: { item: "Iron Sword", count: 1 }, inputs: [{ item: "Iron Ingot", count: 2 }, { item: "Stick", count: 1 }], desc: "High damage combat sword (+6 Damage)." },
-  { id: "torch", name: "Torch", output: { item: "Torch", count: 4 }, inputs: [{ item: "Coal", count: 1 }, { item: "Stick", count: 1 }], desc: "Provides light and repels darkness." },
-  { id: "furnace", name: "Furnace", output: { item: "Furnace", count: 1 }, inputs: [{ item: "Cobblestone", count: 8 }], desc: "Used for smelting ores and cooking food." }
-];
-
-// ==========================================
-// 2. GAME STATE & VARIABLES
-// ==========================================
-
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// Handle Fullscreen Canvas Resizing
-function resizeCanvas() {
+function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas(); // Set initial size
+window.addEventListener('resize', resize);
+resize();
+
+const ARENA_SIZE = 4000;
+const TILE_SIZE = 100;
+
+// ==========================================
+// 2. GAME STATE & ENTITIES
+// ==========================================
+let gameActive = true;
+let isPaused = false;
+let keys = {};
 
 let player = {
-  x: canvas.width / 2,
-  y: canvas.height / 2,
-  size: 28,
-  hp: 20,
-  maxHp: 20,
-  speed: 4,
-  score: 0,
-  inventory: { "Oak Log": 5, "Cobblestone": 8, "Coal": 2, "Iron Ingot": 2 }
+  x: ARENA_SIZE / 2,
+  y: ARENA_SIZE / 2,
+  size: 30,
+  hp: 100,
+  maxHp: 100,
+  speed: 5,
+  damage: 25,
+  attackRadius: 120,
+  attackCooldown: 0,
+  maxCooldown: 30, // Frames between auto-attacks
+  level: 1,
+  xp: 0,
+  xpNeeded: 100,
+  color: "#4facfe"
 };
 
-let activeMobs = [];
-let keys = {};
-let selectedRecipe = null;
-let gameActive = true;
-let lastDamageTime = 0;
+let enemies = [];
+let gems = [];
+let projectiles = []; // Stores Skeleton Arrows
+let damageTexts = [];
+let slashes = [];
 
 // ==========================================
-// 3. ENGINE & CANVAS GRAPHICS
+// 3. SPAWNERS & CLASSES
 // ==========================================
+class Enemy {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.type = type;
+    
+    // Scale enemies slightly as player levels up
+    const scale = 1 + (player.level * 0.1);
 
-function spawnMob(typeKey) {
-  const template = MOBS_DATABASE[typeKey];
-  const side = Math.floor(Math.random() * 4);
-  let x, y;
-  
-  // Spawn just outside the current screen view
-  if (side === 0) { x = Math.random() * canvas.width; y = -50; }
-  else if (side === 1) { x = canvas.width + 50; y = Math.random() * canvas.height; }
-  else if (side === 2) { x = Math.random() * canvas.width; y = canvas.height + 50; }
-  else { x = -50; y = Math.random() * canvas.height; }
-
-  activeMobs.push({
-    ...template,
-    typeKey: typeKey,
-    x: x,
-    y: y,
-    currentHp: template.hp
-  });
-}
-
-// Initial Mob Population
-for (let i = 0; i < 5; i++) spawnMob("cow");
-for (let i = 0; i < 4; i++) spawnMob("zombie");
-for (let i = 0; i < 2; i++) spawnMob("creeper");
-
-function updateGame() {
-  if (!gameActive) return;
-
-  // Player Movement (Constrained to full screen bounds)
-  if (keys['w'] || keys['W'] || keys['ArrowUp']) player.y = Math.max(player.size, player.y - player.speed);
-  if (keys['s'] || keys['S'] || keys['ArrowDown']) player.y = Math.min(canvas.height - player.size, player.y + player.speed);
-  if (keys['a'] || keys['A'] || keys['ArrowLeft']) player.x = Math.max(player.size, player.x - player.speed);
-  if (keys['d'] || keys['D'] || keys['ArrowRight']) player.x = Math.min(canvas.width - player.size, player.x + player.speed);
-
-  // Update Mobs
-  activeMobs.forEach((mob, index) => {
-    const dx = player.x - mob.x;
-    const dy = player.y - mob.y;
-    const dist = Math.hypot(dx, dy);
-
-    if (mob.hostile && dist > 0) {
-      mob.x += (dx / dist) * mob.speed;
-      mob.y += (dy / dist) * mob.speed;
-
-      // Combat Collision
-      if (dist < (player.size + mob.size) / 2) {
-        const now = Date.now();
-        if (now - lastDamageTime > 800) { // Invulnerability window
-          takeDamage(mob.damage, `Slain by ${mob.name}`);
-          lastDamageTime = now;
-        }
-      }
+    if (type === "zombie") {
+      this.size = 30; this.hp = 40 * scale; this.maxHp = 40 * scale; 
+      this.speed = 2.5; this.damage = 15 * scale; this.color = "#4caf50"; // Green Circle
+      this.xpValue = 20;
+    } else if (type === "skeleton") {
+      this.size = 25; this.hp = 30 * scale; this.maxHp = 30 * scale; 
+      this.speed = 2.0; this.damage = 10 * scale; this.color = "#ffffff"; // White Circle
+      this.xpValue = 35; 
+      this.attackCooldown = 0;
+      this.range = 350; // Distance to shoot from
+    } else if (type === "brute") {
+      this.size = 50; this.hp = 200 * scale; this.maxHp = 200 * scale; 
+      this.speed = 1.5; this.damage = 35 * scale; this.color = "#1b5e20"; // Dark Green
+      this.xpValue = 100;
     }
-  });
-
-  // Periodically spawn mobs up to a larger cap for full screen
-  if (Math.random() < 0.01 && activeMobs.length < 15) {
-    const types = ["cow", "pig", "zombie", "skeleton", "creeper"];
-    spawnMob(types[Math.floor(Math.random() * types.length)]);
   }
 }
 
-function renderGame() {
-  // Background (Sky color)
-  ctx.fillStyle = "#70b3ff";
+function spawnEnemy() {
+  if (enemies.length > 100) return; // Cap
+
+  // Spawn just outside viewport
+  const angle = Math.random() * Math.PI * 2;
+  const dist = Math.max(canvas.width, canvas.height) / 2 + 100;
+  const x = player.x + Math.cos(angle) * dist;
+  const y = player.y + Math.sin(angle) * dist;
+
+  // Keep inside arena bounds
+  if (x < 0 || x > ARENA_SIZE || y < 0 || y > ARENA_SIZE) return;
+
+  const rand = Math.random();
+  let type = "zombie";
+  if (rand > 0.6 && player.level > 2) type = "skeleton"; // Start spawning skeletons at level 3
+  if (rand > 0.9 && player.level > 5) type = "brute";    // Giant zombies at level 6
+
+  enemies.push(new Enemy(x, y, type));
+}
+
+// ==========================================
+// 4. COMBAT & UPGRADES (RPG MECHANICS)
+// ==========================================
+function autoAttack() {
+  if (player.attackCooldown > 0) {
+    player.attackCooldown--;
+    return;
+  }
+
+  // Find nearest enemy
+  let nearest = null;
+  let minDist = player.attackRadius;
+
+  enemies.forEach(enemy => {
+    let dist = Math.hypot(enemy.x - player.x, enemy.y - player.y);
+    if (dist < minDist) { minDist = dist; nearest = enemy; }
+  });
+
+  if (nearest) {
+    // Attack nearest
+    nearest.hp -= player.damage;
+    player.attackCooldown = player.maxCooldown;
+
+    // Visuals
+    damageTexts.push({ x: nearest.x, y: nearest.y - 20, text: player.damage, life: 30 });
+    slashes.push({ x: nearest.x, y: nearest.y, life: 10 });
+
+    if (nearest.hp <= 0) {
+      // Drop XP Gem
+      gems.push({ x: nearest.x, y: nearest.y, value: nearest.xpValue });
+      enemies.splice(enemies.indexOf(nearest), 1);
+    }
+  }
+}
+
+const UPGRADE_POOL = [
+  { title: "Vitality", desc: "+25 Max Health", apply: () => { player.maxHp += 25; player.hp += 25; } },
+  { title: "Sharpened Blade", desc: "+10 Damage", apply: () => { player.damage += 10; } },
+  { title: "Agility", desc: "+1 Move Speed", apply: () => { player.speed += 1; } },
+  { title: "Haste", desc: "-15% Attack Cooldown", apply: () => { player.maxCooldown = Math.max(5, Math.floor(player.maxCooldown * 0.85)); } },
+  { title: "Reach", desc: "+30 Attack Range", apply: () => { player.attackRadius += 30; } }
+];
+
+function triggerLevelUp() {
+  isPaused = true;
+  document.getElementById("upgrade-modal").style.display = "flex";
+  
+  const container = document.getElementById("cards-container");
+  container.innerHTML = "";
+
+  // Pick 3 random distinct upgrades
+  let shuffled = UPGRADE_POOL.sort(() => 0.5 - Math.random());
+  let choices = shuffled.slice(0, 3);
+
+  choices.forEach(choice => {
+    let card = document.createElement("div");
+    card.className = "upgrade-card";
+    card.innerHTML = `<h2>${choice.title}</h2><p>${choice.desc}</p>`;
+    card.onclick = () => {
+      choice.apply();
+      resumeGame();
+    };
+    container.appendChild(card);
+  });
+}
+
+function resumeGame() {
+  document.getElementById("upgrade-modal").style.display = "none";
+  updateHUD();
+  isPaused = false;
+}
+
+// ==========================================
+// 5. MAIN GAME LOOP
+// ==========================================
+function update() {
+  if (!gameActive || isPaused) return;
+
+  // Player Movement
+  if (keys['w'] || keys['ArrowUp']) player.y -= player.speed;
+  if (keys['s'] || keys['ArrowDown']) player.y += player.speed;
+  if (keys['a'] || keys['ArrowLeft']) player.x -= player.speed;
+  if (keys['d'] || keys['ArrowRight']) player.x += player.speed;
+
+  // Clamp to Arena
+  player.x = Math.max(player.size, Math.min(ARENA_SIZE - player.size, player.x));
+  player.y = Math.max(player.size, Math.min(ARENA_SIZE - player.size, player.y));
+
+  autoAttack();
+
+  // Update Enemies
+  enemies.forEach(enemy => {
+    let angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+    let dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+
+    if (enemy.type === "skeleton") {
+      // Skeleton Ranged AI
+      if (dist > enemy.range * 0.8) {
+        // Move closer if too far
+        enemy.x += Math.cos(angle) * enemy.speed;
+        enemy.y += Math.sin(angle) * enemy.speed;
+      } else if (dist < enemy.range * 0.4) {
+        // Back away if player gets too close
+        enemy.x -= Math.cos(angle) * (enemy.speed * 0.5);
+        enemy.y -= Math.sin(angle) * (enemy.speed * 0.5);
+      }
+
+      // Shoot Arrow
+      if (enemy.attackCooldown > 0) enemy.attackCooldown--;
+      if (enemy.attackCooldown <= 0 && dist <= enemy.range) {
+        enemy.attackCooldown = 80; // Cooldown before next shot
+        projectiles.push({
+          x: enemy.x,
+          y: enemy.y,
+          vx: Math.cos(angle) * 8, // Arrow speed
+          vy: Math.sin(angle) * 8,
+          damage: enemy.damage,
+          life: 150 // How long the arrow flies before disappearing
+        });
+      }
+    } else {
+      // Zombie & Brute Melee AI
+      enemy.x += Math.cos(angle) * enemy.speed;
+      enemy.y += Math.sin(angle) * enemy.speed;
+    }
+
+    // Melee collision with player
+    if (dist < player.size/2 + enemy.size/2) {
+      if (enemy.type !== "skeleton") {
+        player.hp -= enemy.damage / 30; // Consistent melee damage
+      } else {
+        player.hp -= (enemy.damage * 0.3) / 30; // Skeletons are weak in melee
+      }
+      if (player.hp <= 0) die();
+    }
+  });
+
+  // Update Projectiles (Arrows)
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    let p = projectiles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+
+    // Collision with player
+    let dist = Math.hypot(player.x - p.x, player.y - p.y);
+    if (dist < player.size/2 + 5) {
+      player.hp -= p.damage;
+      projectiles.splice(i, 1);
+      
+      // Floating damage number on player
+      damageTexts.push({ x: player.x, y: player.y - 20, text: `-${Math.floor(p.damage)}`, life: 30, color: "#ff3333" });
+
+      if (player.hp <= 0) die();
+      continue;
+    }
+
+    if (p.life <= 0) {
+      projectiles.splice(i, 1);
+    }
+  }
+
+  // Collect Gems
+  for (let i = gems.length - 1; i >= 0; i--) {
+    let gem = gems[i];
+    let dist = Math.hypot(player.x - gem.x, player.y - gem.y);
+    
+    // Magnet effect
+    if (dist < 150) {
+      let angle = Math.atan2(player.y - gem.y, player.x - gem.x);
+      gem.x += Math.cos(angle) * 8;
+      gem.y += Math.sin(angle) * 8;
+    }
+
+    if (dist < player.size) {
+      player.xp += gem.value;
+      gems.splice(i, 1);
+      
+      if (player.xp >= player.xpNeeded) {
+        player.xp -= player.xpNeeded;
+        player.level++;
+        player.xpNeeded = Math.floor(player.xpNeeded * 1.5);
+        triggerLevelUp();
+      }
+      updateHUD();
+    }
+  }
+
+  // Spawner Tick
+  if (Math.random() < 0.05) spawnEnemy();
+
+  updateHUD();
+}
+
+function draw() {
+  if (!gameActive) return;
+
+  // 1. Clear Screen
+  ctx.fillStyle = "#1a1a1a";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Decorative Grass Tiles (Starts a bit lower)
-  ctx.fillStyle = "#55a630";
-  ctx.fillRect(0, 150, canvas.width, canvas.height - 150);
+  // 2. Setup Camera Translate
+  ctx.save();
+  const camX = canvas.width / 2 - player.x;
+  const camY = canvas.height / 2 - player.y;
+  ctx.translate(camX, camY);
 
-  // Render Mobs
-  activeMobs.forEach(mob => {
-    ctx.fillStyle = mob.color;
-    ctx.fillRect(mob.x - mob.size/2, mob.y - mob.size/2, mob.size, mob.size);
-
-    // Eyes
-    ctx.fillStyle = "#000";
-    ctx.fillRect(mob.x - 8, mob.y - 8, 5, 5);
-    ctx.fillRect(mob.x + 3, mob.y - 8, 5, 5);
-
-    // Name Label
-    ctx.fillStyle = "#fff";
-    ctx.font = "12px Courier New";
-    ctx.textAlign = "center";
-    ctx.fillText(mob.name, mob.x, mob.y - mob.size/2 - 6);
-  });
-
-  // Render Player
-  ctx.fillStyle = "#00b4d8"; // Cyan Steve shirt
-  ctx.fillRect(player.x - player.size/2, player.y - player.size/2, player.size, player.size);
-  ctx.fillStyle = "#ffb5a7"; // Head/Face
-  ctx.fillRect(player.x - 10, player.y - 10, 20, 12);
-
-  // Render Crosshair / Target Indicator
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+  // 3. Draw Arena Floor & Grid
+  ctx.fillStyle = "#2a2a2a";
+  ctx.fillRect(0, 0, ARENA_SIZE, ARENA_SIZE);
+  
+  ctx.strokeStyle = "#333";
   ctx.lineWidth = 2;
-  ctx.strokeRect(player.x - player.size/2 - 5, player.y - player.size/2 - 5, player.size + 10, player.size + 10);
-}
+  ctx.beginPath();
+  for (let x = 0; x <= ARENA_SIZE; x += TILE_SIZE) { ctx.moveTo(x, 0); ctx.lineTo(x, ARENA_SIZE); }
+  for (let y = 0; y <= ARENA_SIZE; y += TILE_SIZE) { ctx.moveTo(0, y); ctx.lineTo(ARENA_SIZE, y); }
+  ctx.stroke();
 
-function gameLoop() {
-  updateGame();
-  renderGame();
-  requestAnimationFrame(gameLoop);
-}
+  ctx.strokeStyle = "#ff3333";
+  ctx.lineWidth = 8;
+  ctx.strokeRect(0, 0, ARENA_SIZE, ARENA_SIZE);
 
-// Attack Mobs on Click
-canvas.addEventListener("click", (e) => {
-  if (!gameActive) return;
-  const rect = canvas.getBoundingClientRect();
-  const clickX = e.clientX - rect.left;
-  const clickY = e.clientY - rect.top;
-
-  activeMobs.forEach((mob, index) => {
-    const dist = Math.hypot(clickX - mob.x, clickY - mob.y);
-    if (dist < mob.size + 15) { // Slightly forgiving hitbox for full screen
-      mob.currentHp -= 10; // Player attack power
-      if (mob.currentHp <= 0) {
-        // Collect drop
-        const drop = mob.drop;
-        player.inventory[drop.item] = (player.inventory[drop.item] || 0) + drop.count;
-        player.score += mob.hostile ? 50 : 10;
-        activeMobs.splice(index, 1);
-        updateHUD();
-        renderHotbar();
-      }
-    }
+  // 4. Draw Gems (XP)
+  gems.forEach(gem => {
+    ctx.fillStyle = "#00d2ff";
+    ctx.beginPath();
+    ctx.arc(gem.x, gem.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#00d2ff";
+    ctx.shadowBlur = 0;
   });
-});
 
-// ==========================================
-// 4. PLAYER HEALTH & DEATH SCENE SYSTEM
-// ==========================================
+  // 5. Draw Projectiles (Arrows)
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 3;
+  projectiles.forEach(p => {
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    // Draw line backwards based on velocity to make it look like an arrow
+    ctx.lineTo(p.x - (p.vx * 2), p.y - (p.vy * 2)); 
+    ctx.stroke();
+  });
 
-function takeDamage(amount, cause) {
-  player.hp -= amount;
-  if (player.hp < 0) player.hp = 0;
-  updateHUD();
+  // 6. Draw Enemies
+  enemies.forEach(enemy => {
+    ctx.fillStyle = enemy.color;
+    ctx.beginPath();
+    ctx.arc(enemy.x, enemy.y, enemy.size/2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Enemy HP Bar
+    ctx.fillStyle = "#000";
+    ctx.fillRect(enemy.x - 15, enemy.y - enemy.size/2 - 12, 30, 6);
+    ctx.fillStyle = "#ff3333";
+    ctx.fillRect(enemy.x - 15, enemy.y - enemy.size/2 - 12, 30 * (enemy.hp / enemy.maxHp), 6);
+  });
 
-  if (player.hp === 0) {
-    triggerDeathScreen(cause);
+  // 7. Draw Player & Attack Radius Indicator
+  ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.attackRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = player.color;
+  ctx.shadowBlur = 15;
+  ctx.shadowColor = player.color;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.size/2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // 8. Draw Visual Effects (Slashes & Numbers)
+  for (let i = slashes.length - 1; i >= 0; i--) {
+    let s = slashes[i];
+    ctx.strokeStyle = `rgba(255, 255, 255, ${s.life / 10})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, 20, 0, Math.PI);
+    ctx.stroke();
+    s.life--;
+    if (s.life <= 0) slashes.splice(i, 1);
   }
+
+  for (let i = damageTexts.length - 1; i >= 0; i--) {
+    let t = damageTexts[i];
+    ctx.fillStyle = t.color ? t.color : `rgba(255, 200, 0, ${t.life / 30})`;
+    ctx.font = "bold 20px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(t.text, t.x, t.y);
+    t.y -= 1; 
+    t.life--;
+    if (t.life <= 0) damageTexts.splice(i, 1);
+  }
+
+  ctx.restore();
 }
 
-function triggerDeathScreen(cause) {
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ==========================================
+// 6. UI & INPUT MANAGEMENT
+// ==========================================
+function updateHUD() {
+  document.getElementById("hp-box").innerText = `HP: ${Math.ceil(player.hp)} / ${player.maxHp}`;
+  document.getElementById("stats-box").innerText = `ATK: ${player.damage} | SPD: ${player.speed}`;
+  
+  document.getElementById("level-indicator").innerText = `Level ${player.level}`;
+  let xpPercent = (player.xp / player.xpNeeded) * 100;
+  document.getElementById("xp-bar").style.width = `${xpPercent}%`;
+}
+
+function die() {
   gameActive = false;
-  document.getElementById("death-cause").innerText = cause;
-  document.getElementById("final-score").innerText = player.score;
+  document.getElementById("final-level").innerText = `Level ${player.level}`;
   document.getElementById("death-screen").style.display = "flex";
 }
 
-function respawn() {
-  player.hp = player.maxHp;
-  player.x = canvas.width / 2;
-  player.y = canvas.height / 2;
-  player.score = Math.max(0, player.score - 50);
-  activeMobs = [];
-  
-  // Re-populate basic mobs
-  for (let i = 0; i < 5; i++) spawnMob("cow");
-  for (let i = 0; i < 4; i++) spawnMob("zombie");
-
-  document.getElementById("death-screen").style.display = "none";
-  updateHUD();
-  gameActive = true;
-}
-
-document.getElementById("respawn-btn").addEventListener("click", respawn);
-
-// ==========================================
-// 5. RECIPE BOOK & CRAFTING ENGINE
-// ==========================================
-
-const craftModal = document.getElementById("crafting-modal");
-const recipeListUI = document.getElementById("recipe-list-ui");
-const ingredientsUI = document.getElementById("ingredients-ui");
-const craftBtn = document.getElementById("craft-action-btn");
-
-function toggleCraftingModal() {
-  const isVisible = craftModal.style.display === "flex";
-  craftModal.style.display = isVisible ? "none" : "flex";
-  if (!isVisible) {
-    populateRecipeList();
-  }
-}
-
-function populateRecipeList() {
-  recipeListUI.innerHTML = "";
-  RECIPES_DATABASE.forEach(recipe => {
-    const item = document.createElement("div");
-    item.className = `recipe-item ${selectedRecipe === recipe ? 'selected' : ''}`;
-    item.innerHTML = `<span>${recipe.name}</span><b>x${recipe.output.count}</b>`;
-    item.onclick = () => selectRecipe(recipe);
-    recipeListUI.appendChild(item);
-  });
-}
-
-function selectRecipe(recipe) {
-  selectedRecipe = recipe;
-  populateRecipeList();
-
-  document.getElementById("recipe-name").innerText = recipe.name;
-  document.getElementById("recipe-desc").innerText = recipe.desc;
-
-  ingredientsUI.innerHTML = "<b>Required Ingredients:</b>";
-  let canCraft = true;
-
-  recipe.inputs.forEach(input => {
-    const playerHas = player.inventory[input.item] || 0;
-    const satisfies = playerHas >= input.count;
-    if (!satisfies) canCraft = false;
-
-    const div = document.createElement("div");
-    div.className = `ingredient ${satisfies ? 'has' : 'missing'}`;
-    div.innerText = `• ${input.item}: ${playerHas} / ${input.count}`;
-    ingredientsUI.appendChild(div);
-  });
-
-  craftBtn.disabled = !canCraft;
-}
-
-craftBtn.addEventListener("click", () => {
-  if (!selectedRecipe) return;
-
-  // Deduct ingredients
-  selectedRecipe.inputs.forEach(input => {
-    player.inventory[input.item] -= input.count;
-  });
-
-  // Add craft result
-  const out = selectedRecipe.output;
-  player.inventory[out.item] = (player.inventory[out.item] || 0) + out.count;
-
-  selectRecipe(selectedRecipe);
-  renderHotbar();
-  updateHUD();
-});
-
-document.getElementById("open-craft-btn").onclick = toggleCraftingModal;
-document.getElementById("close-craft-btn").onclick = toggleCraftingModal;
-
-// ==========================================
-// 6. UI UPDATES & INITIALIZATION
-// ==========================================
-
-function updateHUD() {
-  // Update Health Hearts
-  const heartsCount = Math.ceil(player.hp / 2);
-  document.getElementById("hp-display").innerText = "❤".repeat(heartsCount);
-  document.getElementById("score-display").innerText = player.score;
-}
-
-function renderHotbar() {
-  const hotbar = document.getElementById("hotbar");
-  hotbar.innerHTML = "";
-  
-  Object.keys(player.inventory).forEach(itemName => {
-    const count = player.inventory[itemName];
-    if (count > 0) {
-      const slot = document.createElement("div");
-      slot.className = "slot";
-      slot.title = itemName;
-      slot.innerText = itemName.substring(0, 3);
-      
-      const countEl = document.createElement("span");
-      countEl.className = "slot-count";
-      countEl.innerText = count;
-      slot.appendChild(countEl);
-      
-      hotbar.appendChild(slot);
-    }
-  });
-}
-
-// Input Handlers
-window.addEventListener("keydown", e => {
-  keys[e.key] = true;
-  if (e.key === "e" || e.key === "E") toggleCraftingModal();
-});
+window.addEventListener("keydown", e => keys[e.key] = true);
 window.addEventListener("keyup", e => keys[e.key] = false);
 
-// Launch Engine
-updateHUD();
-renderHotbar();
-requestAnimationFrame(gameLoop);
+// Initial spawn
+for(let i=0; i<15; i++) spawnEnemy();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
