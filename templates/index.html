@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Stationary Turret Defense - Final Spawn Balance</title>
+  <title>Stationary Turret Defense - Leaderboard & Shop Gold</title>
   <style>
     body {
       margin: 0;
@@ -52,6 +52,38 @@
     }
     #shop-btn:hover { background: #f39c12; }
 
+    /* Leaderboard panel on top right */
+    #leaderboard {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.75);
+      border: 2px solid #444;
+      border-radius: 8px;
+      padding: 12px 18px;
+      width: 200px;
+      pointer-events: auto;
+      font-size: 14px;
+    }
+    #leaderboard h3 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      color: #f1c40f;
+      text-align: center;
+      border-bottom: 1px solid #444;
+      padding-bottom: 5px;
+    }
+    .lb-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      color: #ccc;
+    }
+    .lb-row.player-score {
+      color: #3498db;
+      font-weight: bold;
+    }
+
     /* Expanded Upgrade Shop Modal */
     #shop-modal {
       display: none;
@@ -76,6 +108,14 @@
       display: flex;
       flex-direction: column;
       box-shadow: 0 0 40px rgba(0,0,0,0.9);
+    }
+    .shop-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #333;
+      padding-bottom: 10px;
     }
     .shop-grid {
       display: grid;
@@ -173,10 +213,21 @@
     <div class="hud-panel" style="margin-left: 10px;">Gold: <span id="gold-display">0</span></div>
     <button class="hud-panel" id="shop-btn" onclick="toggleShop(true)">Upgrade Shop</button>
     
+    <!-- Leaderboard Panel -->
+    <div id="leaderboard">
+      <h3>SURVIVORS</h3>
+      <div id="lb-content">
+        <!-- Filled dynamically -->
+      </div>
+    </div>
+
     <!-- Expanded Upgrade Shop Modal -->
     <div id="shop-modal">
       <div class="shop-container">
-        <h2 style="color: #f1c40f; margin-top: 0; text-align: center;">TURRET UPGRADE SHOP</h2>
+        <div class="shop-header">
+          <h2 style="color: #f1c40f; margin: 0;">TURRET UPGRADE SHOP</h2>
+          <div style="font-size: 18px; font-weight: bold;">Gold: <span id="shop-gold-display" style="color: #f1c40f;">0</span>g</div>
+        </div>
         <div class="shop-grid">
           
           <div class="shop-item">
@@ -262,6 +313,7 @@ resize();
 
 // --- GAME SETTINGS & STATE ---
 let player = {
+  name: "You",
   x: window.innerWidth / 2,
   y: window.innerHeight / 2,
   size: 28,
@@ -274,8 +326,39 @@ let player = {
   multishot: 1,
   armorReduction: 0,
   goldBonusMultiplier: 1.0,
-  gold: 0
+  gold: 0,
+  score: 0
 };
+
+// Fake AI players for the leaderboard
+let bots = [
+  { name: "ApexTurret", score: 120 },
+  { name: "VortexCore", score: 85 },
+  { name: "IronBulwark", score: 60 },
+  { name: "PulseGunner", score: 40 }
+];
+
+// Periodically update bot scores to make the leaderboard dynamic
+setInterval(() => {
+  if (!gameOver) {
+    bots.forEach(b => {
+      b.score += Math.floor(Math.random() * 5) + 1;
+    });
+  }
+}, 2000);
+
+function updateLeaderboard() {
+  player.score = player.gold + Math.floor(player.hp * 2);
+  let allPlayers = [...bots, { name: player.name, score: player.score, isPlayer: true }];
+  allPlayers.sort((a, b) => b.score - a.score);
+
+  let html = "";
+  allPlayers.slice(0, 5).forEach((p, index) => {
+    let rowClass = p.isPlayer ? "lb-row player-score" : "lb-row";
+    html += `<div class="${rowClass}"><span>${index + 1}. ${p.name}</span><span>${p.score}</span></div>`;
+  });
+  document.getElementById("lb-content").innerHTML = html;
+}
 
 let upgradesState = {
   damage: { level: 0, cost: 35, costMult: 1.4 },
@@ -307,6 +390,8 @@ function toggleShop(open) {
 }
 
 function updateShopUI() {
+  document.getElementById("shop-gold-display").innerText = player.gold;
+  
   for (let key in upgradesState) {
     let u = upgradesState[key];
     let btn = document.getElementById(`btn-${key}`);
@@ -342,6 +427,7 @@ function buyUpgrade(type) {
       player.gold -= cost;
       player.hp = Math.min(player.maxHp, player.hp + 40);
       addFloatingText(player.x, player.y - 40, "+40 HP", "#2ecc71");
+      updateShopUI();
     } else {
       addFloatingText(player.x, player.y - 40, "Not enough Gold!", "#e74c3c");
     }
@@ -420,7 +506,7 @@ function update() {
     }
   }
 
-  // 2. Enemy Spawning Loop (Yellow is now rarer than Purple: 85% Red, 12% Purple, 3% Yellow)
+  // 2. Enemy Spawning Loop (85% Red, 12% Purple, 3% Yellow)
   spawnTimer--;
   if (spawnTimer <= 0) {
     spawnTimer = Math.max(15, 40 - (wave * 2));
@@ -468,7 +554,7 @@ function update() {
       if (player.hp <= 0) {
         player.hp = 0;
         gameOver = true;
-        document.getElementById("final-stats").innerText = `Your base fell to the swarm!`;
+        document.getElementById("final-stats").innerText = `Your base fell to the swarm! Final Score: ${player.score}`;
         document.getElementById("game-over").style.display = "flex";
       }
     }
@@ -511,9 +597,10 @@ function update() {
     if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
   }
 
-  // Update HUD
+  // Update HUD & Leaderboard
   document.getElementById("hp-box").innerText = `Base HP: ${Math.ceil(player.hp)} / ${player.maxHp}`;
   document.getElementById("gold-display").innerText = player.gold;
+  updateLeaderboard();
 }
 
 // --- RENDER LOOP ---
