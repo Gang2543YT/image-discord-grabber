@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Stationary Turret Defense - Expanded Shop</title>
+  <title>Stationary Turret Defense - Balanced Economy</title>
   <style>
     body {
       margin: 0;
@@ -173,7 +173,7 @@
     <div class="hud-panel" style="margin-left: 10px;">Gold: <span id="gold-display">0</span></div>
     <button class="hud-panel" id="shop-btn" onclick="toggleShop(true)">Upgrade Shop</button>
     
-    <!-- Expanded Upgrade Shop Overlay -->
+    <!-- Expanded Upgrade Shop Modal -->
     <div id="shop-modal">
       <div class="shop-container">
         <h2 style="color: #f1c40f; margin-top: 0; text-align: center;">TURRET UPGRADE SHOP</h2>
@@ -183,56 +183,56 @@
             <div style="text-align: left;">
               <strong>Damage Boost</strong><br><span style="font-size: 12px; color: #aaa;" id="desc-damage">+12 Damage (Lvl 0)</span>
             </div>
-            <button onclick="buyUpgrade('damage')" id="btn-damage">Cost: 50g</button>
+            <button onclick="buyUpgrade('damage')" id="btn-damage">Cost: 35g</button>
           </div>
 
           <div class="shop-item">
             <div style="text-align: left;">
               <strong>Rapid Fire</strong><br><span style="font-size: 12px; color: #aaa;" id="desc-fireRate">Faster Shooting (Lvl 0)</span>
             </div>
-            <button onclick="buyUpgrade('fireRate')" id="btn-fireRate">Cost: 75g</button>
+            <button onclick="buyUpgrade('fireRate')" id="btn-fireRate">Cost: 50g</button>
           </div>
 
           <div class="shop-item">
             <div style="text-align: left;">
               <strong>Radar Range</strong><br><span style="font-size: 12px; color: #aaa;" id="desc-range">+75 Range (Lvl 0)</span>
             </div>
-            <button onclick="buyUpgrade('range')" id="btn-range">Cost: 60g</button>
+            <button onclick="buyUpgrade('range')" id="btn-range">Cost: 40g</button>
           </div>
 
           <div class="shop-item">
             <div style="text-align: left;">
               <strong>Multi-Shot</strong><br><span style="font-size: 12px; color: #aaa;" id="desc-multishot">+1 Extra Bullet (Lvl 0)</span>
             </div>
-            <button onclick="buyUpgrade('multishot')" id="btn-multishot">Cost: 200g</button>
+            <button onclick="buyUpgrade('multishot')" id="btn-multishot">Cost: 140g</button>
           </div>
 
           <div class="shop-item">
             <div style="text-align: left;">
               <strong>Armor Plating</strong><br><span style="font-size: 12px; color: #aaa;" id="desc-armor">Reduces Damage Taken (Lvl 0)</span>
             </div>
-            <button onclick="buyUpgrade('armor')" id="btn-armor">Cost: 90g</button>
+            <button onclick="buyUpgrade('armor')" id="btn-armor">Cost: 60g</button>
           </div>
 
           <div class="shop-item">
             <div style="text-align: left;">
               <strong>Bounty Hunter</strong><br><span style="font-size: 12px; color: #aaa;" id="desc-bounty">+25% Gold Drop (Lvl 0)</span>
             </div>
-            <button onclick="buyUpgrade('bounty')" id="btn-bounty">Cost: 120g</button>
+            <button onclick="buyUpgrade('bounty')" id="btn-bounty">Cost: 80g</button>
           </div>
 
           <div class="shop-item">
             <div style="text-align: left;">
               <strong>Max Health</strong><br><span style="font-size: 12px; color: #aaa;" id="desc-maxHp">+40 Max HP (Lvl 0)</span>
             </div>
-            <button onclick="buyUpgrade('maxHp')" id="btn-maxHp">Cost: 70g</button>
+            <button onclick="buyUpgrade('maxHp')" id="btn-maxHp">Cost: 45g</button>
           </div>
 
           <div class="shop-item">
             <div style="text-align: left;">
               <strong>Emergency Repair</strong><br><span style="font-size: 12px; color: #aaa;">Restore 40 HP instantly</span>
             </div>
-            <button onclick="buyUpgrade('heal')">Cost: 40g</button>
+            <button onclick="buyUpgrade('heal')">Cost: 25g</button>
           </div>
 
         </div>
@@ -272,19 +272,19 @@ let player = {
   maxCooldown: 25,
   range: 350,
   multishot: 1,
-  armorReduction: 0, // percentage reduction from incoming damage
+  armorReduction: 0,
   goldBonusMultiplier: 1.0,
   gold: 0
 };
 
 let upgradesState = {
-  damage: { level: 0, cost: 50, costMult: 1.5 },
-  fireRate: { level: 0, cost: 75, costMult: 1.6 },
-  range: { level: 0, cost: 60, costMult: 1.4 },
-  multishot: { level: 0, cost: 200, costMult: 3.0, maxLevel: 4 },
-  armor: { level: 0, cost: 90, costMult: 1.7, maxLevel: 5 },
-  bounty: { level: 0, cost: 120, costMult: 1.8, maxLevel: 4 },
-  maxHp: { level: 0, cost: 70, costMult: 1.5 }
+  damage: { level: 0, cost: 35, costMult: 1.4 },
+  fireRate: { level: 0, cost: 50, costMult: 1.5 },
+  range: { level: 0, cost: 40, costMult: 1.3 },
+  multishot: { level: 0, cost: 140, costMult: 2.5, maxLevel: 4 },
+  armor: { level: 0, cost: 60, costMult: 1.5, maxLevel: 5 },
+  bounty: { level: 0, cost: 80, costMult: 1.6, maxLevel: 4 },
+  maxHp: { level: 0, cost: 45, costMult: 1.4 }
 };
 
 let enemies = [];
@@ -333,7 +333,7 @@ function updateShopUI() {
 
 function buyUpgrade(type) {
   if (type === 'heal') {
-    let cost = 40;
+    let cost = 25;
     if (player.gold >= cost) {
       if (player.hp >= player.maxHp) {
         addFloatingText(player.x, player.y - 40, "Already Full HP!", "#3498db");
@@ -364,9 +364,9 @@ function buyUpgrade(type) {
     } else if (type === 'multishot') {
       player.multishot += 1;
     } else if (type === 'armor') {
-      player.armorReduction += 0.06; // 6% less damage taken per level
+      player.armorReduction += 0.06;
     } else if (type === 'bounty') {
-      player.goldBonusMultiplier += 0.25; // +25% gold per level
+      player.goldBonusMultiplier += 0.25;
     } else if (type === 'maxHp') {
       player.maxHp += 40;
       player.hp += 40;
@@ -386,11 +386,10 @@ function update() {
   player.x = window.innerWidth / 2;
   player.y = window.innerHeight / 2;
 
-  // 1. Auto-Shooting (Fires at closest enemies with Multi-shot support)
+  // 1. Auto-Shooting
   if (player.cooldown > 0) {
     player.cooldown--;
   } else if (enemies.length > 0) {
-    // Sort enemies by distance
     let sortedEnemies = [...enemies].map(e => ({
       enemy: e,
       dist: Math.hypot(player.x - e.x, player.y - e.y)
@@ -401,12 +400,10 @@ function update() {
     if (targets.length > 0) {
       player.cooldown = player.maxCooldown;
       
-      // Fire up to 'multishot' projectiles at different closest targets (or spread out if fewer targets)
       for (let i = 0; i < player.multishot; i++) {
         let target = targets[i % targets.length].enemy;
         let angle = Math.atan2(target.y - player.y, target.x - player.x);
         
-        // Slight spread angle if multiple bullets target the same enemy
         if (i >= targets.length) {
           angle += (i * 0.15);
         }
@@ -423,7 +420,7 @@ function update() {
     }
   }
 
-  // 2. Enemy Spawning Loop
+  // 2. Enemy Spawning Loop (Reduces purple and yellow spawn chances significantly)
   spawnTimer--;
   if (spawnTimer <= 0) {
     spawnTimer = Math.max(15, 40 - (wave * 2));
@@ -436,9 +433,10 @@ function update() {
     let rand = Math.random();
     let tierData;
 
-    if (rand < 0.60) {
+    // 80% Red (common), 15% Purple (uncommon), 5% Yellow (rare boss-type)
+    if (rand < 0.80) {
       tierData = { color: "#e74c3c", size: 14, hp: 25, speed: 2.8, damage: 6, goldValue: 3 };
-    } else if (rand < 0.88) {
+    } else if (rand < 0.95) {
       tierData = { color: "#9b59b6", size: 26, hp: 90, speed: 1.5, damage: 18, goldValue: 8 };
     } else {
       tierData = { color: "#f1c40f", size: 34, hp: 220, speed: 2.0, damage: 30, goldValue: 20 };
