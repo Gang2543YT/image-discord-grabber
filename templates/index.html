@@ -38,7 +38,7 @@
     #gold-display {
       color: #f1c40f;
     }
-    #shop-btn {
+    #shop-btn, #lb-toggle-btn {
       background: #f1c40f;
       color: #111;
       border: none;
@@ -47,23 +47,31 @@
       font-weight: bold;
       border-radius: 6px;
       cursor: pointer;
-      margin-left: 15px;
+      margin-left: 10px;
       transition: 0.2s;
     }
     #shop-btn:hover { background: #f39c12; }
+    
+    #lb-toggle-btn {
+      background: #3498db;
+      color: white;
+    }
+    #lb-toggle-btn:hover { background: #2980b9; }
 
     /* Leaderboard panel on top right */
     #leaderboard {
       position: absolute;
-      top: 20px;
+      top: 70px;
       right: 20px;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.85);
       border: 2px solid #444;
       border-radius: 8px;
       padding: 12px 18px;
       width: 240px;
       pointer-events: auto;
       font-size: 14px;
+      display: none; /* Collapsed/hidden by default */
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
     #leaderboard h3 {
       margin: 0 0 4px 0;
@@ -106,6 +114,14 @@
       transition: 0.15s;
     }
     .admin-reset-btn:hover { background: #e74c3c; }
+
+    /* Top right controls wrapper for toggle button */
+    .top-right-controls {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      pointer-events: auto;
+    }
 
     /* Name Prompt Modal */
     #name-modal {
@@ -330,7 +346,12 @@
     <div class="hud-panel" style="margin-left: 10px;">Gold: <span id="gold-display">0</span></div>
     <button class="hud-panel" id="shop-btn" onclick="toggleShop(true)">Upgrade Shop</button>
     
-    <!-- Real-Player Unique Leaderboard Panel with Admin Reset Button -->
+    <!-- Top Right Controls with Toggle Button -->
+    <div class="top-right-controls">
+      <button id="lb-toggle-btn" onclick="toggleLeaderboard()">🏆 Leaderboard</button>
+    </div>
+
+    <!-- Toggleable Leaderboard Panel -->
     <div id="leaderboard">
       <h3>GLOBAL SURVIVORS</h3>
       <div class="lb-subtitle">Tracking All-Time Best Scores</div>
@@ -452,6 +473,15 @@ let player = {
 
 let gameStarted = false;
 
+// Leaderboard visibility toggle state
+let isLeaderboardOpen = false;
+
+function toggleLeaderboard() {
+  isLeaderboardOpen = !isLeaderboardOpen;
+  const lbPanel = document.getElementById("leaderboard");
+  lbPanel.style.display = isLeaderboardOpen ? "block" : "none";
+}
+
 function startGame() {
   let inputName = document.getElementById("player-name-input").value.trim();
   let errorDiv = document.getElementById("name-error");
@@ -493,7 +523,7 @@ function startGame() {
 }
 
 // --- ADMIN RESET FUNCTIONS ---
-const ADMIN_PASSWORD_CODE = "admin123"; // Change this password as needed
+const ADMIN_PASSWORD_CODE = "admin123";
 
 function openAdminModal() {
   document.getElementById("admin-pass-input").value = "";
@@ -510,10 +540,8 @@ function verifyAdminReset() {
   let errorDiv = document.getElementById("admin-error");
 
   if (passInput === ADMIN_PASSWORD_CODE) {
-    // Wipe local storage leaderboard records
     localStorage.removeItem("turret_lifetime_scores");
     
-    // Re-register current player's baseline score if game has started
     if (gameStarted) {
       let freshScores = [{ id: player.id, name: player.name, score: player.score }];
       localStorage.setItem("turret_lifetime_scores", JSON.stringify(freshScores));
